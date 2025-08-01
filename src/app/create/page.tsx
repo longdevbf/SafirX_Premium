@@ -51,9 +51,6 @@ export default function CreatePage() {
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
               <h1 className="text-3xl font-bold">Create NFT</h1>
-              <Button variant="outline" asChild>
-                <Link href="/create/collection">Mint NFT Collection</Link>
-              </Button>
             </div>
             <p className="text-muted-foreground">Upload your digital asset and create your unique NFT</p>
           </div>
