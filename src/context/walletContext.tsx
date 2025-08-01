@@ -7,7 +7,7 @@ import {WalletContextType} from '@/interfaces/walletContextType';
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected} = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
