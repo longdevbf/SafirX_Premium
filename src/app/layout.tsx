@@ -1,17 +1,24 @@
+
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import '@rainbow-me/rainbowkit/styles.css';
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { ThemeProvider } from "@/components/theme-provider"
+import { Providers } from "@/components/provider/provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Nexelra - Premier NFT Marketplace",
+  title: "SafirX - Premier NFT Marketplace",
   description: "Discover, create, and trade extraordinary NFTs on the world's premier marketplace",
-    generator: 'v0.dev'
+  generator: 'Thomas',
+  icons: {
+    icon: "/assets/NFT.jpg",
+    shortcut: "/assets/NFT.jpg",
+    apple: "/assets/NFT.jpg",
+  },
 }
 
 export default function RootLayout({
@@ -21,12 +28,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+      <body className={inter.className} suppressHydrationWarning>
+        <Providers>
           <Header />
           <main>{children}</main>
           <Footer />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )

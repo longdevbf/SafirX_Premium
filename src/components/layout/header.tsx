@@ -8,32 +8,42 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ConnectWallet } from "@/components/ConnectWallet"
+import { useWallet } from "@/context/walletContext"
+
 import {
   Search,
   Menu,
   X,
-  Wallet,
-  User,
-  Settings,
-  LogOut,
-  Plus,
   TrendingUp,
   Grid3X3,
   Gavel,
-  Heart,
   Lock,
+  Plus,
+  LogOut,
+  Copy,
+  Heart,
+  Settings,
+  User,
 } from "lucide-react"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
+  const { isConnected, address, disconnect } = useWallet()
 
-  const connectWallet = () => {
-    setIsConnected(true)
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
+  
+  const copyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address)
+      // Optional: Add toast notification here
+    }
   }
 
   return (
@@ -41,11 +51,12 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">N</span>
-            </div>
-            <span className="text-xl font-bold">Nexelra</span>
+          <Link href="/" className="flex items-center space-x-3">
+            <img 
+              src="/assets/logo.png" 
+              alt="SafirX Logo" 
+              className="w-29 h-29 object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -65,19 +76,13 @@ export default function Header() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/collections" className="flex items-center gap-2">
+                  <Link href="/create/collection" className="flex items-center gap-2">
                     <Grid3X3 className="w-4 h-4" />
                     Collections
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/auctions" className="flex items-center gap-2">
-                    <Gavel className="w-4 h-4" />
-                    Auctions
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/auctions/sealed" className="flex items-center gap-2">
                     <Lock className="w-4 h-4" />
                     Sealed Auctions
                   </Link>
@@ -115,50 +120,28 @@ export default function Header() {
 
             {/* Wallet Connection */}
             {!isConnected ? (
-              <Button onClick={connectWallet} className="hidden md:flex">
-                <Wallet className="w-4 h-4 mr-2" />
-                Connect Wallet
-              </Button>
+              <div className="hidden md:flex">
+                <ConnectWallet />
+              </div>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                      <AvatarFallback>JD</AvatarFallback>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-muted">
+                    {/* Removed dynamic user profile logic; now displaying a default avatar placeholder */}
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold">
+                        U
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">0x1234...5678</p>
-                      <p className="w-[200px] truncate text-sm text-muted-foreground">Balance: 2.45 ETH</p>
-                    </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/favorites" className="flex items-center gap-2">
-                      <Heart className="w-4 h-4" />
-                      Favorites
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Disconnect
+                <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <DropdownMenuItem
+                    onClick={() => disconnect()}
+                    className="flex items-center gap-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Disconnect Wallet
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -179,6 +162,9 @@ export default function Header() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input placeholder="Search collections, NFTs..." className="pl-10 pr-4" />
               </div>
+              
+              {/* Removed Mobile User Info block */}
+              
               <nav className="flex flex-col space-y-2">
                 <Link
                   href="/marketplace"
@@ -212,21 +198,23 @@ export default function Header() {
                   <Plus className="w-4 h-4" />
                   Create
                 </Link>
-                {isConnected && (
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-2 px-2 py-2 text-sm font-medium hover:bg-muted rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <User className="w-4 h-4" />
-                    Profile
-                  </Link>
-                )}
               </nav>
-              {!isConnected && (
-                <Button onClick={connectWallet} className="w-full">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
+              
+              {!isConnected ? (
+                <div className="w-full">
+                  <ConnectWallet />
+                </div>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    disconnect()
+                    setIsMenuOpen(false)
+                  }} 
+                  variant="outline" 
+                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Disconnect Wallet
                 </Button>
               )}
             </div>
