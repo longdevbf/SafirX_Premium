@@ -136,6 +136,13 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/profile/${address}`} className="flex items-center gap-2 cursor-pointer">
+                      <User className="w-4 h-4" />
+                      View Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => disconnect()}
                     className="flex items-center gap-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
