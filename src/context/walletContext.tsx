@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import {WalletContextType} from '@/interfaces/walletContextType';
 
@@ -10,6 +10,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // Tạo user khi kết nối ví thành công
+  useEffect(() => {
+    const createUserIfNotExists = async (walletAddress: string) => {
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ address: walletAddress }),
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          if (data.exists) {
+            console.log('User already exists:', walletAddress);
+          } else {
+            console.log('New user created:', data.user);
+          }
+        } else {
+          console.error('Error creating user:', data.error);
+        }
+      } catch (error) {
+        console.error('Failed to create user:', error);
+      }
+    };
+
+    if (isConnected && address) {
+      createUserIfNotExists(address);
+    }
+  }, [isConnected, address]);
 
   const handleConnect = () => {
     if (connectors.length > 0) {
