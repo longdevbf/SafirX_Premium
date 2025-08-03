@@ -23,7 +23,7 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace SealedBidAuction {
+export declare namespace SealedBidsealedBidAuction {
   export type BidStruct = {
     bidder: AddressLike;
     amount: BigNumberish;
@@ -39,43 +39,43 @@ export declare namespace SealedBidAuction {
   ] & { bidder: string; amount: bigint; timestamp: bigint; deposit: bigint };
 }
 
-export interface SealedBidAuctionInterface extends Interface {
+export interface SealedBidsealedBidAuctionInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "BID_EXTENSION_TIME"
       | "CLAIM_DURATION"
-      | "MAX_AUCTION_DURATION"
-      | "MAX_BIDS_PER_AUCTION"
+      | "MAX_sealedBidAuction_DURATION"
+      | "MAX_BIDS_PER_sealedBidAuction"
       | "MAX_COLLECTION_SIZE"
       | "MAX_EXTENSIONS"
-      | "MIN_AUCTION_DURATION"
+      | "MIN_sealedBidAuction_DURATION"
       | "MIN_BID_INCREMENT"
       | "PLATFORM_FEE"
-      | "auctionBids"
-      | "auctionDeposits"
-      | "auctions"
+      | "sealedBidAuctionBids"
+      | "sealedBidAuctionDeposits"
+      | "sealedBidAuctions"
       | "bidderToIndex"
-      | "cancelAuction"
+      | "cancelsealedBidAuction"
       | "claimNFT"
-      | "createCollectionAuction"
-      | "createSingleNFTAuction"
-      | "finalizeAuction"
-      | "getAuctionBids"
+      | "createCollectionsealedBidAuction"
+      | "createSingleNFTsealedBidAuction"
+      | "finalizesealedBidAuction"
+      | "getsealedBidAuctionBids"
       | "onERC721Received"
       | "owner"
       | "placeBid"
       | "reclaimNFT"
       | "renounceOwnership"
       | "transferOwnership"
-      | "userAuctions"
+      | "usersealedBidAuctions"
       | "userBids"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
-      | "AuctionCancelled"
-      | "AuctionCreated"
-      | "AuctionFinalized"
+      | "sealedBidAuctionCancelled"
+      | "sealedBidAuctionCreated"
+      | "sealedBidAuctionFinalized"
       | "BidPlaced"
       | "NFTClaimed"
       | "NFTReclaimed"
@@ -91,11 +91,11 @@ export interface SealedBidAuctionInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "MAX_AUCTION_DURATION",
+    functionFragment: "MAX_sealedBidAuction_DURATION",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "MAX_BIDS_PER_AUCTION",
+    functionFragment: "MAX_BIDS_PER_sealedBidAuction",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -107,7 +107,7 @@ export interface SealedBidAuctionInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "MIN_AUCTION_DURATION",
+    functionFragment: "MIN_sealedBidAuction_DURATION",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -119,15 +119,15 @@ export interface SealedBidAuctionInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "auctionBids",
+    functionFragment: "sealedBidAuctionBids",
     values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "auctionDeposits",
+    functionFragment: "sealedBidAuctionDeposits",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "auctions",
+    functionFragment: "sealedBidAuctions",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -135,7 +135,7 @@ export interface SealedBidAuctionInterface extends Interface {
     values: [BigNumberish, AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "cancelAuction",
+    functionFragment: "cancelsealedBidAuction",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -143,7 +143,7 @@ export interface SealedBidAuctionInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "createCollectionAuction",
+    functionFragment: "createCollectionsealedBidAuction",
     values: [
       AddressLike,
       BigNumberish[],
@@ -156,7 +156,7 @@ export interface SealedBidAuctionInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "createSingleNFTAuction",
+    functionFragment: "createSingleNFTsealedBidAuction",
     values: [
       AddressLike,
       BigNumberish,
@@ -169,11 +169,11 @@ export interface SealedBidAuctionInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "finalizeAuction",
+    functionFragment: "finalizesealedBidAuction",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getAuctionBids",
+    functionFragment: "getsealedBidAuctionBids",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -198,7 +198,7 @@ export interface SealedBidAuctionInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "userAuctions",
+    functionFragment: "usersealedBidAuctions",
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
@@ -215,11 +215,11 @@ export interface SealedBidAuctionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "MAX_AUCTION_DURATION",
+    functionFragment: "MAX_sealedBidAuction_DURATION",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "MAX_BIDS_PER_AUCTION",
+    functionFragment: "MAX_BIDS_PER_sealedBidAuction",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -231,7 +231,7 @@ export interface SealedBidAuctionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "MIN_AUCTION_DURATION",
+    functionFragment: "MIN_sealedBidAuction_DURATION",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -243,37 +243,37 @@ export interface SealedBidAuctionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "auctionBids",
+    functionFragment: "sealedBidAuctionBids",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "auctionDeposits",
+    functionFragment: "sealedBidAuctionDeposits",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "auctions", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "sealedBidAuctions", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "bidderToIndex",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "cancelAuction",
+    functionFragment: "cancelsealedBidAuction",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "claimNFT", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "createCollectionAuction",
+    functionFragment: "createCollectionsealedBidAuction",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "createSingleNFTAuction",
+    functionFragment: "createSingleNFTsealedBidAuction",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "finalizeAuction",
+    functionFragment: "finalizesealedBidAuction",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getAuctionBids",
+    functionFragment: "getsealedBidAuctionBids",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -292,21 +292,21 @@ export interface SealedBidAuctionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "userAuctions",
+    functionFragment: "usersealedBidAuctions",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "userBids", data: BytesLike): Result;
 }
 
-export namespace AuctionCancelledEvent {
+export namespace sealedBidAuctionCancelledEvent {
   export type InputTuple = [
-    auctionId: BigNumberish,
+    sealedBidAuctionId: BigNumberish,
     seller: AddressLike,
     reason: string
   ];
-  export type OutputTuple = [auctionId: bigint, seller: string, reason: string];
+  export type OutputTuple = [sealedBidAuctionId: bigint, seller: string, reason: string];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     seller: string;
     reason: string;
   }
@@ -316,12 +316,12 @@ export namespace AuctionCancelledEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace AuctionCreatedEvent {
+export namespace sealedBidAuctionCreatedEvent {
   export type InputTuple = [
-    auctionId: BigNumberish,
+    sealedBidAuctionId: BigNumberish,
     seller: AddressLike,
     nftContract: AddressLike,
-    auctionType: BigNumberish,
+    sealedBidAuctionType: BigNumberish,
     tokenId: BigNumberish,
     tokenIds: BigNumberish[],
     startingPrice: BigNumberish,
@@ -329,10 +329,10 @@ export namespace AuctionCreatedEvent {
     title: string
   ];
   export type OutputTuple = [
-    auctionId: bigint,
+    sealedBidAuctionId: bigint,
     seller: string,
     nftContract: string,
-    auctionType: bigint,
+    sealedBidAuctionType: bigint,
     tokenId: bigint,
     tokenIds: bigint[],
     startingPrice: bigint,
@@ -340,10 +340,10 @@ export namespace AuctionCreatedEvent {
     title: string
   ];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     seller: string;
     nftContract: string;
-    auctionType: bigint;
+    sealedBidAuctionType: bigint;
     tokenId: bigint;
     tokenIds: bigint[];
     startingPrice: bigint;
@@ -356,23 +356,23 @@ export namespace AuctionCreatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace AuctionFinalizedEvent {
+export namespace sealedBidAuctionFinalizedEvent {
   export type InputTuple = [
-    auctionId: BigNumberish,
+    sealedBidAuctionId: BigNumberish,
     winner: AddressLike,
     finalPrice: BigNumberish,
     platformFeeAmount: BigNumberish,
     sellerAmount: BigNumberish
   ];
   export type OutputTuple = [
-    auctionId: bigint,
+    sealedBidAuctionId: bigint,
     winner: string,
     finalPrice: bigint,
     platformFeeAmount: bigint,
     sellerAmount: bigint
   ];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     winner: string;
     finalPrice: bigint;
     platformFeeAmount: bigint;
@@ -386,19 +386,19 @@ export namespace AuctionFinalizedEvent {
 
 export namespace BidPlacedEvent {
   export type InputTuple = [
-    auctionId: BigNumberish,
+    sealedBidAuctionId: BigNumberish,
     bidder: AddressLike,
     amount: BigNumberish,
     timestamp: BigNumberish
   ];
   export type OutputTuple = [
-    auctionId: bigint,
+    sealedBidAuctionId: bigint,
     bidder: string,
     amount: bigint,
     timestamp: bigint
   ];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     bidder: string;
     amount: bigint;
     timestamp: bigint;
@@ -411,17 +411,17 @@ export namespace BidPlacedEvent {
 
 export namespace NFTClaimedEvent {
   export type InputTuple = [
-    auctionId: BigNumberish,
+    sealedBidAuctionId: BigNumberish,
     winner: AddressLike,
     amountPaid: BigNumberish
   ];
   export type OutputTuple = [
-    auctionId: bigint,
+    sealedBidAuctionId: bigint,
     winner: string,
     amountPaid: bigint
   ];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     winner: string;
     amountPaid: bigint;
   }
@@ -432,10 +432,10 @@ export namespace NFTClaimedEvent {
 }
 
 export namespace NFTReclaimedEvent {
-  export type InputTuple = [auctionId: BigNumberish, seller: AddressLike];
-  export type OutputTuple = [auctionId: bigint, seller: string];
+  export type InputTuple = [sealedBidAuctionId: BigNumberish, seller: AddressLike];
+  export type OutputTuple = [sealedBidAuctionId: bigint, seller: string];
   export interface OutputObject {
-    auctionId: bigint;
+    sealedBidAuctionId: bigint;
     seller: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -457,11 +457,11 @@ export namespace OwnershipTransferredEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export interface SealedBidAuction extends BaseContract {
-  connect(runner?: ContractRunner | null): SealedBidAuction;
+export interface SealedBidsealedBidAuction extends BaseContract {
+  connect(runner?: ContractRunner | null): SealedBidsealedBidAuction;
   waitForDeployment(): Promise<this>;
 
-  interface: SealedBidAuctionInterface;
+  interface: SealedBidsealedBidAuctionInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -504,21 +504,21 @@ export interface SealedBidAuction extends BaseContract {
 
   CLAIM_DURATION: TypedContractMethod<[], [bigint], "view">;
 
-  MAX_AUCTION_DURATION: TypedContractMethod<[], [bigint], "view">;
+  MAX_sealedBidAuction_DURATION: TypedContractMethod<[], [bigint], "view">;
 
-  MAX_BIDS_PER_AUCTION: TypedContractMethod<[], [bigint], "view">;
+  MAX_BIDS_PER_sealedBidAuction: TypedContractMethod<[], [bigint], "view">;
 
   MAX_COLLECTION_SIZE: TypedContractMethod<[], [bigint], "view">;
 
   MAX_EXTENSIONS: TypedContractMethod<[], [bigint], "view">;
 
-  MIN_AUCTION_DURATION: TypedContractMethod<[], [bigint], "view">;
+  MIN_sealedBidAuction_DURATION: TypedContractMethod<[], [bigint], "view">;
 
   MIN_BID_INCREMENT: TypedContractMethod<[], [bigint], "view">;
 
   PLATFORM_FEE: TypedContractMethod<[], [bigint], "view">;
 
-  auctionBids: TypedContractMethod<
+  sealedBidAuctionBids: TypedContractMethod<
     [arg0: BigNumberish, arg1: BigNumberish],
     [
       [string, bigint, bigint, bigint] & {
@@ -531,9 +531,9 @@ export interface SealedBidAuction extends BaseContract {
     "view"
   >;
 
-  auctionDeposits: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
+  sealedBidAuctionDeposits: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
-  auctions: TypedContractMethod<
+  sealedBidAuctions: TypedContractMethod<
     [arg0: BigNumberish],
     [
       [
@@ -556,8 +556,8 @@ export interface SealedBidAuction extends BaseContract {
         string,
         bigint
       ] & {
-        auctionId: bigint;
-        auctionType: bigint;
+        sealedBidAuctionId: bigint;
+        sealedBidAuctionType: bigint;
         nftContract: string;
         tokenId: bigint;
         seller: string;
@@ -585,15 +585,15 @@ export interface SealedBidAuction extends BaseContract {
     "view"
   >;
 
-  cancelAuction: TypedContractMethod<
-    [auctionId: BigNumberish],
+  cancelsealedBidAuction: TypedContractMethod<
+    [sealedBidAuctionId: BigNumberish],
     [void],
     "nonpayable"
   >;
 
-  claimNFT: TypedContractMethod<[auctionId: BigNumberish], [void], "payable">;
+  claimNFT: TypedContractMethod<[sealedBidAuctionId: BigNumberish], [void], "payable">;
 
-  createCollectionAuction: TypedContractMethod<
+  createCollectionsealedBidAuction: TypedContractMethod<
     [
       nftContract: AddressLike,
       tokenIds: BigNumberish[],
@@ -608,7 +608,7 @@ export interface SealedBidAuction extends BaseContract {
     "nonpayable"
   >;
 
-  createSingleNFTAuction: TypedContractMethod<
+  createSingleNFTsealedBidAuction: TypedContractMethod<
     [
       nftContract: AddressLike,
       tokenId: BigNumberish,
@@ -623,15 +623,15 @@ export interface SealedBidAuction extends BaseContract {
     "nonpayable"
   >;
 
-  finalizeAuction: TypedContractMethod<
-    [auctionId: BigNumberish],
+  finalizesealedBidAuction: TypedContractMethod<
+    [sealedBidAuctionId: BigNumberish],
     [void],
     "nonpayable"
   >;
 
-  getAuctionBids: TypedContractMethod<
-    [auctionId: BigNumberish],
-    [SealedBidAuction.BidStructOutput[]],
+  getsealedBidAuctionBids: TypedContractMethod<
+    [sealedBidAuctionId: BigNumberish],
+    [SealedBidsealedBidAuction.BidStructOutput[]],
     "view"
   >;
 
@@ -644,13 +644,13 @@ export interface SealedBidAuction extends BaseContract {
   owner: TypedContractMethod<[], [string], "view">;
 
   placeBid: TypedContractMethod<
-    [auctionId: BigNumberish, bidAmount: BigNumberish],
+    [sealedBidAuctionId: BigNumberish, bidAmount: BigNumberish],
     [void],
     "payable"
   >;
 
   reclaimNFT: TypedContractMethod<
-    [auctionId: BigNumberish],
+    [sealedBidAuctionId: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -663,7 +663,7 @@ export interface SealedBidAuction extends BaseContract {
     "nonpayable"
   >;
 
-  userAuctions: TypedContractMethod<
+  usersealedBidAuctions: TypedContractMethod<
     [arg0: AddressLike, arg1: BigNumberish],
     [bigint],
     "view"
@@ -686,10 +686,10 @@ export interface SealedBidAuction extends BaseContract {
     nameOrSignature: "CLAIM_DURATION"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "MAX_AUCTION_DURATION"
+    nameOrSignature: "MAX_sealedBidAuction_DURATION"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "MAX_BIDS_PER_AUCTION"
+    nameOrSignature: "MAX_BIDS_PER_sealedBidAuction"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "MAX_COLLECTION_SIZE"
@@ -698,7 +698,7 @@ export interface SealedBidAuction extends BaseContract {
     nameOrSignature: "MAX_EXTENSIONS"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "MIN_AUCTION_DURATION"
+    nameOrSignature: "MIN_sealedBidAuction_DURATION"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "MIN_BID_INCREMENT"
@@ -707,7 +707,7 @@ export interface SealedBidAuction extends BaseContract {
     nameOrSignature: "PLATFORM_FEE"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "auctionBids"
+    nameOrSignature: "sealedBidAuctionBids"
   ): TypedContractMethod<
     [arg0: BigNumberish, arg1: BigNumberish],
     [
@@ -721,10 +721,10 @@ export interface SealedBidAuction extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "auctionDeposits"
+    nameOrSignature: "sealedBidAuctionDeposits"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
-    nameOrSignature: "auctions"
+    nameOrSignature: "sealedBidAuctions"
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [
@@ -748,8 +748,8 @@ export interface SealedBidAuction extends BaseContract {
         string,
         bigint
       ] & {
-        auctionId: bigint;
-        auctionType: bigint;
+        sealedBidAuctionId: bigint;
+        sealedBidAuctionType: bigint;
         nftContract: string;
         tokenId: bigint;
         seller: string;
@@ -778,13 +778,13 @@ export interface SealedBidAuction extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "cancelAuction"
-  ): TypedContractMethod<[auctionId: BigNumberish], [void], "nonpayable">;
+    nameOrSignature: "cancelsealedBidAuction"
+  ): TypedContractMethod<[sealedBidAuctionId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "claimNFT"
-  ): TypedContractMethod<[auctionId: BigNumberish], [void], "payable">;
+  ): TypedContractMethod<[sealedBidAuctionId: BigNumberish], [void], "payable">;
   getFunction(
-    nameOrSignature: "createCollectionAuction"
+    nameOrSignature: "createCollectionsealedBidAuction"
   ): TypedContractMethod<
     [
       nftContract: AddressLike,
@@ -800,7 +800,7 @@ export interface SealedBidAuction extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "createSingleNFTAuction"
+    nameOrSignature: "createSingleNFTsealedBidAuction"
   ): TypedContractMethod<
     [
       nftContract: AddressLike,
@@ -816,13 +816,13 @@ export interface SealedBidAuction extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "finalizeAuction"
-  ): TypedContractMethod<[auctionId: BigNumberish], [void], "nonpayable">;
+    nameOrSignature: "finalizesealedBidAuction"
+  ): TypedContractMethod<[sealedBidAuctionId: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "getAuctionBids"
+    nameOrSignature: "getsealedBidAuctionBids"
   ): TypedContractMethod<
-    [auctionId: BigNumberish],
-    [SealedBidAuction.BidStructOutput[]],
+    [sealedBidAuctionId: BigNumberish],
+    [SealedBidsealedBidAuction.BidStructOutput[]],
     "view"
   >;
   getFunction(
@@ -838,13 +838,13 @@ export interface SealedBidAuction extends BaseContract {
   getFunction(
     nameOrSignature: "placeBid"
   ): TypedContractMethod<
-    [auctionId: BigNumberish, bidAmount: BigNumberish],
+    [sealedBidAuctionId: BigNumberish, bidAmount: BigNumberish],
     [void],
     "payable"
   >;
   getFunction(
     nameOrSignature: "reclaimNFT"
-  ): TypedContractMethod<[auctionId: BigNumberish], [void], "nonpayable">;
+  ): TypedContractMethod<[sealedBidAuctionId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -852,7 +852,7 @@ export interface SealedBidAuction extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "userAuctions"
+    nameOrSignature: "usersealedBidAuctions"
   ): TypedContractMethod<
     [arg0: AddressLike, arg1: BigNumberish],
     [bigint],
@@ -867,25 +867,25 @@ export interface SealedBidAuction extends BaseContract {
   >;
 
   getEvent(
-    key: "AuctionCancelled"
+    key: "sealedBidAuctionCancelled"
   ): TypedContractEvent<
-    AuctionCancelledEvent.InputTuple,
-    AuctionCancelledEvent.OutputTuple,
-    AuctionCancelledEvent.OutputObject
+    sealedBidAuctionCancelledEvent.InputTuple,
+    sealedBidAuctionCancelledEvent.OutputTuple,
+    sealedBidAuctionCancelledEvent.OutputObject
   >;
   getEvent(
-    key: "AuctionCreated"
+    key: "sealedBidAuctionCreated"
   ): TypedContractEvent<
-    AuctionCreatedEvent.InputTuple,
-    AuctionCreatedEvent.OutputTuple,
-    AuctionCreatedEvent.OutputObject
+    sealedBidAuctionCreatedEvent.InputTuple,
+    sealedBidAuctionCreatedEvent.OutputTuple,
+    sealedBidAuctionCreatedEvent.OutputObject
   >;
   getEvent(
-    key: "AuctionFinalized"
+    key: "sealedBidAuctionFinalized"
   ): TypedContractEvent<
-    AuctionFinalizedEvent.InputTuple,
-    AuctionFinalizedEvent.OutputTuple,
-    AuctionFinalizedEvent.OutputObject
+    sealedBidAuctionFinalizedEvent.InputTuple,
+    sealedBidAuctionFinalizedEvent.OutputTuple,
+    sealedBidAuctionFinalizedEvent.OutputObject
   >;
   getEvent(
     key: "BidPlaced"
@@ -917,37 +917,37 @@ export interface SealedBidAuction extends BaseContract {
   >;
 
   filters: {
-    "AuctionCancelled(uint256,address,string)": TypedContractEvent<
-      AuctionCancelledEvent.InputTuple,
-      AuctionCancelledEvent.OutputTuple,
-      AuctionCancelledEvent.OutputObject
+    "sealedBidAuctionCancelled(uint256,address,string)": TypedContractEvent<
+      sealedBidAuctionCancelledEvent.InputTuple,
+      sealedBidAuctionCancelledEvent.OutputTuple,
+      sealedBidAuctionCancelledEvent.OutputObject
     >;
-    AuctionCancelled: TypedContractEvent<
-      AuctionCancelledEvent.InputTuple,
-      AuctionCancelledEvent.OutputTuple,
-      AuctionCancelledEvent.OutputObject
-    >;
-
-    "AuctionCreated(uint256,address,address,uint8,uint256,uint256[],uint256,uint256,string)": TypedContractEvent<
-      AuctionCreatedEvent.InputTuple,
-      AuctionCreatedEvent.OutputTuple,
-      AuctionCreatedEvent.OutputObject
-    >;
-    AuctionCreated: TypedContractEvent<
-      AuctionCreatedEvent.InputTuple,
-      AuctionCreatedEvent.OutputTuple,
-      AuctionCreatedEvent.OutputObject
+    sealedBidAuctionCancelled: TypedContractEvent<
+      sealedBidAuctionCancelledEvent.InputTuple,
+      sealedBidAuctionCancelledEvent.OutputTuple,
+      sealedBidAuctionCancelledEvent.OutputObject
     >;
 
-    "AuctionFinalized(uint256,address,uint256,uint256,uint256)": TypedContractEvent<
-      AuctionFinalizedEvent.InputTuple,
-      AuctionFinalizedEvent.OutputTuple,
-      AuctionFinalizedEvent.OutputObject
+    "sealedBidAuctionCreated(uint256,address,address,uint8,uint256,uint256[],uint256,uint256,string)": TypedContractEvent<
+      sealedBidAuctionCreatedEvent.InputTuple,
+      sealedBidAuctionCreatedEvent.OutputTuple,
+      sealedBidAuctionCreatedEvent.OutputObject
     >;
-    AuctionFinalized: TypedContractEvent<
-      AuctionFinalizedEvent.InputTuple,
-      AuctionFinalizedEvent.OutputTuple,
-      AuctionFinalizedEvent.OutputObject
+    sealedBidAuctionCreated: TypedContractEvent<
+      sealedBidAuctionCreatedEvent.InputTuple,
+      sealedBidAuctionCreatedEvent.OutputTuple,
+      sealedBidAuctionCreatedEvent.OutputObject
+    >;
+
+    "sealedBidAuctionFinalized(uint256,address,uint256,uint256,uint256)": TypedContractEvent<
+      sealedBidAuctionFinalizedEvent.InputTuple,
+      sealedBidAuctionFinalizedEvent.OutputTuple,
+      sealedBidAuctionFinalizedEvent.OutputObject
+    >;
+    sealedBidAuctionFinalized: TypedContractEvent<
+      sealedBidAuctionFinalizedEvent.InputTuple,
+      sealedBidAuctionFinalizedEvent.OutputTuple,
+      sealedBidAuctionFinalizedEvent.OutputObject
     >;
 
     "BidPlaced(uint256,address,uint256,uint256)": TypedContractEvent<
