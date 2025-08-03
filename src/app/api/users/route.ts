@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mysql from 'mysql2/promise';
 
 export async function POST(req: NextRequest) {
+  let connection: mysql.Connection | null = null;
+  
   try {
     const { address } = await req.json();
     
@@ -8,9 +11,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
     }
 
-    // Kết nối database (bạn cần cấu hình connection string)
-    const mysql = require('mysql2/promise');
-    const connection = await mysql.createConnection({
+    // Kết nối database
+    connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
@@ -21,10 +23,9 @@ export async function POST(req: NextRequest) {
     const [existingUser] = await connection.execute(
       'SELECT address FROM users WHERE address = ?',
       [address]
-    );
+    ) as mysql.RowDataPacket[][];
 
     if (existingUser.length > 0) {
-      await connection.end();
       return NextResponse.json({ message: 'User already exists', exists: true });
     }
 
@@ -34,8 +35,6 @@ export async function POST(req: NextRequest) {
        VALUES (?, 0, 0, 0.0, 'test name', 0, 0, NOW())`,
       [address]
     );
-
-    await connection.end();
 
     return NextResponse.json({ 
       message: 'User created successfully', 
@@ -54,10 +53,17 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    // Đảm bảo connection được đóng trong mọi trường hợp
+    if (connection) {
+      await connection.end();
+    }
   }
 }
 
 export async function GET(req: NextRequest) {
+  let connection: mysql.Connection | null = null;
+  
   try {
     const { searchParams } = new URL(req.url);
     const address = searchParams.get('address');
@@ -66,8 +72,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
     }
 
-    const mysql = require('mysql2/promise');
-    const connection = await mysql.createConnection({
+    connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
@@ -77,9 +82,7 @@ export async function GET(req: NextRequest) {
     const [user] = await connection.execute(
       'SELECT * FROM users WHERE address = ?',
       [address]
-    );
-
-    await connection.end();
+    ) as mysql.RowDataPacket[][];
 
     if (user.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -90,5 +93,10 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    // Đảm bảo connection được đóng trong mọi trường hợp
+    if (connection) {
+      await connection.end();
+    }
   }
 }
