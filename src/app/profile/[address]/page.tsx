@@ -10,7 +10,8 @@ import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import Following from "@/components/pages/profile/following"
 import EditProfile from "@/components/pages/profile/editProfile"
-import { useNFTData } from "@/hooks/use-NFTData"
+import { useNFTData } from "@/hooks/use-NFT-data"
+import { useUserData } from "@/hooks/use-user-data"
 
 export default function PublicProfilePage({ params }: { params: Promise<{ address: string }> }) {
   // Unwrap the params Promise
@@ -26,31 +27,51 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     background: "",
   })
 
-  // Fetch NFT data từ API
-  const { nfts, totalCount, isLoading, error } = useNFTData(address)
+  // Fetch NFT data và User data từ API
+  const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
+  const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUserData(address)
 
-  // Mock user data - in real app, fetch based on address
-  const user = {
+  // Tạo user object từ database data với fallback values
+  const user = userData ? {
+    address: userData.address,
+    name: userData.name || "Unnamed User",
+    username: userData.username ? `@${userData.username}` : `@${userData.address.slice(0, 8)}...`,
+    bio: userData.bio || "NFT enthusiast and collector",
+    avatar: userData.avatar || "/placeholder-user.jpg",
+    banner: userData.banner || "/images/nft-background.jpg",
+    verified: false, // Có thể thêm field này vào database sau
+    joined: new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    website: null, // Có thể thêm field này vào database sau
+    stats: {
+      owned: totalCount,
+      created: userData.created,
+      sold: userData.sold,
+      totalVolume: `${userData.total_volume.toFixed(1)} ROSE`,
+      following: userData.followed,
+      followers: userData.follower,
+    },
+  } : {
+    // Fallback cho khi chưa có data
     address: address,
-    name: "ArtCollector",
-    username: "@artcollector",
-    bio: "Passionate about digital art and blockchain technology. Collecting unique pieces since 2021.",
+    name: "Loading...",
+    username: `@${address.slice(0, 8)}...`,
+    bio: "NFT enthusiast and collector",
     avatar: "/placeholder-user.jpg",
     banner: "/images/nft-background.jpg",
     verified: false,
-    joined: "June 2021",
-    website: "https://artcollector.com",
+    joined: "Recently",
+    website: null,
     stats: {
-      owned: totalCount, // Sử dụng totalCount từ API
-      created: 12,
-      sold: 34,
-      totalVolume: "156.3 ETH",
-      following: 45,
-      followers: 123,
+      owned: totalCount,
+      created: 0,
+      sold: 0,
+      totalVolume: "0.0 ROSE",
+      following: 0,
+      followers: 0,
     },
   }
 
-  // Mock following data
+  // Mock following data (có thể tạo bảng following sau)
   const followingUsers = [
     {
       address: "0x1234567890abcdef1234567890abcdef12345678",
@@ -96,44 +117,107 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   const copyAddress = () => {
     navigator.clipboard.writeText(user.address)
+    // Có thể thêm toast notification ở đây
+    console.log("Address copied to clipboard")
   }
 
   const handleEditProfile = () => {
     setEditForm({
-      name: user.name,
-      tag: user.username,
-      description: user.bio,
-      avatar: user.avatar,
-      background: user.banner,
+      name: user.name || "",
+      tag: user.username ? user.username.replace('@', '') : "",
+      description: user.bio || "",
+      avatar: user.avatar || "",
+      background: user.banner || "",
     })
     setIsEditModalOpen(true)
   }
 
-  const handleSaveProfile = () => {
-    console.log("Save profile:", editForm)
-    setIsEditModalOpen(false)
+  const handleSaveProfile = async () => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: user.address,
+          name: editForm.name.trim(),
+          username: editForm.tag.trim(),
+          bio: editForm.description.trim(),
+          avatar: editForm.avatar.trim() || null,
+          banner: editForm.background.trim() || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+
+      console.log("Profile updated successfully!");
+      
+      // Refresh user data
+      await refreshUser();
+      setIsEditModalOpen(false);
+      
+      // Có thể thêm toast notification ở đây
+      alert("Profile updated successfully!");
+
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile");
+    }
   }
 
-  const handleImageUpload = (type: 'avatar' | 'background') => {
-    console.log("Upload image for:", type)
+  // Loading state
+  if (userLoading || nftLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (userError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Error loading profile: {userError}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Profile Banner */}
-      <div className="relative h-64 bg-gradient-to-r from-purple-600 to-blue-600">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url('${user.banner}')`,
-          }}
-        />
+      {/* Profile Banner - Updated to use user data */}
+      <div className="relative h-[504px] bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
+        {user.banner && (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url('${user.banner}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          />
+        )}
+        {/* Overlay gradient để text dễ đọc */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        
         <div className="absolute bottom-4 right-4 flex gap-2">
-          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
             <Flag className="w-4 h-4 mr-2" />
             Report
           </Button>
@@ -141,12 +225,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       </div>
 
       <div className="container mx-auto px-4">
-        {/* Profile Info */}
+        {/* Profile Info - Updated to use user data */}
         <div className="relative mb-8 pt-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <Avatar className="w-32 h-32 border-4 border-white shadow-lg bg-white -mt-16">
               <AvatarImage src={user.avatar || "/placeholder.svg"} />
-              <AvatarFallback className="text-2xl bg-gray-100">AC</AvatarFallback>
+              <AvatarFallback className="text-2xl bg-gray-100">
+                {user.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
 
             <div className="flex-1">
@@ -190,7 +276,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats - Updated to use database data */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
@@ -241,8 +327,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
             <OwnedNFTs 
               nfts={nfts} 
               totalCount={totalCount} 
-              isLoading={isLoading}
-              error={error}
+              isLoading={nftLoading}
+              error={nftError}
             />
           </TabsContent>
 
@@ -259,7 +345,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         editForm={editForm}
         setEditForm={setEditForm}
         onSave={handleSaveProfile}
-        onImageUpload={handleImageUpload}
       />
     </div>
   )
