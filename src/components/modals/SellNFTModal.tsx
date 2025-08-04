@@ -16,7 +16,7 @@ import { useAccount } from "wagmi"
 import { useNFTMarketplace } from "@/hooks/use-market"
 import { useNFTApproval } from "@/hooks/use-approval-market"
 import { formatEther, parseEther } from "viem"
-
+//interfaces
 interface NFT {
   id: string
   name: string
