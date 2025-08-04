@@ -14,6 +14,7 @@ import EditProfileModal from "@/components/pages/profile/editProfileModal"
 import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
 import { useNFTData } from "@/hooks/use-NFT-data"
+import { useWalletBalance } from "@/hooks/use-balance"
 
 // Interface cho NFT
 interface NFT {
@@ -52,6 +53,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   // Sử dụng context và NFT data
   const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
   const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
+  
+  // Get wallet balance for this address
+  const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
 
   // Handler để mở single auction từ NFT card
   const handleOpenSingleAuction = (nft: NFT) => {
@@ -76,6 +80,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       created: userData.created,
       sold: userData.sold,
       totalVolume: `${userData.total_volume.toFixed(1)} ROSE`,
+      walletBalance: walletBalance,
       following: userData.followed,
       followers: userData.follower,
     },
@@ -94,6 +99,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       created: 0,
       sold: 0,
       totalVolume: "0.0 ROSE",
+      walletBalance: "0.00 ROSE",
       following: 0,
       followers: 0,
     },
@@ -300,7 +306,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-primary">{user.stats.owned}</div>
@@ -323,6 +329,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-primary">{user.stats.totalVolume}</div>
               <div className="text-sm text-muted-foreground">Total Volume</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{user.stats.walletBalance}</div>
+              <div className="text-sm text-muted-foreground">Wallet Balance</div>
             </CardContent>
           </Card>
           <Card>
