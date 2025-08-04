@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -17,20 +18,22 @@ import {
   Search, 
   CheckCircle, 
   Circle, 
-  DollarSign, 
   Gavel, 
   Package,
   Grid3X3,
   AlertTriangle,
   X,
   Filter,
-  Loader2
+  Loader2,
+  Clock,
+  DollarSign,
+  Info
 } from "lucide-react"
 import Image from "next/image"
 import { useAccount } from "wagmi"
 import { parseEther } from "viem"
-import { useNFTMarketplace } from "@/hooks/use-market"
-import { useNFTApproval } from "@/hooks/use-approval-market"
+import { useSealedBidAuction } from "@/hooks/use-auctions"
+import { useNFTAuctionApproval } from "@/hooks/use-approval-auction"
 
 interface NFT {
   id: string
@@ -45,23 +48,20 @@ interface NFT {
   edition?: string
 }
 
-interface ListCollectionModalProps {
+interface CreateAuctionModalProps {
   isOpen: boolean
   onClose: () => void
   nfts: NFT[]
-  mode: "list" | "auction"
+  mode: "single" | "collection"
 }
 
-interface CollectionForm {
-  name: string
+interface AuctionForm {
+  title: string
   description: string
-  bundlePrice: string
-  
-  // Auction specific
   startingPrice: string
   reservePrice: string
-  duration: string
   minBidIncrement: string
+  duration: string
 }
 
 // Component để handle NFT image với fallback
@@ -80,7 +80,6 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
     )
   }
 
-  // Kiểm tra nếu là IPFS URL hoặc external URL
   const isExternalUrl = src?.includes('http') || src?.includes('ipfs') || src?.includes('gateway.pinata.cloud')
   
   if (isExternalUrl) {
@@ -102,7 +101,6 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
     )
   }
 
-  // Sử dụng Next.js Image cho local images
   return (
     <div className="relative w-full h-full">
       <Image
@@ -112,54 +110,70 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
         className={`${className} object-cover`}
         onError={() => setError(true)}
         onLoad={() => setLoading(false)}
-        unoptimized // Thêm này để tránh lỗi optimization
+        unoptimized
       />
     </div>
   )
 }
 
-export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: ListCollectionModalProps) {
+export default function CreateAuctionModal({ isOpen, onClose, nfts, mode }: CreateAuctionModalProps) {
   const { address } = useAccount()
-  const { listCollectionBundle } = useNFTMarketplace()
-  const { isApprovedForAll, setApprovalForAll } = useNFTApproval()
+  const { 
+    createSingleNFTAuctionWithApproval, 
+    createCollectionAuctionWithApproval,
+    checkSingleNFTApproval,
+    checkCollectionApproval,
+    getMinAuctionDuration,
+    getMaxAuctionDuration,
+    getMinBidIncrement,
+    getPlatformFee
+  } = useSealedBidAuction()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedNFTs, setSelectedNFTs] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<"all" | "grouped">("all")
   const [selectedCollection, setSelectedCollection] = useState<string>("all")
-  const [form, setForm] = useState<CollectionForm>({
-    name: "",
+  const [form, setForm] = useState<AuctionForm>({
+    title: "",
     description: "",
-    bundlePrice: "",
     startingPrice: "",
     reservePrice: "",
-    duration: "24", // Default 24 hours
-    minBidIncrement: "0.1"
+    minBidIncrement: "0.001", // Default MIN_BID_INCREMENT
+    duration: "24" // Default 24 hours
   })
   const [isLoading, setIsLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState<"select" | "configure" | "confirm">("select")
-  const [processingStep, setProcessingStep] = useState<"approval" | "listing" | null>(null)
+  const [processingStep, setProcessingStep] = useState<"approval" | "creation" | null>(null)
   const [error, setError] = useState("")
+  const [selectedCollectionForAuction, setSelectedCollectionForAuction] = useState<string | null>(null)
 
-  // Thêm state để track collection đã chọn:
-  const [selectedCollectionForListing, setSelectedCollectionForListing] = useState<string | null>(null)
+  // Get contract constants
+  const minDuration = getMinAuctionDuration() // 1 hour in seconds
+  const maxDuration = getMaxAuctionDuration() // 30 days in seconds
+  const minBidIncrement = getMinBidIncrement() // 0.001 ether
+  const platformFee = getPlatformFee() // 250 (2.5%)
 
   // Get selected NFTs list
   const selectedNFTsList = useMemo(() => 
     nfts.filter(nft => selectedNFTs.has(nft.id))
   , [nfts, selectedNFTs])
 
-  // Get contract address from selected NFTs (all should be from same collection)
+  // Get contract address from selected NFTs (all should be from same collection for collection auction)
   const contractAddress = selectedNFTsList.length > 0 ? selectedNFTsList[0].contractAddress : ""
 
-  // Check approval status for the contract
-  const { isApproved, refetch: refetchApproval } = isApprovedForAll(
-    contractAddress,
-    address || ""
-  )
-
-  // Debug: Log tổng số NFTs
-  console.log("Total NFTs in wallet:", nfts.length)
+  // Duration options in hours
+  const durationOptions = [
+    { value: "1", label: "1 Hour", seconds: 3600 },
+    { value: "3", label: "3 Hours", seconds: 10800 },
+    { value: "6", label: "6 Hours", seconds: 21600 },
+    { value: "12", label: "12 Hours", seconds: 43200 },
+    { value: "24", label: "1 Day", seconds: 86400 },
+    { value: "48", label: "2 Days", seconds: 172800 },
+    { value: "72", label: "3 Days", seconds: 259200 },
+    { value: "168", label: "7 Days", seconds: 604800 },
+    { value: "336", label: "14 Days", seconds: 1209600 },
+    { value: "720", label: "30 Days", seconds: 2592000 },
+  ]
 
   // Filter NFTs by search term và collection
   const filteredNFTs = useMemo(() => {
@@ -174,18 +188,18 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
     
       const matchesCollection = selectedCollection === "all" || nft.collection === selectedCollection
     
-      // Nếu đã chọn collection cho listing, chỉ hiển thị NFTs từ collection đó
-      const matchesSelectedCollectionForListing = selectedCollectionForListing === null || nft.collection === selectedCollectionForListing
+      // For collection auction, only show NFTs from selected collection
+      const matchesSelectedCollectionForAuction = mode === "single" || 
+        selectedCollectionForAuction === null || 
+        nft.collection === selectedCollectionForAuction
     
-      return matchesSearch && matchesCollection && matchesSelectedCollectionForListing
+      return matchesSearch && matchesCollection && matchesSelectedCollectionForAuction
     })
     
-    console.log("Filtered NFTs:", filtered.length)
-    console.log("Selected collection for listing:", selectedCollectionForListing)
     return filtered
-  }, [nfts, searchTerm, selectedCollection, selectedCollectionForListing])
+  }, [nfts, searchTerm, selectedCollection, selectedCollectionForAuction, mode])
 
-  // Get unique collections cho filter dropdown
+  // Get unique collections
   const collections = useMemo(() => {
     if (!nfts || nfts.length === 0) return []
     
@@ -193,11 +207,10 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
       .filter(nft => nft && nft.collection)
       .map(nft => nft.collection)
     )]
-    console.log("Unique collections:", uniqueCollections)
     return uniqueCollections
   }, [nfts])
 
-  // Group NFTs by collection (chỉ dùng khi viewMode = "grouped")
+  // Group NFTs by collection
   const groupedNFTs = useMemo(() => {
     const groups: { [key: string]: NFT[] } = {}
     filteredNFTs.forEach(nft => {
@@ -215,27 +228,31 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
 
     const newSelected = new Set(selectedNFTs)
     
-    if (newSelected.has(nftId)) {
-      // Deselect NFT
-      newSelected.delete(nftId)
-      
-      // Nếu không còn NFT nào được chọn, reset collection
-      if (newSelected.size === 0) {
-        setSelectedCollectionForListing(null)
+    if (mode === "single") {
+      // Single auction mode - only allow one NFT
+      if (newSelected.has(nftId)) {
+        newSelected.clear()
+      } else {
+        newSelected.clear()
+        newSelected.add(nftId)
       }
     } else {
-      // Select NFT
-      if (selectedCollectionForListing === null) {
-        // Lần đầu chọn NFT - set collection
-        setSelectedCollectionForListing(nft.collection)
-        newSelected.add(nftId)
-      } else if (selectedCollectionForListing === nft.collection) {
-        // Chọn NFT từ cùng collection
-        newSelected.add(nftId)
+      // Collection auction mode
+      if (newSelected.has(nftId)) {
+        newSelected.delete(nftId)
+        if (newSelected.size === 0) {
+          setSelectedCollectionForAuction(null)
+        }
       } else {
-        // Không cho phép chọn NFT từ collection khác
-        alert(`You can only select NFTs from the same collection. Currently selected: ${selectedCollectionForListing}`)
-        return
+        if (selectedCollectionForAuction === null) {
+          setSelectedCollectionForAuction(nft.collection)
+          newSelected.add(nftId)
+        } else if (selectedCollectionForAuction === nft.collection) {
+          newSelected.add(nftId)
+        } else {
+          alert(`You can only select NFTs from the same collection. Currently selected: ${selectedCollectionForAuction}`)
+          return
+        }
       }
     }
     
@@ -247,78 +264,66 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
     
     const newSelected = new Set(selectedNFTs)
     
-    // Nếu chưa có collection nào được chọn, chọn collection của NFT đầu tiên
-    if (selectedCollectionForListing === null && filteredNFTs.length > 0) {
-      const firstCollection = filteredNFTs[0].collection
-      setSelectedCollectionForListing(firstCollection)
-      
-      // Chỉ chọn NFTs từ collection đầu tiên
-      const sameCollectionNFTs = filteredNFTs.filter(nft => nft.collection === firstCollection)
-      sameCollectionNFTs.forEach(nft => newSelected.add(nft.id))
-    } else {
-      // Đã có collection được chọn
-      const sameCollectionFilteredNFTs = filteredNFTs.filter(nft => nft.collection === selectedCollectionForListing)
-      const allSameCollectionSelected = sameCollectionFilteredNFTs.every(nft => newSelected.has(nft.id))
-      
-      if (allSameCollectionSelected) {
-        // Deselect all from same collection
-        sameCollectionFilteredNFTs.forEach(nft => newSelected.delete(nft.id))
-        if (newSelected.size === 0) {
-          setSelectedCollectionForListing(null)
-        }
+    if (mode === "single") {
+      // Single mode - select first NFT only
+      if (newSelected.size > 0) {
+        newSelected.clear()
       } else {
-        // Select all from same collection
-        sameCollectionFilteredNFTs.forEach(nft => newSelected.add(nft.id))
+        newSelected.clear()
+        newSelected.add(filteredNFTs[0].id)
+      }
+    } else {
+      // Collection mode
+      if (selectedCollectionForAuction === null && filteredNFTs.length > 0) {
+        const firstCollection = filteredNFTs[0].collection
+        setSelectedCollectionForAuction(firstCollection)
+        const sameCollectionNFTs = filteredNFTs.filter(nft => nft.collection === firstCollection)
+        sameCollectionNFTs.forEach(nft => newSelected.add(nft.id))
+      } else {
+        const sameCollectionFilteredNFTs = filteredNFTs.filter(nft => nft.collection === selectedCollectionForAuction)
+        const allSameCollectionSelected = sameCollectionFilteredNFTs.every(nft => newSelected.has(nft.id))
+        
+        if (allSameCollectionSelected) {
+          sameCollectionFilteredNFTs.forEach(nft => newSelected.delete(nft.id))
+          if (newSelected.size === 0) {
+            setSelectedCollectionForAuction(null)
+          }
+        } else {
+          sameCollectionFilteredNFTs.forEach(nft => newSelected.add(nft.id))
+        }
       }
     }
     
     setSelectedNFTs(newSelected)
   }
 
-  const handleSelectCollection = (collectionNFTs: NFT[]) => {
-    if (collectionNFTs.length === 0) return
+  const calculateEstimatedFees = () => {
+    if (!form.startingPrice) return { platformFee: "0", netAmount: "0" }
     
-    const collectionName = collectionNFTs[0].collection
-    const newSelected = new Set(selectedNFTs)
+    const startingPriceNum = parseFloat(form.startingPrice)
+    const feePercent = 2.5 // 2.5%
+    const platformFeeAmount = (startingPriceNum * feePercent) / 100
+    const netAmount = startingPriceNum - platformFeeAmount
     
-    if (selectedCollectionForListing === null) {
-      // Chưa có collection nào được chọn - chọn toàn bộ collection này
-      setSelectedCollectionForListing(collectionName)
-      collectionNFTs.forEach(nft => newSelected.add(nft.id))
-    } else if (selectedCollectionForListing === collectionName) {
-      // Cùng collection - toggle select/deselect
-      const allSelected = collectionNFTs.every(nft => newSelected.has(nft.id))
-      
-      if (allSelected) {
-        // Deselect all in collection
-        collectionNFTs.forEach(nft => newSelected.delete(nft.id))
-        if (newSelected.size === 0) {
-          setSelectedCollectionForListing(null)
-        }
-      } else {
-        // Select all in collection
-        collectionNFTs.forEach(nft => newSelected.add(nft.id))
-      }
-    } else {
-      // Collection khác - không cho phép
-      alert(`You can only select NFTs from the same collection. Currently selected: ${selectedCollectionForListing}`)
-      return
+    return {
+      platformFee: platformFeeAmount.toFixed(4),
+      netAmount: netAmount.toFixed(4)
     }
-    
-    setSelectedNFTs(newSelected)
   }
 
-  const getTotalValue = () => {
-    if (mode === "list") {
-      return form.bundlePrice ? `${form.bundlePrice} ROSE` : "0 ROSE"
-    } else {
-      return form.startingPrice ? `${form.startingPrice} ROSE` : "0 ROSE"
-    }
+  const getDurationInSeconds = () => {
+    const selectedOption = durationOptions.find(opt => opt.value === form.duration)
+    return selectedOption ? selectedOption.seconds : 86400 // Default 24 hours
   }
 
   const handleSubmit = async () => {
     if (selectedNFTs.size === 0) {
       setError("Please select at least one NFT")
+      return
+    }
+
+    if (mode === "collection" && selectedNFTs.size < 2) {
+      setError("Collection auction requires at least 2 NFTs")
       return
     }
 
@@ -336,50 +341,72 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
     setError("")
 
     try {
-      // Prepare NFT data
-      const tokenIds = selectedNFTsList.map(nft => parseInt(nft.tokenId))
-      
-      if (mode === "list") {
-        // Step 1: Check và request approval nếu cần
-        setProcessingStep("approval")
-        
-        if (!isApproved) {
-          console.log("NFTs not approved, requesting approval...")
-          await setApprovalForAll(contractAddress, true)
-          
-          // Wait và refetch approval status
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          await refetchApproval()
-        }
+      // ✅ Convert form values to Wei properly
+      const startingPriceWei = parseEther(form.startingPrice)
+      const reservePriceWei = form.reservePrice ? parseEther(form.reservePrice) : startingPriceWei
+      const minBidIncrementWei = parseEther(form.minBidIncrement)
+      const durationSeconds = getDurationInSeconds()
 
-        // Step 2: List collection as bundle
-        setProcessingStep("listing")
-        console.log("Listing collection as bundle...")
+      console.log("Creating auction with params:", {
+        mode,
+        contractAddress,
+        selectedNFTs: selectedNFTs.size,
+        startingPriceWei: startingPriceWei.toString(),
+        reservePriceWei: reservePriceWei.toString(),
+        minBidIncrementWei: minBidIncrementWei.toString(),
+        durationSeconds,
+        title: form.title,
+        description: form.description
+      })
+
+      if (mode === "single") {
+        // Single NFT Auction
+        setProcessingStep("approval")
+        const tokenId = parseInt(selectedNFTsList[0].tokenId)
         
-        const bundlePriceInWei = parseEther(form.bundlePrice)
-        
-        const result = await listCollectionBundle(
+        const result = await createSingleNFTAuctionWithApproval(
           contractAddress,
-          tokenIds,
-          Number(bundlePriceInWei),
-          form.name
+          tokenId,
+          Number(startingPriceWei), // ✅ Convert BigInt to number
+          Number(reservePriceWei),
+          Number(minBidIncrementWei),
+          durationSeconds,
+          form.title,
+          form.description,
+          address
         )
 
-        console.log("Collection bundle listed successfully!", result)
-        
-        // Success - close modal
+        console.log("Single NFT Auction created successfully!", result)
         handleClose()
-        alert("Collection bundle listed successfully!")
+        alert("Single NFT Auction created successfully!")
 
       } else {
-        // TODO: Implement auction logic later
-        setError("Auction functionality is not implemented yet")
-        return
+        // Collection Auction
+        setProcessingStep("approval")
+        const tokenIds = selectedNFTsList.map(nft => parseInt(nft.tokenId))
+        
+        console.log("Creating collection auction with tokenIds:", tokenIds)
+        
+        const result = await createCollectionAuctionWithApproval(
+          contractAddress,
+          tokenIds,
+          Number(startingPriceWei), // ✅ Convert BigInt to number
+          Number(reservePriceWei),
+          Number(minBidIncrementWei),
+          durationSeconds,
+          form.title,
+          form.description,
+          address
+        )
+
+        console.log("Collection Auction created successfully!", result)
+        handleClose()
+        alert("Collection Auction created successfully!")
       }
 
     } catch (error: any) {
-      console.error("Error listing collection:", error)
-      setError(error.message || `Failed to ${mode === "list" ? "list collection" : "create auction"}`)
+      console.error("Error creating auction:", error)
+      setError(error.message || "Failed to create auction")
     } finally {
       setIsLoading(false)
       setProcessingStep(null)
@@ -389,17 +416,16 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
   const handleClose = () => {
     setCurrentStep("select")
     setSelectedNFTs(new Set())
-    setSelectedCollectionForListing(null)
+    setSelectedCollectionForAuction(null)
     setViewMode("all")
     setSelectedCollection("all")
     setForm({
-      name: "",
+      title: "",
       description: "",
-      bundlePrice: "",
       startingPrice: "",
       reservePrice: "",
-      duration: "24",
-      minBidIncrement: "0.1"
+      minBidIncrement: "0.001",
+      duration: "24"
     })
     setSearchTerm("")
     setError("")
@@ -408,25 +434,22 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
   }
 
   const canProceed = () => {
-    if (currentStep === "select") return selectedNFTs.size > 0
+    if (currentStep === "select") {
+      return mode === "single" ? selectedNFTs.size === 1 : selectedNFTs.size >= 2
+    }
     if (currentStep === "configure") {
-      if (mode === "list") {
-        const hasValidName = form.name.trim().length >= 3
-        const hasValidPrice = form.bundlePrice && parseFloat(form.bundlePrice) > 0
-        return hasValidName && hasValidPrice
-      } else {
-        const hasValidName = form.name.trim().length >= 3
-        const hasValidStartingPrice = form.startingPrice && parseFloat(form.startingPrice) > 0
-        const hasValidDuration = form.duration
-        return hasValidName && hasValidStartingPrice && hasValidDuration
-      }
+      const hasValidTitle = form.title.trim().length >= 3
+      const hasValidStartingPrice = form.startingPrice && parseFloat(form.startingPrice) > 0
+      const hasValidReservePrice = !form.reservePrice || parseFloat(form.reservePrice) >= parseFloat(form.startingPrice)
+      const hasValidMinBidIncrement = form.minBidIncrement && parseFloat(form.minBidIncrement) >= 0.001
+      return hasValidTitle && hasValidStartingPrice && hasValidReservePrice && hasValidMinBidIncrement
     }
     return true
   }
 
-  // Component NFT Card riêng để tái sử dụng
+  // Component NFT Card
   const NFTCard = ({ nft, isSelected, onClick }: { nft: NFT, isSelected: boolean, onClick: () => void }) => {
-    const isDisabled = selectedCollectionForListing !== null && selectedCollectionForListing !== nft.collection
+    const isDisabled = mode === "collection" && selectedCollectionForAuction !== null && selectedCollectionForAuction !== nft.collection
     
     return (
       <Card
@@ -478,7 +501,6 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
     )
   }
 
-  // Thêm vào đầu component:
   if (!nfts || nfts.length === 0) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -488,7 +510,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
           </DialogHeader>
           <div className="text-center py-8">
             <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">You don&apos;t have any NFTs to list or auction.</p>
+            <p className="text-muted-foreground">You don&apos;t have any NFTs to auction.</p>
           </div>
           <Button onClick={onClose} className="w-full">Close</Button>
         </DialogContent>
@@ -501,8 +523,8 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
       <DialogContent className="sm:max-w-6xl h-[95vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {mode === "list" ? <Package className="w-5 h-5" /> : <Gavel className="w-5 h-5" />}
-            {mode === "list" ? "List Collection Bundle" : "Create Collection Auction"}
+            <Gavel className="w-5 h-5" />
+            Create {mode === "single" ? "Single NFT" : "Collection"} Auction
           </DialogTitle>
         </DialogHeader>
 
@@ -519,7 +541,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
             currentStep === "configure" ? "bg-primary text-primary-foreground" : "bg-muted"
           }`}>
             <Circle className="w-3 h-3" />
-            Configure
+            Configure Auction
           </div>
           <div className="w-8 h-px bg-border" />
           <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
@@ -530,11 +552,11 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
           </div>
         </div>
 
-        {/* Main Content - FIXED HEIGHT */}
+        {/* Main Content */}
         <div className="flex-1 min-h-0" style={{ height: 'calc(100% - 140px)' }}>
           {currentStep === "select" && (
             <div className="h-full flex flex-col">
-              {/* Controls - Fixed height */}
+              {/* Controls */}
               <div className="flex-shrink-0 mb-4 space-y-3">
                 {/* Search */}
                 <div className="relative">
@@ -547,9 +569,8 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                   />
                 </div>
 
-                {/* Filters và Controls */}
+                {/* Filters */}
                 <div className="flex flex-wrap gap-3 items-center">
-                  {/* Collection Filter */}
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-muted-foreground" />
                     <Select value={selectedCollection} onValueChange={setSelectedCollection}>
@@ -570,27 +591,26 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                     </Select>
                   </div>
 
-                  {/* View Mode Toggle */}
-                  <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "all" | "grouped")}>
-                    <TabsList>
-                      <TabsTrigger value="all">All NFTs</TabsTrigger>
-                      <TabsTrigger value="grouped">By Collection</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  {mode === "collection" && (
+                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "all" | "grouped")}>
+                      <TabsList>
+                        <TabsTrigger value="all">All NFTs</TabsTrigger>
+                        <TabsTrigger value="grouped">By Collection</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  )}
 
                   <div className="flex-1" />
 
-                  {/* Select All Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    {selectedCollectionForListing === null 
-                      ? "Select All" 
-                      : (filteredNFTs.filter(nft => nft.collection === selectedCollectionForListing).every(nft => selectedNFTs.has(nft.id)) 
-                        ? "Deselect All" 
-                        : "Select All")
+                  <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                    {mode === "single" 
+                      ? (selectedNFTs.size > 0 ? "Deselect" : "Select First")
+                      : (selectedCollectionForAuction === null 
+                        ? "Select All" 
+                        : (filteredNFTs.filter(nft => nft.collection === selectedCollectionForAuction).every(nft => selectedNFTs.has(nft.id)) 
+                          ? "Deselect All" 
+                          : "Select All")
+                      )
                     }
                   </Button>
                 </div>
@@ -601,10 +621,9 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                     <span>Total NFTs: <strong>{nfts.length}</strong></span>
                     <span>Filtered: <strong>{filteredNFTs.length}</strong></span>
                     <span>Selected: <strong>{selectedNFTs.size}</strong></span>
-                    {selectedCollectionForListing && (
-                      <span className="text-primary">
-                        Collection: <strong>{selectedCollectionForListing}</strong>
-                      </span>
+                    {mode === "single" && <span className="text-primary">Mode: <strong>Single NFT Auction</strong></span>}
+                    {mode === "collection" && selectedCollectionForAuction && (
+                      <span className="text-primary">Collection: <strong>{selectedCollectionForAuction}</strong></span>
                     )}
                   </div>
                   {selectedNFTs.size > 0 && (
@@ -613,35 +632,16 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                       size="sm"
                       onClick={() => {
                         setSelectedNFTs(new Set())
-                        setSelectedCollectionForListing(null)
+                        setSelectedCollectionForAuction(null)
                       }}
                     >
                       Clear Selected
                     </Button>
                   )}
                 </div>
-
-                {/* Approval Status */}
-                {selectedNFTsList.length > 0 && (
-                  <Alert className={isApproved ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
-                    <div className="flex items-center gap-2">
-                      {isApproved ? (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                      )}
-                      <AlertDescription>
-                        {isApproved 
-                          ? "✅ NFTs approved for marketplace"
-                          : "⚠️ NFTs need approval before listing"
-                        }
-                      </AlertDescription>
-                    </div>
-                  </Alert>
-                )}
               </div>
 
-              {/* Scrollable NFTs area - Rest of height */}
+              {/* Scrollable NFTs area */}
               <div className="flex-1" style={{ height: 'calc(100% - 280px)', overflow: 'auto' }}>
                 {filteredNFTs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
@@ -649,7 +649,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                     <p className="text-lg font-medium">No NFTs found</p>
                     <p className="text-sm">Try adjusting your search or filter criteria</p>
                   </div>
-                ) : viewMode === "all" ? (
+                ) : viewMode === "all" || mode === "single" ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
                     {filteredNFTs.map((nft) => {
                       const isSelected = selectedNFTs.has(nft.id)
@@ -671,7 +671,6 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                       
                       return (
                         <div key={collectionName} className="space-y-4">
-                          {/* Collection Header */}
                           <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
                             <div className="flex items-center gap-4">
                               <h3 className="text-lg font-semibold">{collectionName}</h3>
@@ -689,14 +688,30 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                             <Button
                               variant={allSelected ? "default" : "outline"}
                               size="sm"
-                              onClick={() => handleSelectCollection(collectionNFTs)}
+                              onClick={() => {
+                                const newSelected = new Set(selectedNFTs)
+                                if (allSelected) {
+                                  collectionNFTs.forEach(nft => newSelected.delete(nft.id))
+                                  if (newSelected.size === 0) {
+                                    setSelectedCollectionForAuction(null)
+                                  }
+                                } else {
+                                  if (selectedCollectionForAuction === null) {
+                                    setSelectedCollectionForAuction(collectionName)
+                                  } else if (selectedCollectionForAuction !== collectionName) {
+                                    alert(`You can only select NFTs from the same collection. Currently selected: ${selectedCollectionForAuction}`)
+                                    return
+                                  }
+                                  collectionNFTs.forEach(nft => newSelected.add(nft.id))
+                                }
+                                setSelectedNFTs(newSelected)
+                              }}
                               className="min-w-24"
                             >
                               {allSelected ? "Deselect All" : "Select All"}
                             </Button>
                           </div>
 
-                          {/* NFTs Grid */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pl-4">
                             {collectionNFTs.map((nft) => {
                               const isSelected = selectedNFTs.has(nft.id)
@@ -725,16 +740,16 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
               {/* Basic Information */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Collection Name *</Label>
+                  <Label htmlFor="title">Auction Title *</Label>
                   <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Enter collection name (min 3 characters)"
+                    id="title"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Enter auction title (min 3 characters)"
                     maxLength={100}
                   />
                   <div className="text-xs text-muted-foreground mt-1">
-                    {form.name.length}/100 characters
+                    {form.title.length}/100 characters
                   </div>
                 </div>
                 
@@ -744,7 +759,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                     id="description"
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="Describe your collection..."
+                    placeholder="Describe your auction..."
                     rows={3}
                     maxLength={500}
                   />
@@ -754,111 +769,126 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                 </div>
               </div>
 
-              {mode === "list" && (
-                <>
-                  <Separator />
-                  
-                  {/* Bundle Collection Pricing */}
-                  <div className="space-y-4">
-                    <Label>Bundle Collection</Label>
-                    
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <p className="text-sm text-purple-800">
-                        All selected NFTs will be sold together as a single bundle collection. Buyers must purchase the entire collection.
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="bundlePrice">Collection Price (ROSE) *</Label>
-                      <Input
-                        id="bundlePrice"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={form.bundlePrice}
-                        onChange={(e) => setForm({ ...form, bundlePrice: e.target.value })}
-                        placeholder="0.0"
-                      />
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Price for all {selectedNFTs.size} NFTs as a bundle
-                      </div>
+              <Separator />
+              
+              {/* Auction Settings */}
+              <div className="space-y-4">
+                <Label>Auction Settings</Label>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startingPrice">Starting Price (ROSE) *</Label>
+                    <Input
+                      id="startingPrice"
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={form.startingPrice}
+                      onChange={(e) => setForm({ ...form, startingPrice: e.target.value })}
+                      placeholder="0.0"
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Minimum bid amount
                     </div>
                   </div>
-                </>
-              )}
+                  
+                  <div>
+                    <Label htmlFor="reservePrice">Reserve Price (ROSE)</Label>
+                    <Input
+                      id="reservePrice"
+                      type="number"
+                      step="0.001"
+                      min={form.startingPrice || "0"}
+                      value={form.reservePrice}
+                      onChange={(e) => setForm({ ...form, reservePrice: e.target.value })}
+                      placeholder={form.startingPrice || "0.0"}
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Minimum price to close auction (optional)
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minBidIncrement">Min Bid Increment (ROSE) *</Label>
+                    <Input
+                      id="minBidIncrement"
+                      type="number"
+                      step="0.001"
+                      min="0.001"
+                      value={form.minBidIncrement}
+                      onChange={(e) => setForm({ ...form, minBidIncrement: e.target.value })}
+                      placeholder="0.001"
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Minimum increase for each bid (min: 0.001 ROSE)
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="duration">Duration</Label>
+                    <Select value={form.duration} onValueChange={(value) => setForm({ ...form, duration: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {durationOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      How long the auction will run
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              {mode === "auction" && (
-                <>
-                  <Separator />
-                  
-                  {/* Auction Settings */}
-                  <div className="space-y-4">
-                    <Label>Auction Settings</Label>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="startingPrice">Starting Price (ROSE) *</Label>
-                        <Input
-                          id="startingPrice"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={form.startingPrice}
-                          onChange={(e) => setForm({ ...form, startingPrice: e.target.value })}
-                          placeholder="0.0"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="reservePrice">Reserve Price (ROSE)</Label>
-                        <Input
-                          id="reservePrice"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={form.reservePrice}
-                          onChange={(e) => setForm({ ...form, reservePrice: e.target.value })}
-                          placeholder="0.0"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="duration">Duration (Hours)</Label>
-                        <Select value={form.duration} onValueChange={(value) => setForm({ ...form, duration: value })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 Hour</SelectItem>
-                            <SelectItem value="3">3 Hours</SelectItem>
-                            <SelectItem value="6">6 Hours</SelectItem>
-                            <SelectItem value="12">12 Hours</SelectItem>
-                            <SelectItem value="24">24 Hours (1 Day)</SelectItem>
-                            <SelectItem value="48">48 Hours (2 Days)</SelectItem>
-                            <SelectItem value="72">72 Hours (3 Days)</SelectItem>
-                            <SelectItem value="168">168 Hours (7 Days)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="minBidIncrement">Min Bid Increment (ROSE)</Label>
-                        <Input
-                          id="minBidIncrement"
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          value={form.minBidIncrement}
-                          onChange={(e) => setForm({ ...form, minBidIncrement: e.target.value })}
-                          placeholder="0.1"
-                        />
-                      </div>
-                    </div>
+              <Separator />
+
+              {/* Fee Information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-blue-800">Fee Information</span>
+                </div>
+                <div className="space-y-2 text-sm text-blue-700">
+                  <div className="flex justify-between">
+                    <span>Platform Fee:</span>
+                    <span>2.5%</span>
                   </div>
-                </>
-              )}
+                  {form.startingPrice && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Est. Platform Fee:</span>
+                        <span>{calculateEstimatedFees().platformFee} ROSE</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Est. Net Amount:</span>
+                        <span>{calculateEstimatedFees().netAmount} ROSE</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Important Notes */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <span className="font-medium text-yellow-800">Important Notes</span>
+                </div>
+                <ul className="space-y-1 text-sm text-yellow-700">
+                  <li>• This is a sealed bid auction - bids are hidden until auction ends</li>
+                  <li>• Bidders must deposit the starting price when placing bids</li>
+                  <li>• Winner pays the full bid amount and gets their deposit back</li>
+                  <li>• NFT(s) will be transferred to auction contract upon creation</li>
+                  <li>• Auction can be extended by 10 minutes if bids are placed near the end</li>
+                </ul>
+              </div>
             </div>
           )}
 
@@ -867,10 +897,13 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
             <div className="h-full overflow-y-auto space-y-6 p-2">
               {/* Summary */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <h3 className="font-semibold">Summary</h3>
+                <h3 className="font-semibold">Auction Summary</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Collection Name:</div>
-                  <div className="font-medium">{form.name}</div>
+                  <div>Auction Title:</div>
+                  <div className="font-medium">{form.title}</div>
+                  
+                  <div>Type:</div>
+                  <div className="font-medium">{mode === "single" ? "Single NFT" : "Collection"} Auction</div>
                   
                   <div>Selected NFTs:</div>
                   <div className="font-medium">{selectedNFTs.size} items</div>
@@ -878,13 +911,19 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                   <div>Contract Address:</div>
                   <div className="font-medium font-mono text-xs">{contractAddress}</div>
                   
-                  <div>Type:</div>
-                  <div className="font-medium">
-                    {mode === "list" ? "Bundle Collection" : "Collection Auction"}
-                  </div>
+                  <div>Starting Price:</div>
+                  <div className="font-medium text-green-600">{form.startingPrice} ROSE</div>
                   
-                  <div>Total Value:</div>
-                  <div className="font-medium text-primary">{getTotalValue()}</div>
+                  <div>Reserve Price:</div>
+                  <div className="font-medium">{form.reservePrice || form.startingPrice} ROSE</div>
+                  
+                  <div>Min Bid Increment:</div>
+                  <div className="font-medium">{form.minBidIncrement} ROSE</div>
+                  
+                  <div>Duration:</div>
+                  <div className="font-medium">
+                    {durationOptions.find(opt => opt.value === form.duration)?.label}
+                  </div>
                 </div>
               </div>
 
@@ -910,20 +949,20 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                 </div>
               </div>
 
-              {/* Progress Steps khi đang process */}
+              {/* Processing Steps */}
               {isLoading && (
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <div className="flex-1">
-                        {processingStep === "approval" && "Requesting NFT approval..."}
-                        {processingStep === "listing" && "Listing collection on marketplace..."}
+                        {processingStep === "approval" && "Checking approvals and creating auction..."}
+                        {processingStep === "creation" && "Creating auction on blockchain..."}
                       </div>
                     </div>
                     <div className="mt-3 text-xs text-muted-foreground">
-                      {processingStep === "approval" && "Please approve the transaction in your wallet"}
-                      {processingStep === "listing" && "Please confirm the listing transaction"}
+                      {processingStep === "approval" && "Please approve transactions in your wallet"}
+                      {processingStep === "creation" && "Please confirm the auction creation transaction"}
                     </div>
                   </CardContent>
                 </Card>
@@ -939,14 +978,14 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                 </Alert>
               )}
 
-              {/* Warning */}
-              <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="font-medium mb-1">Important:</p>
+              {/* Final Warning */}
+              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <p className="font-medium mb-1">Final Warning:</p>
                   <p>
-                    Make sure you have approved the marketplace contract to transfer these NFTs. 
-                    You&apos;ll need to confirm the transaction in your wallet.
+                    Creating this auction will transfer your NFT(s) to the auction contract. 
+                    Make sure all details are correct before proceeding.
                   </p>
                 </div>
               </div>
@@ -954,7 +993,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
           )}
         </div>
 
-        {/* Action Buttons - Fixed at bottom */}
+        {/* Action Buttons */}
         <div className="flex gap-3 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={handleClose} className="flex-1" disabled={isLoading}>
             Cancel
@@ -986,12 +1025,12 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {processingStep === "approval" ? "Approving..." : "Listing..."}
+                    Creating...
                   </>
                 ) : (
                   <>
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    {mode === "list" ? "List Collection" : "Create Auction"}
+                    <Gavel className="w-4 h-4 mr-2" />
+                    Create Auction
                   </>
                 )}
               </Button>

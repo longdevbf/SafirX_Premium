@@ -57,7 +57,7 @@ contract NFTMarket is ReentrancyGuard, Ownable {
     mapping(address => uint256[]) public sellerCollections;                // seller => array collectionIds
     
     // ✅ Events để frontend có thể lắng nghe
-    event NFTListed(
+     event NFTListed(
         uint256 indexed listingId,
         address indexed nftContract,
         uint256 indexed tokenId,

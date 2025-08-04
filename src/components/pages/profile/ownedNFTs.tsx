@@ -17,8 +17,8 @@ interface NFT {
   image: string
   isVerified: boolean
   contractName: string
-  contractAddress: string // Thêm contract address
-  tokenId: string // Thêm token ID
+  contractAddress: string
+  tokenId: string
   transfers: number
   edition?: string
 }
@@ -28,6 +28,8 @@ interface OwnedNFTsProps {
   totalCount: number
   isLoading?: boolean
   error?: string | null
+  // Thêm props cho auction
+  onOpenSingleAuction?: (nft: NFT) => void
 }
 
 // Component để handle NFT image với fallback
@@ -35,7 +37,6 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Kiểm tra nếu là IPFS URL
   const isIPFSUrl = src?.includes('ipfs') || src?.includes('gateway.pinata.cloud');
 
   if (error || !src) {
@@ -71,7 +72,6 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
     );
   }
 
-  // Sử dụng Next.js Image cho local images
   return (
     <Image
       src={src}
@@ -83,11 +83,16 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
   );
 }
 
-export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedNFTsProps) {
+export default function OwnedNFTs({ 
+  nfts, 
+  totalCount, 
+  isLoading, 
+  error, 
+  onOpenSingleAuction 
+}: OwnedNFTsProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  // Thêm state cho sell modal
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
   const [showSellModal, setShowSellModal] = useState(false)
   
@@ -109,7 +114,6 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
   const endIndex = startIndex + ITEMS_PER_PAGE
   const currentNFTs = filteredNFTs.slice(startIndex, endIndex)
 
-  // Reset về trang 1 khi search
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
     setCurrentPage(1)
@@ -117,29 +121,29 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    // Scroll to top when page changes
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Cập nhật handleSell để nhận NFT object thay vì chỉ id
   const handleSell = (nft: NFT) => {
     setSelectedNFT(nft)
     setShowSellModal(true)
   }
 
-  const handleAuction = (nftId: string) => {
-    console.log("Auction NFT:", nftId)
+  // Cập nhật handleAuction để sử dụng callback từ parent
+  const handleAuction = (nft: NFT) => {
+    if (onOpenSingleAuction) {
+      onOpenSingleAuction(nft)
+    } else {
+      console.log("Auction NFT:", nft.id)
+    }
   }
 
-  // Copy to clipboard với error handling
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      // Có thể thêm toast notification ở đây nếu cần
       console.log("Copied to clipboard:", text)
     } catch (err) {
       console.error("Failed to copy:", err)
-      // Fallback method
       const textArea = document.createElement("textarea")
       textArea.value = text
       document.body.appendChild(textArea)
@@ -155,13 +159,11 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
     }
   }
 
-  // Format address for display
   const formatAddress = (address: string) => {
     if (!address || address === 'N/A') return 'N/A'
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pages = []
     const maxVisiblePages = 5
@@ -381,7 +383,7 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
                       className="flex-1"
                       onClick={(e) => {
                         e.preventDefault()
-                        handleSell(nft) // Truyền NFT object thay vì chỉ id
+                        handleSell(nft)
                       }}
                     >
                       <DollarSign className="w-3 h-3 mr-1" />
@@ -393,7 +395,7 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
                       className="flex-1"
                       onClick={(e) => {
                         e.preventDefault()
-                        handleAuction(nft.id)
+                        handleAuction(nft) // Truyền NFT object thay vì chỉ id
                       }}
                     >
                       <Gavel className="w-3 h-3 mr-1" />

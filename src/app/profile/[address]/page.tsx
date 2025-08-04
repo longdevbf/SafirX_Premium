@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, use } from "react"
-import { useUser } from "@/context/userContext" // Sử dụng context
+import { useUser } from "@/context/userContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,7 +12,22 @@ import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import Following from "@/components/pages/profile/following"
 import EditProfileModal from "@/components/pages/profile/editProfileModal"
 import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
+import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
 import { useNFTData } from "@/hooks/use-NFT-data"
+
+// Interface cho NFT
+interface NFT {
+  id: string
+  name: string
+  collection: string
+  image: string
+  isVerified: boolean
+  contractName: string
+  contractAddress: string
+  tokenId: string
+  transfers: number
+  edition?: string
+}
 
 export default function PublicProfilePage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params)
@@ -20,6 +35,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isListCollectionOpen, setIsListCollectionOpen] = useState(false)
   const [isAuctionCollectionOpen, setIsAuctionCollectionOpen] = useState(false)
+  const [isSingleAuctionOpen, setIsSingleAuctionOpen] = useState(false)
+  const [isCollectionAuctionOpen, setIsCollectionAuctionOpen] = useState(false)
+  
+  // Thêm state để lưu NFT được chọn từ card
+  const [selectedNFTForAuction, setSelectedNFTForAuction] = useState<NFT | null>(null)
+  
   const [editForm, setEditForm] = useState({
     name: "",
     tag: "",
@@ -32,6 +53,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
   const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
 
+  // Handler để mở single auction từ NFT card
+  const handleOpenSingleAuction = (nft: NFT) => {
+    console.log("Opening single auction for NFT:", nft) // Debug log
+    setSelectedNFTForAuction(nft)
+    setIsSingleAuctionOpen(true)
+  }
+
   // Tạo user object từ database data với fallback values
   const user = userData ? {
     address: userData.address,
@@ -40,9 +68,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     bio: userData.bio || "NFT enthusiast and collector",
     avatar: userData.avatar || "/placeholder-user.jpg",
     banner: userData.banner || "/images/nft-background.jpg",
-    verified: false, // Có thể thêm field này vào database sau
+    verified: false,
     joined: new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-    website: null, // Có thể thêm field này vào database sau
+    website: null,
     stats: {
       owned: totalCount,
       created: userData.created,
@@ -52,7 +80,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       followers: userData.follower,
     },
   } : {
-    // Fallback cho khi chưa có data
     address: address,
     name: "Loading...",
     username: `@${address.slice(0, 8)}...`,
@@ -72,7 +99,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     },
   }
 
-  // Mock following data (có thể tạo bảng following sau)
+  // Mock following data
   const followingUsers = [
     {
       address: "0x1234567890abcdef1234567890abcdef12345678",
@@ -118,7 +145,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   const copyAddress = () => {
     navigator.clipboard.writeText(user.address)
-    // Có thể thêm toast notification ở đây
     console.log("Address copied to clipboard")
   }
 
@@ -157,11 +183,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       }
 
       console.log("Profile updated successfully!");
-      
-      // Refresh user data - bây giờ sẽ cập nhật global state
       await refreshUser();
       setIsEditModalOpen(false);
-      
       alert("Profile updated successfully!");
 
     } catch (error) {
@@ -196,7 +219,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Profile Banner - Updated to use user data */}
+      {/* Profile Banner */}
       <div className="relative h-[504px] bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
         {user.banner && (
           <div
@@ -209,7 +232,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
             }}
           />
         )}
-        {/* Overlay gradient để text dễ đọc */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         
         <div className="absolute bottom-4 right-4 flex gap-2">
@@ -225,7 +247,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       </div>
 
       <div className="container mx-auto px-4">
-        {/* Profile Info - Updated to use user data */}
+        {/* Profile Info */}
         <div className="relative mb-8 pt-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <Avatar className="w-40 h-40 border-4 border-white shadow-lg bg-white -mt-25">
@@ -277,7 +299,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
           </div>
         </div>
 
-        {/* Stats - Updated to use database data */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
@@ -325,7 +347,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
               <TabsTrigger value="following">Following ({user.stats.following})</TabsTrigger>
             </TabsList>
 
-            {/* Collection Actions - Only show on NFTs tab and when user has NFTs */}
+            {/* Collection Actions */}
             {activeTab === "nfts" && totalCount > 0 && (
               <div className="flex gap-2">
                 <Button 
@@ -340,11 +362,23 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setIsAuctionCollectionOpen(true)}
+                  onClick={() => {
+                    setSelectedNFTForAuction(null) // Reset selected NFT for general auction
+                    setIsSingleAuctionOpen(true)
+                  }}
                   className="flex items-center gap-2"
                 >
                   <Gavel className="w-4 h-4" />
-                  Auction Collection
+                  Single Auction
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsCollectionAuctionOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Gavel className="w-4 h-4" />
+                  Collection Auction
                 </Button>
               </div>
             )}
@@ -356,6 +390,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
               totalCount={totalCount} 
               isLoading={nftLoading}
               error={nftError}
+              onOpenSingleAuction={handleOpenSingleAuction} // ✅ Truyền callback
             />
           </TabsContent>
 
@@ -388,6 +423,25 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         onClose={() => setIsAuctionCollectionOpen(false)}
         nfts={nfts}
         mode="auction"
+      />
+
+      {/* Single NFT Auction Modal */}
+      <CreateAuctionModal
+        isOpen={isSingleAuctionOpen}
+        onClose={() => {
+          setIsSingleAuctionOpen(false)
+          setSelectedNFTForAuction(null) // Reset selected NFT khi đóng modal
+        }}
+        nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts} // ✅ Nếu có NFT được chọn, chỉ hiển thị NFT đó
+        mode="single"
+      />
+
+      {/* Collection Auction Modal */}
+      <CreateAuctionModal
+        isOpen={isCollectionAuctionOpen}
+        onClose={() => setIsCollectionAuctionOpen(false)}
+        nfts={nfts}
+        mode="collection"
       />
     </div>
   )

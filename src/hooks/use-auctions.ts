@@ -1,17 +1,29 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   useReadContract,
   useWriteContract,
   usePublicClient,
 } from "wagmi";
 import { ABI_CONFIG } from "@/components/config/abi_config";
+import { useNFTAuctionApproval } from "./use-approval-auction";
 
 export function useSealedBidAuction() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { 
+    checkSingleNFTApproval, 
+    checkCollectionApproval, 
+    approveCollection,
+    setApprovalForAll,
+    approveNFT
+  } = useNFTAuctionApproval();
 
-  // Create Auction Functions
+  // ✅ Move publicClient call outside of nested functions
+  const client = publicClient;
+
+  // Create Auction Functions with approval check
   const createSingleNFTAuction = async (
     nftContract: string,
     tokenId: number,
@@ -20,9 +32,18 @@ export function useSealedBidAuction() {
     minBidIncrement: number,
     duration: number,
     title: string,
-    description: string
+    description: string,
+    userAddress: string
   ) => {
     try {
+      // Step 1: Check approval status
+      const approvalCheck = await checkSingleNFTApproval(nftContract, tokenId, userAddress);
+      
+      if (!approvalCheck.isApproved) {
+        throw new Error("NFT is not approved for auction contract. Please approve first.");
+      }
+
+      // Step 2: Create auction
       const hash = await writeContractAsync({
         address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
         abi: ABI_CONFIG.sealedBidAuction.abi,
@@ -30,13 +51,13 @@ export function useSealedBidAuction() {
         args: [nftContract, tokenId, startingPrice, reservePrice, minBidIncrement, duration, title, description],
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Create Single NFT Auction Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Create Single NFT Auction Error:", error.message);
       throw error;
     }
   };
@@ -49,9 +70,18 @@ export function useSealedBidAuction() {
     minBidIncrement: number,
     duration: number,
     title: string,
-    description: string
+    description: string,
+    userAddress: string
   ) => {
     try {
+      // Step 1: Check approval status for all NFTs
+      const approvalCheck = await checkCollectionApproval(nftContract, tokenIds, userAddress);
+      
+      if (!approvalCheck.isApproved) {
+        throw new Error("NFTs are not approved for auction contract. Please approve first.");
+      }
+
+      // Step 2: Create collection auction
       const hash = await writeContractAsync({
         address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
         abi: ABI_CONFIG.sealedBidAuction.abi,
@@ -59,13 +89,140 @@ export function useSealedBidAuction() {
         args: [nftContract, tokenIds, startingPrice, reservePrice, minBidIncrement, duration, title, description],
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Create Collection Auction Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Create Collection Auction Error:", error.message);
+      throw error;
+    }
+  };
+
+  // Helper function to create auction with auto-approval
+  const createSingleNFTAuctionWithApproval = async (
+    nftContract: string,
+    tokenId: number,
+    startingPrice: number,
+    reservePrice: number,
+    minBidIncrement: number,
+    duration: number,
+    title: string,
+    description: string,
+    userAddress: string
+  ) => {
+    try {
+      console.log("Create Single NFT Auction with Approval:", {
+        nftContract,
+        tokenId,
+        startingPrice,
+        reservePrice,
+        minBidIncrement,
+        duration,
+        title,
+        description,
+        userAddress
+      });
+
+      // Step 1: Check current approval status
+      const approvalCheck = await checkSingleNFTApproval(nftContract, tokenId, userAddress);
+      
+      // Step 2: Request approval if needed
+      if (approvalCheck.needsApproval) {
+        console.log("NFT not approved, requesting approval...");
+        await approveNFT(nftContract, tokenId);
+        console.log("NFT approved successfully");
+      }
+
+      // Step 3: Create auction
+      const hash = await writeContractAsync({
+        address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
+        abi: ABI_CONFIG.sealedBidAuction.abi,
+        functionName: "createSingleNFTAuction",
+        args: [
+          nftContract as `0x${string}`,
+          BigInt(tokenId),
+          BigInt(startingPrice),
+          BigInt(reservePrice),
+          BigInt(minBidIncrement),
+          BigInt(duration),
+          title,
+          description
+        ],
+      });
+      
+      console.log("Single NFT auction created:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      
+      return { hash, receipt };
+
+    } catch (error: any) {
+      console.error("Create Single NFT Auction with Approval Error:", error);
+      throw error;
+    }
+  };
+
+  const createCollectionAuctionWithApproval = async (
+    nftContract: string,
+    tokenIds: number[],
+    startingPrice: number,
+    reservePrice: number,
+    minBidIncrement: number,
+    duration: number,
+    title: string,
+    description: string,
+    userAddress: string
+  ) => {
+    try {
+      console.log("Create Collection Auction with Approval:", {
+        nftContract,
+        tokenIds,
+        startingPrice,
+        reservePrice,
+        minBidIncrement,
+        duration,
+        title,
+        description,
+        userAddress
+      });
+
+      // Step 1: Check current approval status
+      const approvalCheck = await checkCollectionApproval(nftContract, tokenIds, userAddress);
+      
+      // Step 2: Request approval if needed
+      if (approvalCheck.needsApproval) {
+        console.log("Collection not approved, requesting approval...");
+        await approveCollection(nftContract);
+        console.log("Collection approved successfully");
+      }
+
+      // Step 3: Create collection auction
+      const hash = await writeContractAsync({
+        address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
+        abi: ABI_CONFIG.sealedBidAuction.abi,
+        functionName: "createCollectionAuction",
+        args: [
+          nftContract as `0x${string}`,
+          tokenIds.map(id => BigInt(id)),
+          BigInt(startingPrice),
+          BigInt(reservePrice),
+          BigInt(minBidIncrement),
+          BigInt(duration),
+          title,
+          description
+        ],
+      });
+      
+      console.log("Collection auction created:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      
+      return { hash, receipt };
+
+    } catch (error: any) {
+      console.error("Create Collection Auction with Approval Error:", error);
       throw error;
     }
   };
@@ -81,13 +238,13 @@ export function useSealedBidAuction() {
         value: BigInt(deposit),
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Place Bid Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Place Bid Error:", error.message);
       throw error;
     }
   };
@@ -102,13 +259,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Finalize Auction Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Finalize Auction Error:", error.message);
       throw error;
     }
   };
@@ -122,13 +279,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Cancel Auction Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Cancel Auction Error:", error.message);
       throw error;
     }
   };
@@ -143,13 +300,13 @@ export function useSealedBidAuction() {
         value: BigInt(payment),
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Claim NFT Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Claim NFT Error:", error.message);
       throw error;
     }
   };
@@ -163,13 +320,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Txhash:", hash);
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      console.log("Reclaim NFT Txhash:", hash);
+      const receipt = await client?.waitForTransactionReceipt({ hash });
+      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      console.error("Reclaim NFT Error:", error.message);
       throw error;
     }
   };
@@ -334,10 +491,33 @@ export function useSealedBidAuction() {
     return data;
   };
 
+  // ✅ Get auction details function for modal
+  const getAuctionDetails = async (auctionId: number) => {
+    try {
+      if (!client) {
+        throw new Error("Public client not available")
+      }
+
+      const auction = await client.readContract({
+        address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
+        abi: ABI_CONFIG.sealedBidAuction.abi,
+        functionName: "getAuction",
+        args: [BigInt(auctionId)],
+      })
+
+      return auction
+    } catch (error) {
+      console.error("Error getting auction details:", error)
+      throw error
+    }
+  };
+
   return {
-    // Write functions
+    // Write functions with approval check
     createSingleNFTAuction,
     createCollectionAuction,
+    createSingleNFTAuctionWithApproval,
+    createCollectionAuctionWithApproval,
     placeBid,
     finalizeAuction,
     cancelAuction,
@@ -352,6 +532,7 @@ export function useSealedBidAuction() {
     getAuctionDeposits,
     getAuctionBid,
     getBidderToIndex,
+    getAuctionDetails,
 
     // Constants
     getPlatformFee,
@@ -363,5 +544,9 @@ export function useSealedBidAuction() {
     getMaxBidsPerAuction,
     getMaxCollectionSize,
     getMaxExtensions,
+
+    // Approval utilities
+    checkSingleNFTApproval,
+    checkCollectionApproval,
   };
 }
