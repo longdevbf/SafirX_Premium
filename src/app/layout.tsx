@@ -7,6 +7,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { Providers } from "@/components/provider/provider"
+import { UserProvider } from "@/context/userContext";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,9 +31,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
-          <Header />
-          <main>{children}</main>
-          <Footer />
+          <UserProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </UserProvider>
         </Providers>
       </body>
     </html>

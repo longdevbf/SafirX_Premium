@@ -1,24 +1,25 @@
 "use client"
 
 import { useState, use } from "react"
+import { useUser } from "@/context/userContext" // Sử dụng context
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit } from "lucide-react"
+import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel } from "lucide-react"
 import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import Following from "@/components/pages/profile/following"
-import EditProfile from "@/components/pages/profile/editProfile"
+import EditProfileModal from "@/components/pages/profile/editProfileModal"
+import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import { useNFTData } from "@/hooks/use-NFT-data"
-import { useUserData } from "@/hooks/use-user-data"
 
 export default function PublicProfilePage({ params }: { params: Promise<{ address: string }> }) {
-  // Unwrap the params Promise
   const { address } = use(params)
-  
   const [activeTab, setActiveTab] = useState<"nfts" | "following">("nfts")
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isListCollectionOpen, setIsListCollectionOpen] = useState(false)
+  const [isAuctionCollectionOpen, setIsAuctionCollectionOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     name: "",
     tag: "",
@@ -27,9 +28,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     background: "",
   })
 
-  // Fetch NFT data và User data từ API
+  // Sử dụng context và NFT data
   const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
-  const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUserData(address)
+  const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
 
   // Tạo user object từ database data với fallback values
   const user = userData ? {
@@ -157,16 +158,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
       console.log("Profile updated successfully!");
       
-      // Refresh user data
+      // Refresh user data - bây giờ sẽ cập nhật global state
       await refreshUser();
       setIsEditModalOpen(false);
       
-      // Có thể thêm toast notification ở đây
       alert("Profile updated successfully!");
 
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      alert("Failed to update profile")
     }
   }
 
@@ -228,9 +228,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         {/* Profile Info - Updated to use user data */}
         <div className="relative mb-8 pt-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <Avatar className="w-32 h-32 border-4 border-white shadow-lg bg-white -mt-16">
+            <Avatar className="w-40 h-40 border-4 border-white shadow-lg bg-white -mt-25">
               <AvatarImage src={user.avatar || "/placeholder.svg"} />
-              <AvatarFallback className="text-2xl bg-gray-100">
+              <AvatarFallback className="text-3xl bg-gray-100">
                 {user.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -245,15 +245,16 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
                   <p className="text-muted-foreground mb-2">{user.username}</p>
                   <p className="text-foreground mb-4 max-w-2xl">{user.bio}</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleEditProfile}
-                  className="ml-4"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
+                <div className="flex gap-2 ml-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEditProfile}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -318,10 +319,36 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "nfts" | "following")} className="mb-8">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="nfts">Owned NFTs ({user.stats.owned})</TabsTrigger>
-            <TabsTrigger value="following">Following ({user.stats.following})</TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <TabsList className="grid w-full sm:w-auto grid-cols-2">
+              <TabsTrigger value="nfts">Owned NFTs ({user.stats.owned})</TabsTrigger>
+              <TabsTrigger value="following">Following ({user.stats.following})</TabsTrigger>
+            </TabsList>
+
+            {/* Collection Actions - Only show on NFTs tab and when user has NFTs */}
+            {activeTab === "nfts" && totalCount > 0 && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsListCollectionOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Package className="w-4 h-4" />
+                  List Collection
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsAuctionCollectionOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Gavel className="w-4 h-4" />
+                  Auction Collection
+                </Button>
+              </div>
+            )}
+          </div>
 
           <TabsContent value="nfts">
             <OwnedNFTs 
@@ -339,12 +366,28 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       </div>
 
       {/* Edit Profile Modal */}
-      <EditProfile
+      <EditProfileModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         editForm={editForm}
         setEditForm={setEditForm}
         onSave={handleSaveProfile}
+      />
+
+      {/* List Collection Modal */}
+      <ListCollectionModal
+        isOpen={isListCollectionOpen}
+        onClose={() => setIsListCollectionOpen(false)}
+        nfts={nfts}
+        mode="list"
+      />
+
+      {/* Auction Collection Modal */}
+      <ListCollectionModal
+        isOpen={isAuctionCollectionOpen}
+        onClose={() => setIsAuctionCollectionOpen(false)}
+        nfts={nfts}
+        mode="auction"
       />
     </div>
   )

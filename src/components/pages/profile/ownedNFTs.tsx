@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import SellNFTModal from "@/components/modals/SellNFTModal"
+import SellNFTModal from "@/components/pages/profile/sellNFTModal"
 
 interface NFT {
   id: string

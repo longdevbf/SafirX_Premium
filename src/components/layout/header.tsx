@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConnectWallet } from "@/components/ConnectWallet"
 import { useWallet } from "@/context/walletContext"
+import { useUser } from "@/context/userContext" // Sử dụng context thay vì hook
 
 import {
   Search,
@@ -26,14 +27,15 @@ import {
   Plus,
   LogOut,
   Copy,
-  Heart,
-  Settings,
   User,
 } from "lucide-react"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isConnected, address, disconnect } = useWallet()
+  
+  // Sử dụng context thay vì hook riêng biệt
+  const { user: userData, isLoading: userLoading } = useUser()
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -42,8 +44,18 @@ export default function Header() {
   const copyAddress = () => {
     if (address) {
       navigator.clipboard.writeText(address)
-      // Optional: Add toast notification here
     }
+  }
+
+  // Tạo user object với fallback values
+  const user = userData ? {
+    name: userData.name || "Unnamed User",
+    avatar: userData.avatar || null,
+    username: userData.username || null
+  } : {
+    name: "Loading...",
+    avatar: null,
+    username: null
   }
 
   return (
@@ -127,15 +139,47 @@ export default function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-muted">
-                    {/* Removed dynamic user profile logic; now displaying a default avatar placeholder */}
+                    {/* Avatar từ database */}
                     <Avatar className="h-9 w-9">
+                      {user.avatar ? (
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                      ) : null}
                       <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold">
-                        U
+                        {userLoading ? '...' : user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>
+                  {/* User info trong dropdown */}
+                  <div className="flex items-center gap-3 p-3 border-b">
+                    <Avatar className="h-8 w-8">
+                      {user.avatar ? (
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                      ) : null}
+                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm">
+                        {userLoading ? '...' : user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{user.name}</p>
+                      {user.username && (
+                        <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground font-mono truncate">
+                        {formatAddress(address || '')}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyAddress}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  
                   <DropdownMenuItem asChild>
                     <Link href={`/profile/${address}`} className="flex items-center gap-2 cursor-pointer">
                       <User className="w-4 h-4" />
@@ -170,7 +214,36 @@ export default function Header() {
                 <Input placeholder="Search collections, NFTs..." className="pl-10 pr-4" />
               </div>
               
-              {/* Removed Mobile User Info block */}
+              {/* Mobile User Info */}
+              {isConnected && (
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <Avatar className="h-10 w-10">
+                    {user.avatar ? (
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                    ) : null}
+                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                      {userLoading ? '...' : user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{user.name}</p>
+                    {user.username && (
+                      <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground font-mono truncate">
+                      {formatAddress(address || '')}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyAddress}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
               
               <nav className="flex flex-col space-y-2">
                 <Link
@@ -212,17 +285,27 @@ export default function Header() {
                   <ConnectWallet />
                 </div>
               ) : (
-                <Button 
-                  onClick={() => {
-                    disconnect()
-                    setIsMenuOpen(false)
-                  }} 
-                  variant="outline" 
-                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Disconnect Wallet
-                </Button>
+                <div className="space-y-2">
+                  <Link
+                    href={`/profile/${address}`}
+                    className="flex items-center gap-2 px-2 py-2 text-sm font-medium hover:bg-muted rounded-md w-full"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    View Profile
+                  </Link>
+                  <Button 
+                    onClick={() => {
+                      disconnect()
+                      setIsMenuOpen(false)
+                    }} 
+                    variant="outline" 
+                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Disconnect Wallet
+                  </Button>
+                </div>
               )}
             </div>
           </div>

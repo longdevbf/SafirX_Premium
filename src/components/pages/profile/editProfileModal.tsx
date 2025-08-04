@@ -27,7 +27,7 @@ interface EditProfileProps {
   onSave: () => void
 }
 
-export default function EditProfile({
+export default function EditProfileModal({
   isOpen,
   onClose,
   editForm,
