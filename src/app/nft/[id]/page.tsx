@@ -25,7 +25,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 
-export default function NFTDetailPage({ params }: { params: { id: string } }) {
+export default function NFTDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [isLiked, setIsLiked] = useState(false)
   const [bidAmount, setBidAmount] = useState("")
 
