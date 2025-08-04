@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConnectWallet } from "@/components/ConnectWallet"
 import { useWallet } from "@/context/walletContext"
 import { useUser } from "@/context/userContext" // Sử dụng context thay vì hook
+import { useWalletBalance } from "@/hooks/use-balance"
 
 import {
   Search,
@@ -36,6 +37,9 @@ export default function Header() {
   
   // Sử dụng context thay vì hook riêng biệt
   const { user: userData, isLoading: userLoading } = useUser()
+  
+  // Get wallet balance for connected address
+  const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -169,6 +173,10 @@ export default function Header() {
                       <p className="text-xs text-muted-foreground font-mono truncate">
                         {formatAddress(address || '')}
                       </p>
+                      {/* Hiển thị balance */}
+                      <p className="text-xs text-green-600 font-semibold">
+                        Balance: {balanceLoading ? 'Loading...' : walletBalance}
+                      </p>
                     </div>
                     <Button
                       variant="ghost"
@@ -232,6 +240,10 @@ export default function Header() {
                     )}
                     <p className="text-xs text-muted-foreground font-mono truncate">
                       {formatAddress(address || '')}
+                    </p>
+                    {/* Hiển thị balance trong mobile */}
+                    <p className="text-xs text-green-600 font-semibold">
+                      Balance: {balanceLoading ? 'Loading...' : walletBalance}
                     </p>
                   </div>
                   <Button
