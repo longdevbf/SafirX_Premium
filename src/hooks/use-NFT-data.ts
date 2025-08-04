@@ -55,7 +55,7 @@ export function useNFTData(address: string | undefined) {
       setError(null);
       
       try {
-        const response = await fetch(`https://testnet.nexus.oasis.io/v1/sapphire/accounts/${address}/nfts`);
+        const response = await fetch(`https://testnet.nexus.oasis.io/v1/sapphire/accounts/${address}/nfts??limit=100&offset=0`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch NFTs');
@@ -77,7 +77,7 @@ export function useNFTData(address: string | undefined) {
             image: nft.image,
             isVerified: nft.token.is_verified,
             contractName: nft.token.name,
-            contractAddress: nft.token.contract_addr, // Lấy contract address từ token.contract_addr
+            contractAddress: nft.token.eth_contract_addr, // Lấy contract address từ token.contract_addr
             tokenId: nft.id, // Token ID chính là field id
             transfers: nft.num_transfers,
             edition: editionAttr?.value

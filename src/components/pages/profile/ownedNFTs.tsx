@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import SellNFTModal from "@/components/modals/SellNFTModal"
 
 interface NFT {
   id: string
@@ -35,7 +36,7 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
   const [loading, setLoading] = useState(true);
 
   // Kiểm tra nếu là IPFS URL
-  const isIPFSUrl = src.includes('ipfs') || src.includes('gateway.pinata.cloud');
+  const isIPFSUrl = src?.includes('ipfs') || src?.includes('gateway.pinata.cloud');
 
   if (error || !src) {
     return (
@@ -50,16 +51,23 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
 
   if (isIPFSUrl) {
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={() => setError(true)}
-        onLoad={() => setLoading(false)}
-        style={{
-          display: loading ? 'none' : 'block'
-        }}
-      />
+      <div className="relative w-full h-full">
+        {loading && (
+          <div className={`${className} flex items-center justify-center bg-gray-100 absolute inset-0`}>
+            <div className="text-gray-400 text-sm">Loading...</div>
+          </div>
+        )}
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          onError={() => setError(true)}
+          onLoad={() => setLoading(false)}
+          style={{
+            display: loading ? 'none' : 'block'
+          }}
+        />
+      </div>
     );
   }
 
@@ -79,6 +87,9 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  // Thêm state cho sell modal
+  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
+  const [showSellModal, setShowSellModal] = useState(false)
   
   const ITEMS_PER_PAGE = 20
 
@@ -110,17 +121,38 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleSell = (nftId: string) => {
-    console.log("Sell NFT:", nftId)
+  // Cập nhật handleSell để nhận NFT object thay vì chỉ id
+  const handleSell = (nft: NFT) => {
+    setSelectedNFT(nft)
+    setShowSellModal(true)
   }
 
   const handleAuction = (nftId: string) => {
     console.log("Auction NFT:", nftId)
   }
 
-  // Copy to clipboard
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  // Copy to clipboard với error handling
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      // Có thể thêm toast notification ở đây nếu cần
+      console.log("Copied to clipboard:", text)
+    } catch (err) {
+      console.error("Failed to copy:", err)
+      // Fallback method
+      const textArea = document.createElement("textarea")
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        console.log("Copied to clipboard (fallback):", text)
+      } catch (fallbackErr) {
+        console.error("Fallback copy failed:", fallbackErr)
+      }
+      document.body.removeChild(textArea)
+    }
   }
 
   // Format address for display
@@ -347,7 +379,10 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
                       variant="default"
                       size="sm"
                       className="flex-1"
-                      onClick={() => handleSell(nft.id)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleSell(nft) // Truyền NFT object thay vì chỉ id
+                      }}
                     >
                       <DollarSign className="w-3 h-3 mr-1" />
                       Sell
@@ -356,7 +391,10 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => handleAuction(nft.id)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleAuction(nft.id)
+                      }}
                     >
                       <Gavel className="w-3 h-3 mr-1" />
                       Auction
@@ -412,6 +450,16 @@ export default function OwnedNFTs({ nfts, totalCount, isLoading, error }: OwnedN
           )}
         </>
       )}
+
+      {/* Sell NFT Modal */}
+      <SellNFTModal
+        isOpen={showSellModal}
+        onClose={() => {
+          setShowSellModal(false)
+          setSelectedNFT(null)
+        }}
+        nft={selectedNFT}
+      />
     </div>
   )
 }
