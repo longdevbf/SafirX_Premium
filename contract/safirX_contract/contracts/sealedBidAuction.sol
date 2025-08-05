@@ -66,6 +66,7 @@ contract SealedBidAuction is ReentrancyGuard, Ownable, ERC721Holder {
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
+
     function createSingleNFTAuction(
         address nftContract,
         uint256 tokenId,
