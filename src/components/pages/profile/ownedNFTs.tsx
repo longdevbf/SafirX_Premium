@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink, X } from "lucide-react"
+import { Grid3X3, List, Filter, Search, DollarSign, Gavel, ChevronLeft, ChevronRight, Copy, ExternalLink, Heart, Eye, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import SellNFTModal from "@/components/pages/profile/sellNFTModal"
@@ -28,14 +27,8 @@ interface OwnedNFTsProps {
   totalCount: number
   isLoading?: boolean
   error?: string | null
+  // Thêm props cho auction
   onOpenSingleAuction?: (nft: NFT) => void
-  showTransactionSuccess?: (txHash: string, message: string) => void
-}
-interface SellNFTModalProps {
-  isOpen: boolean
-  onClose: () => void
-  nft: NFT | null
-  showTransactionSuccess?: (txHash: string, message: string) => void
 }
 
 // Component để handle NFT image với fallback
@@ -94,8 +87,7 @@ export default function OwnedNFTs({
   totalCount, 
   isLoading, 
   error, 
-  onOpenSingleAuction,
-  showTransactionSuccess 
+  onOpenSingleAuction 
 }: OwnedNFTsProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchTerm, setSearchTerm] = useState("")
@@ -228,247 +220,290 @@ export default function OwnedNFTs({
 
   return (
     <div className="mt-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Owned NFTs ({totalCount})
+          </h2>
+          {searchTerm && (
+            <p className="text-base text-gray-600">
+              {filteredNFTs.length} NFTs found matching your search
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant={viewMode === "grid" ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setViewMode("grid")}
+            className="hover:shadow-md transition-all duration-300 rounded-xl px-4 py-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+            title="Grid View"
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant={viewMode === "list" ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setViewMode("list")}
+            className="hover:shadow-md transition-all duration-300 rounded-xl px-4 py-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+            title="List View"
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <h2 className="text-2xl font-bold">
-        Owned NFTs ({totalCount})
-        {searchTerm && (
-        <span className="text-lg font-normal text-muted-foreground">
-          {" "}• {filteredNFTs.length} filtered
-        </span>
-        )}
-      </h2>
-
-      <div className="flex items-center gap-2">
         <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input 
-          placeholder="Search by name, collection, token ID, contract..." 
-          className="pl-10 w-80" 
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input 
+            placeholder="Search by name, collection, token ID..." 
+            className="pl-12 rounded-full border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-12 text-base w-80" 
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
         </div>
-        <Button variant="outline" size="sm">
-        <Filter className="w-4 h-4" />
-        </Button>
-        <Button
-        variant={viewMode === "grid" ? "default" : "outline"}
-        size="sm"
-        onClick={() => setViewMode("grid")}
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
         >
-        <Grid3X3 className="w-4 h-4" />
+          <Filter className="w-4 h-4 mr-2" />
+          Filter
         </Button>
-        <Button
-        variant={viewMode === "list" ? "default" : "outline"}
-        size="sm"
-        onClick={() => setViewMode("list")}
-        >
-        <List className="w-4 h-4" />
-        </Button>
-      </div>
       </div>
 
-      {/* Pagination Info */}
-      {filteredNFTs.length > 0 && (
-      <div className="flex justify-between items-center mb-4 text-sm text-muted-foreground">
-        <div>
-        Showing {startIndex + 1}-{Math.min(endIndex, filteredNFTs.length)} of {filteredNFTs.length} NFTs
-        </div>
-        <div>
-        Page {currentPage} of {totalPages}
-        </div>
+      {/* Results Count */}
+      <div className="flex justify-between items-center py-4 mb-6">
+        <p className="text-lg font-medium text-gray-900 flex items-center gap-2">
+          🔎 Showing {filteredNFTs.length > 0 ? `${startIndex + 1}-${Math.min(endIndex, filteredNFTs.length)} of ` : ''}
+          {filteredNFTs.length} results
+        </p>
+        {totalPages > 1 && (
+          <div className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </div>
+        )}
       </div>
-      )}
 
       {filteredNFTs.length === 0 ? (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-muted-foreground">
-        {searchTerm ? "No NFTs found matching your search" : "No NFTs owned"}
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <div className="text-6xl mb-4">🖼️</div>
+          <div className="text-xl font-medium text-gray-900 mb-2">
+            {searchTerm ? "No NFTs found" : "No NFTs owned"}
+          </div>
+          <div className="text-gray-600">
+            {searchTerm ? "Try adjusting your search criteria" : "Start collecting amazing NFTs!"}
+          </div>
         </div>
-      </div>
       ) : (
-      <>
-        <div
-        className={`grid gap-6 ${
-          viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
-        }`}
-        >
-        {currentNFTs.map((nft) => (
-          <Card key={nft.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-          <Link href={`/nft/${nft.id}`}>
-            <div className="aspect-square relative">
-            <NFTImage
-              src={nft.image || "/placeholder.svg"}
-              alt={nft.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-            />
-            <div className="absolute top-3 left-3 flex flex-col gap-2">
-              {nft.isVerified && (
-              <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Verified
-              </Badge>
-              )}
-            </div>
-            {nft.edition && (
-              <div className="absolute top-3 right-3">
-              <Badge variant="secondary" className="text-xs">
-                {nft.edition}
-              </Badge>
-              </div>
-            )}
-            </div>
-          </Link>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-            {nft.collection}
-            {nft.isVerified && <CheckCircle className="w-3 h-3 text-blue-500" />}
-            </div>
-            <h3 className="font-semibold mb-2 truncate">{nft.name}</h3>
-            
-            {/* Token ID and Contract Address */}
-            <div className="space-y-2 mb-3">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Token ID:</span>
-              <div className="flex items-center gap-1">
-              <span className="font-mono">{nft.tokenId}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0"
-                onClick={(e) => {
-                e.preventDefault()
-                copyToClipboard(nft.tokenId)
-                }}
-              >
-                <Copy className="w-3 h-3" />
-              </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Contract:</span>
-              <div className="flex items-center gap-1">
-              <span className="font-mono">{formatAddress(nft.contractAddress)}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0"
-                onClick={(e) => {
-                e.preventDefault()
-                copyToClipboard(nft.contractAddress)
-                }}
-              >
-                <Copy className="w-3 h-3" />
-              </Button>
-              {nft.contractAddress !== 'N/A' && (
-                <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0"
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.open(`https://testnet.explorer.sapphire.oasis.io/address/${nft.contractAddress}`, '_blank')
-                }}
-                >
-                <ExternalLink className="w-3 h-3" />
-                </Button>
-              )}
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Transfers:</span>
-              <span>{nft.transfers}</span>
-            </div>
-            </div>
-
-            <div className="flex gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1"
-              onClick={(e) => {
-              e.preventDefault()
-              handleSell(nft)
-              }}
-            >
-              <DollarSign className="w-3 h-3 mr-1" />
-              Sell
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={(e) => {
-              e.preventDefault()
-              handleAuction(nft)
-              }}
-            >
-              <Gavel className="w-3 h-3 mr-1" />
-              Auction
-            </Button>
-            </div>
-          </CardContent>
-          </Card>
-        ))}
-        </div>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-8">
-          <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
+        <>
+          <div
+            className={`grid gap-6 ${
+              viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
+            }`}
           >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-          </Button>
-
-          <div className="flex gap-1">
-          {getPageNumbers().map((page, index) => (
-            <div key={index}>
-            {page === '...' ? (
-              <span className="px-3 py-2 text-muted-foreground">...</span>
-            ) : (
-              <Button
-              variant={currentPage === page ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePageChange(page as number)}
-              className="w-10 h-10"
+            {currentNFTs.map((nft) => (
+              <Card 
+                key={nft.id} 
+                className="w-full overflow-hidden bg-white shadow-sm hover:shadow-lg border border-gray-100 hover:border-indigo-200 transition-all duration-300 group hover:scale-[1.02] rounded-xl"
               >
-              {page}
-              </Button>
-            )}
-            </div>
-          ))}
+                <Link href={`/nft/${nft.id}`}>
+                  <div className="aspect-square relative overflow-hidden">
+                    <NFTImage
+                      src={nft.image || "/placeholder.svg"}
+                      alt={nft.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 right-3 flex flex-col gap-2">
+                      <div className="bg-white/80 backdrop-blur-sm text-gray-900 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
+                        <Eye className="w-3 h-3" />
+                        {nft.transfers}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white/90 hover:text-red-500 hover:scale-110 w-8 h-8 p-0 rounded-full shadow-sm transition-all duration-300"
+                      >
+                        <Heart className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                      {nft.isVerified && (
+                        <div className="bg-blue-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
+                          <Star className="w-3 h-3 fill-current" />
+                          Verified
+                        </div>
+                      )}
+                    </div>
+                    {nft.edition && (
+                      <div className="absolute bottom-3 left-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs font-medium shadow-sm">
+                        {nft.edition}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                <CardContent className="p-5 bg-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-sm text-gray-500 font-medium">{nft.collection}</div>
+                    {nft.isVerified && <Star className="w-4 h-4 text-blue-500 fill-current" />}
+                  </div>
+                  <h3 className="font-semibold mb-3 truncate text-gray-900 text-base">{nft.name}</h3>
+                  
+                  {/* Token ID and Contract Info */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Token ID:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-gray-700">{nft.tokenId}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            copyToClipboard(nft.tokenId)
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Contract:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-gray-700">{formatAddress(nft.contractAddress)}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            copyToClipboard(nft.contractAddress)
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        {nft.contractAddress !== 'N/A' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              window.open(`https://testnet.explorer.sapphire.oasis.io/address/${nft.contractAddress}`, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Transfers:</span>
+                      <span className="text-gray-700 font-medium">{nft.transfers}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Heart className="w-4 h-4" />
+                      <span className="font-medium">0</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white border-0 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleSell(nft)
+                        }}
+                      >
+                        <DollarSign className="w-3 h-3 mr-1" />
+                        Sell
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white border-0 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleAuction(nft)
+                        }}
+                      >
+                        <Gavel className="w-3 h-3 mr-1" />
+                        Auction
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          >
-          Next
-          <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-        )}
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-10">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+
+              <div className="flex gap-1">
+                {getPageNumbers().map((page, index) => (
+                  <div key={index}>
+                    {page === '...' ? (
+                      <span className="px-3 py-2 text-gray-500">...</span>
+                    ) : (
+                      <Button
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page as number)}
+                        className={`w-10 h-10 ${
+                          currentPage === page 
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                            : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        } transition-all duration-150`}
+                      >
+                        {page}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
       </>
       )}
 
       {/* Sell NFT Modal */}
       <SellNFTModal
-      isOpen={showSellModal}
-      onClose={() => {
-        setShowSellModal(false)
-        setSelectedNFT(null)
-      }}
-      nft={selectedNFT}
-      showTransactionSuccess={showTransactionSuccess}
+        isOpen={showSellModal}
+        onClose={() => {
+          setShowSellModal(false)
+          setSelectedNFT(null)
+        }}
+        nft={selectedNFT}
       />
     </div>
   )
