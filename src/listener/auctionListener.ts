@@ -34,8 +34,8 @@ async function saveToDatabase(data: any) {
             `INSERT INTO auctions (
                 auction_id, seller_address, nft_contract_address, auction_type, token_ids,
                 starting_price, end_time, title, collection_name, image_url, description,
-                nft_individual, status, nft_claimed, nft_reclaimed
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                nft_individual, status, nft_claimed, nft_reclaimed, total_bid
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
             [
                 data.auction_id,
                 data.seller_address,
@@ -43,7 +43,7 @@ async function saveToDatabase(data: any) {
                 data.auction_type,
                 JSON.stringify(data.token_ids),
                 data.starting_price,
-                data.end_time, // Store as Unix timestamp (number)
+                data.end_time,
                 data.title,
                 data.collection_name,
                 data.image_url,
@@ -51,7 +51,8 @@ async function saveToDatabase(data: any) {
                 JSON.stringify(data.nft_individual),
                 data.status,
                 data.nft_claimed,
-                data.nft_reclaimed
+                data.nft_reclaimed,
+                0 // Khởi tạo total_bid là 0
             ]
         );
     } catch (error) {
@@ -86,6 +87,21 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
         );
     } catch (error) {
         console.error(`Lỗi khi cập nhật ${field}:`, error);
+    } finally {
+        client.release();
+    }
+}
+
+// Hàm cập nhật total_bid
+async function incrementTotalBid(auctionId: string, auctionType: string) {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
+            [auctionId, auctionType]
+        );
+    } catch (error) {
+        console.error('Lỗi khi cập nhật total_bid:', error);
     } finally {
         client.release();
     }
@@ -161,7 +177,9 @@ async function main() {
         const timestampNum = Number(timestamp); // Convert BigInt to number
         console.log('BidPlaced:', { auctionIdStr, bidder, amountStr, timestamp: timestampNum });
 
-        // No DB update needed unless you want to track bids separately
+        // Cập nhật total_bid cho cả single và bundle
+        await incrementTotalBid(auctionIdStr, 'single');
+        await incrementTotalBid(auctionIdStr, 'bundle');
     });
 
     // Sự kiện AuctionFinalized
