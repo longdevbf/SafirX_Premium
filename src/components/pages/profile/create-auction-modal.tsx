@@ -53,6 +53,7 @@ interface CreateAuctionModalProps {
   onClose: () => void
   nfts: NFT[]
   mode: "single" | "collection"
+  showTransactionSuccess?: (txHash: string, message: string) => void
 }
 
 interface AuctionForm {
@@ -116,7 +117,7 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
   )
 }
 
-export default function CreateAuctionModal({ isOpen, onClose, nfts, mode }: CreateAuctionModalProps) {
+export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTransactionSuccess }: CreateAuctionModalProps) {
   const { address } = useAccount()
   const { 
     createSingleNFTAuctionWithApproval, 
@@ -377,8 +378,13 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode }: Crea
         )
 
         console.log("Single NFT Auction created successfully!", result)
+        
+        // Show transaction success notification
+        if (showTransactionSuccess && result?.hash) {
+          showTransactionSuccess(result.hash, "Single NFT Auction created successfully!")
+        }
+        
         handleClose()
-        alert("Single NFT Auction created successfully!")
 
       } else {
         // Collection Auction
@@ -400,8 +406,13 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode }: Crea
         )
 
         console.log("Collection Auction created successfully!", result)
+        
+        // Show transaction success notification
+        if (showTransactionSuccess && result?.hash) {
+          showTransactionSuccess(result.hash, "Collection Auction created successfully!")
+        }
+        
         handleClose()
-        alert("Collection Auction created successfully!")
       }
 
     } catch (error: any) {

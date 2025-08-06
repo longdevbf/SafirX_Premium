@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useEffect } from "react"
 import { useUser } from "@/context/userContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel } from "lucide-react"
+import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel, CheckCircle, X } from "lucide-react"
 import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import Following from "@/components/pages/profile/following"
@@ -15,6 +15,84 @@ import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
 import { useNFTData } from "@/hooks/use-NFT-data"
 import { useWalletBalance } from "@/hooks/use-balance"
+
+// Transaction Success Toast Component
+interface TransactionToastProps {
+  isVisible: boolean
+  txHash: string
+  message: string
+  onClose: () => void
+}
+
+const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+  const [progress, setProgress] = useState(100)
+
+  useEffect(() => {
+    if (isVisible) {
+      setProgress(100)
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= 0) {
+            clearInterval(timer)
+            onClose()
+            return 0
+          }
+          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
+        })
+      }, 100)
+
+      return () => clearInterval(timer)
+    }
+  }, [isVisible, onClose])
+
+  if (!isVisible) return null
+
+  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
+            {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+            onClick={() => window.open(explorerUrl, '_blank')}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            View
+          </Button>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Interface cho NFT
 interface NFT {
@@ -50,12 +128,44 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     background: "",
   })
 
+  // Transaction toast state
+  const [transactionToast, setTransactionToast] = useState({
+    isVisible: false,
+    txHash: '',
+    message: ''
+  })
+
   // Sử dụng context và NFT data
   const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
   const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
   
   // Get wallet balance for this address
   const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
+
+  // Show transaction success toast (with optional auto-reload)
+  const showTransactionSuccess = (txHash: string, message: string, autoReload = true) => {
+    setTransactionToast({
+      isVisible: true,
+      txHash,
+      message
+    })
+    
+    // Auto reload page after 7 seconds (5s toast display + 2s delay) - only for blockchain transactions
+    if (autoReload) {
+      setTimeout(() => {
+        window.location.reload()
+      }, 7000)
+    }
+  }
+
+  // Hide transaction toast
+  const hideTransactionToast = () => {
+    setTransactionToast({
+      isVisible: false,
+      txHash: '',
+      message: ''
+    })
+  }
 
   // Handler để mở single auction từ NFT card
   const handleOpenSingleAuction = (nft: NFT) => {
@@ -191,7 +301,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       console.log("Profile updated successfully!");
       await refreshUser();
       setIsEditModalOpen(false);
-      alert("Profile updated successfully!");
+      
+      // Show success notification for profile update (no auto-reload)
+      showTransactionSuccess("profile-update", "Profile updated successfully!", false);
 
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -403,6 +515,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
               isLoading={nftLoading}
               error={nftError}
               onOpenSingleAuction={handleOpenSingleAuction} // ✅ Truyền callback
+              showTransactionSuccess={showTransactionSuccess} // ✅ Pass transaction success callback
             />
           </TabsContent>
 
@@ -427,6 +540,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         onClose={() => setIsListCollectionOpen(false)}
         nfts={nfts}
         mode="list"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
       {/* Auction Collection Modal */}
@@ -435,6 +549,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         onClose={() => setIsAuctionCollectionOpen(false)}
         nfts={nfts}
         mode="auction"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
       {/* Single NFT Auction Modal */}
@@ -446,6 +561,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         }}
         nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts} // ✅ Nếu có NFT được chọn, chỉ hiển thị NFT đó
         mode="single"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
       {/* Collection Auction Modal */}
@@ -454,6 +570,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         onClose={() => setIsCollectionAuctionOpen(false)}
         nfts={nfts}
         mode="collection"
+        showTransactionSuccess={showTransactionSuccess}
+      />
+      
+      {/* Transaction Success Toast */}
+      <TransactionToast
+        isVisible={transactionToast.isVisible}
+        txHash={transactionToast.txHash}
+        message={transactionToast.message}
+        onClose={hideTransactionToast}
       />
     </div>
   )

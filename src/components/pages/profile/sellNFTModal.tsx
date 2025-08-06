@@ -30,9 +30,10 @@ interface SellNFTModalProps {
   isOpen: boolean
   onClose: () => void
   nft: NFT | null
+  showTransactionSuccess?: (txHash: string, message: string) => void
 }
 
-export default function SellNFTModal({ isOpen, onClose, nft }: SellNFTModalProps) {
+export default function SellNFTModal({ isOpen, onClose, nft, showTransactionSuccess }: SellNFTModalProps) {
   const { address } = useAccount()
   const { listSingleNFT, getMarketplaceFee } = useNFTMarketplace()
   const { isApprovedForAll, setApprovalForAll } = useNFTApproval()
@@ -90,17 +91,20 @@ export default function SellNFTModal({ isOpen, onClose, nft }: SellNFTModalProps
       console.log("Listing NFT...")
       
       const priceInWei = parseEther(price)
-      await listSingleNFT(
+      const result = await listSingleNFT(
         nft.contractAddress,
         parseInt(nft.tokenId),
         Number(priceInWei)
       )
 
       console.log("NFT listed successfully!")
-      handleClose()
       
-      // Show success message (you can add toast here)
-      alert("NFT listed successfully!")
+      // Show transaction success notification
+      if (showTransactionSuccess && result?.hash) {
+        showTransactionSuccess(result.hash, "NFT listed successfully!")
+      }
+      
+      handleClose()
 
     } catch (error: any) {
       console.error("Error selling NFT:", error)

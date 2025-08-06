@@ -468,6 +468,7 @@ export default function OwnedNFTs({
         setSelectedNFT(null)
       }}
       nft={selectedNFT}
+      showTransactionSuccess={showTransactionSuccess}
       />
     </div>
   )

@@ -50,6 +50,7 @@ interface ListCollectionModalProps {
   onClose: () => void
   nfts: NFT[]
   mode: "list" | "auction"
+  showTransactionSuccess?: (txHash: string, message: string) => void
 }
 
 interface CollectionForm {
@@ -118,7 +119,7 @@ function NFTImage({ src, alt, className }: { src: string; alt: string; className
   )
 }
 
-export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: ListCollectionModalProps) {
+export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showTransactionSuccess }: ListCollectionModalProps) {
   const { address } = useAccount()
   const { listCollectionBundle } = useNFTMarketplace()
   const { isApprovedForAll, setApprovalForAll } = useNFTApproval()
@@ -367,9 +368,13 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode }: Lis
 
         console.log("Collection bundle listed successfully!", result)
         
+        // Show transaction success notification
+        if (showTransactionSuccess && result?.hash) {
+          showTransactionSuccess(result.hash, "Collection bundle listed successfully!")
+        }
+        
         // Success - close modal
         handleClose()
-        alert("Collection bundle listed successfully!")
 
       } else {
         // TODO: Implement auction logic later
