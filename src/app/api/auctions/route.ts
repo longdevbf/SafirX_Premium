@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         WHERE status = 'active' AND end_time <= $1
       `, [currentTime])
 
-      // Fetch all auctions with time calculations
+      // Fetch all auctions with time calculations and reclaim_nft
       const result = await client.query(`
         SELECT 
           *,
@@ -35,7 +35,22 @@ export async function GET(request: NextRequest) {
               END,
               CONCAT(FLOOR(((end_time - $1) % 3600) / 60), 'm')
             )
-          END as time_left
+          END as time_left,
+          CASE 
+            WHEN reclaim_nft > 0 AND reclaim_nft > $1 THEN CONCAT(
+              CASE 
+                WHEN (reclaim_nft - $1) >= 86400 THEN CONCAT(FLOOR((reclaim_nft - $1) / 86400), 'd ')
+                ELSE ''
+              END,
+              CASE 
+                WHEN (reclaim_nft - $1) >= 3600 THEN CONCAT(FLOOR(((reclaim_nft - $1) % 86400) / 3600), 'h ')
+                ELSE ''
+              END,
+              CONCAT(FLOOR(((reclaim_nft - $1) % 3600) / 60), 'm left to reclaim')
+            )
+            WHEN reclaim_nft > 0 AND reclaim_nft <= $1 THEN 'Reclaim period expired'
+            ELSE NULL
+          END as reclaim_time_left
         FROM auctions 
         ORDER BY 
           CASE status 

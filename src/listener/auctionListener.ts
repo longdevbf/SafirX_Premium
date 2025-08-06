@@ -77,6 +77,27 @@ async function updateAuctionStatus(auctionId: string, auctionType: string, statu
     }
 }
 
+// Hàm cập nhật trạng thái đấu giá và reclaim_nft - THÊM MỚI
+async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string) {
+    const client = await pool.connect();
+    try {
+        // Tính timestamp hiện tại + 3 ngày (3 * 24 * 60 * 60 = 259200 giây)
+        const currentTimestamp = Math.floor(Date.now() / 1000); // Timestamp hiện tại
+        const reclaimTimestamp = currentTimestamp + (3 * 24 * 60 * 60); // Cộng thêm 3 ngày
+        
+        await client.query(
+            `UPDATE auctions SET status = $1, reclaim_nft = $2 WHERE auction_id = $3 AND auction_type = $4`,
+            [status, reclaimTimestamp, auctionId, auctionType]
+        );
+        
+        console.log(`✅ Cập nhật auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp} (${new Date(reclaimTimestamp * 1000).toISOString()})`);
+    } catch (error) {
+        console.error('Lỗi khi cập nhật trạng thái và reclaim_nft:', error);
+    } finally {
+        client.release();
+    }
+}
+
 // Hàm cập nhật trạng thái claim/reclaim
 async function updateClaimStatus(auctionId: string, auctionType: string, field: string, value: boolean) {
     const client = await pool.connect();
@@ -182,14 +203,21 @@ async function main() {
         await incrementTotalBid(auctionIdStr, 'bundle');
     });
 
-    // Sự kiện AuctionFinalized
+    // Sự kiện AuctionFinalized - CẬP NHẬT
     auctionContract.on('AuctionFinalized', async (auctionId, winner, finalPrice, platformFeeAmount, sellerAmount) => {
         const auctionIdStr = auctionId.toString();
         const finalPriceStr = ethers.formatEther(finalPrice); // Convert wei to Ether
-        console.log('AuctionFinalized:', { auctionIdStr, winner, finalPriceStr, platformFeeAmount: ethers.formatEther(platformFeeAmount), sellerAmount: ethers.formatEther(sellerAmount) });
+        console.log('AuctionFinalized:', { 
+            auctionIdStr, 
+            winner, 
+            finalPriceStr, 
+            platformFeeAmount: ethers.formatEther(platformFeeAmount), 
+            sellerAmount: ethers.formatEther(sellerAmount) 
+        });
 
-        await updateAuctionStatus(auctionIdStr, 'single', 'finalized');
-        await updateAuctionStatus(auctionIdStr, 'bundle', 'finalized');
+        // Sử dụng hàm mới để cập nhật cả status và reclaim_nft
+        await updateAuctionStatusWithReclaim(auctionIdStr, 'single', 'finalized');
+        await updateAuctionStatusWithReclaim(auctionIdStr, 'bundle', 'finalized');
     });
 
     // Sự kiện AuctionCancelled

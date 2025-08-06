@@ -290,14 +290,24 @@ export function useSealedBidAuction() {
     }
   };
 
-  const claimNFT = async (auctionId: number, payment: number = 0) => {
+  const claimNFT = async (auctionId: number, highestBid: bigint, startingPrice: bigint) => {
     try {
+      // Tính remainingAmount = highestBid - startingPrice
+      const remainingAmount = highestBid - startingPrice;
+      
+      console.log('Claiming NFT:', {
+        auctionId,
+        highestBid: highestBid.toString(),
+        startingPrice: startingPrice.toString(),
+        remainingAmount: remainingAmount.toString()
+      });
+      
       const hash = await writeContractAsync({
         address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
         abi: ABI_CONFIG.sealedBidAuction.abi,
         functionName: "claimNFT",
         args: [auctionId],
-        value: BigInt(payment),
+        value: remainingAmount, // Truyền remainingAmount thay vì 0
       });
       
       console.log("Claim NFT Txhash:", hash);
@@ -512,6 +522,48 @@ export function useSealedBidAuction() {
     }
   };
 
+  // ✅ Get auction bids using publicClient - CHO BID HISTORY
+  const getAuctionBidsAsync = async (auctionId: number) => {
+    try {
+      if (!client) {
+        throw new Error("Public client not available")
+      }
+
+      const bids = await client.readContract({
+        address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
+        abi: ABI_CONFIG.sealedBidAuction.abi,
+        functionName: "getAuctionBids",
+        args: [BigInt(auctionId)],
+      })
+
+      return bids
+    } catch (error) {
+      console.error("Error getting auction bids:", error)
+      throw error
+    }
+  };
+
+  // ✅ Get auction data using publicClient - CHO CONTRACT DATA
+  const getAuctionAsync = async (auctionId: number) => {
+    try {
+      if (!client) {
+        throw new Error("Public client not available")
+      }
+
+      const auction = await client.readContract({
+        address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
+        abi: ABI_CONFIG.sealedBidAuction.abi,
+        functionName: "auctions",
+        args: [BigInt(auctionId)],
+      })
+
+      return auction
+    } catch (error) {
+      console.error("Error getting auction:", error)
+      throw error
+    }
+  };
+
   return {
     // Write functions with approval check
     createSingleNFTAuction,
@@ -534,6 +586,10 @@ export function useSealedBidAuction() {
     getBidderToIndex,
     getAuctionDetails,
 
+    // Async read functions for publicClient
+    getAuctionAsync,
+    getAuctionBidsAsync,
+
     // Constants
     getPlatformFee,
     getMinBidIncrement,
@@ -550,3 +606,4 @@ export function useSealedBidAuction() {
     checkCollectionApproval,
   };
 }
+//concurrently "next start" "npx tsx src/listener/marketListener.ts" "npx tsx src/listener/auctionListener.ts"

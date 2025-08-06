@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     // Update all expired auctions
     const result = await client.query(`
       UPDATE auctions 
-      SET status = 'ended', updated_at = NOW()
+      SET status = 'ended'
       WHERE status = 'active' AND end_time <= $1
       RETURNING auction_id, title
     `, [currentTime])

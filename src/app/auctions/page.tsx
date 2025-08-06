@@ -54,8 +54,55 @@ interface Auction {
   nft_reclaimed: boolean
   created_at: string
   total_bid: number
+  reclaim_nft: number // THÊM MỚI
+  reclaim_time_left?: string // THÊM MỚI
   timeLeft?: string
   isEnded?: boolean
+}
+
+// Real-time countdown component for reclaim - THÊM MỚI
+interface ReclaimCountdownProps {
+  reclaimTime: number
+  className?: string
+}
+
+const ReclaimCountdown = ({ reclaimTime, className = "" }: ReclaimCountdownProps) => {
+  const [timeLeft, setTimeLeft] = useState('')
+  
+  useEffect(() => {
+    const updateTime = () => {
+      const now = Math.floor(Date.now() / 1000)
+      const timeLeft = reclaimTime - now
+      
+      if (timeLeft <= 0) {
+        setTimeLeft("Reclaim period expired")
+        return
+      }
+      
+      const days = Math.floor(timeLeft / 86400)
+      const hours = Math.floor((timeLeft % 86400) / 3600)
+      const minutes = Math.floor((timeLeft % 3600) / 60)
+      
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m left to reclaim`)
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m left to reclaim`)
+      } else {
+        setTimeLeft(`${minutes}m left to reclaim`)
+      }
+    }
+    
+    updateTime()
+    const timer = setInterval(updateTime, 1000)
+    
+    return () => clearInterval(timer)
+  }, [reclaimTime])
+  
+  return (
+    <div className={className}>
+      {timeLeft}
+    </div>
+  )
 }
 
 // Transaction Success Toast Component
@@ -637,7 +684,7 @@ export default function AuctionsPage() {
             )}
           </TabsContent>
 
-          {/* Finalized Auctions */}
+          {/* Finalized Auctions - CẬP NHẬT */}
           <TabsContent value="finalized" className="space-y-6">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
@@ -645,7 +692,7 @@ export default function AuctionsPage() {
                 <div>
                   <h4 className="font-medium text-green-900 mb-1">Finalized Auctions</h4>
                   <p className="text-sm text-green-700">
-                    These auctions have been completed. Winners can claim their NFTs, and bid history is available.
+                    These auctions have been completed. Winners can claim their NFTs within 3 days, after which creators can reclaim.
                   </p>
                 </div>
               </div>
@@ -667,7 +714,23 @@ export default function AuctionsPage() {
                         Finalized
                       </Badge>
                     </div>
-                    {!auction.nft_claimed && (
+                    
+                    {/* Status Badges - CẬP NHẬT */}
+                    {auction.nft_claimed ? (
+                      <div className="absolute bottom-3 right-3">
+                        <Badge className="bg-blue-100 text-blue-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          NFT Claimed
+                        </Badge>
+                      </div>
+                    ) : auction.nft_reclaimed ? (
+                      <div className="absolute bottom-3 right-3">
+                        <Badge className="bg-orange-100 text-orange-800">
+                          <Clock className="w-3 h-3 mr-1" />
+                          NFT Reclaimed
+                        </Badge>
+                      </div>
+                    ) : auction.reclaim_nft > 0 && (
                       <div className="absolute bottom-3 right-3">
                         <Badge className="bg-yellow-100 text-yellow-800">
                           <Crown className="w-3 h-3 mr-1" />
@@ -675,6 +738,7 @@ export default function AuctionsPage() {
                         </Badge>
                       </div>
                     )}
+                    
                     {isAuctionCreator(auction) && (
                       <div className="absolute top-3 left-3">
                         <Badge className="bg-green-100 text-green-800">
@@ -700,6 +764,16 @@ export default function AuctionsPage() {
                         </div>
                       </div>
 
+                      {/* Reclaim Countdown - THÊM MỚI */}
+                      {auction.reclaim_nft > 0 && !auction.nft_claimed && !auction.nft_reclaimed && (
+                        <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <ReclaimCountdown 
+                            reclaimTime={auction.reclaim_nft}
+                            className="text-xs font-medium text-yellow-700"
+                          />
+                        </div>
+                      )}
+
                       <div className="text-center">
                         <div className="text-sm text-gray-500">
                           Finalized {new Date(auction.created_at).toLocaleDateString()}
@@ -707,26 +781,10 @@ export default function AuctionsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        {!auction.nft_claimed ? (
-                          <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700" asChild>
-                            <Link href={`/auctions/${auction.auction_id}`}>
-                              <Crown className="w-4 h-4 mr-2" />
-                              View Details
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button variant="outline" className="w-full bg-white/80" asChild>
-                            <Link href={`/auctions/${auction.auction_id}`}>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              View Details
-                            </Link>
-                          </Button>
-                        )}
-                        
-                        <Button variant="outline" className="w-full bg-white/80" asChild>
-                          <Link href={`/auctions/${auction.auction_id}/history`}>
-                            <History className="w-4 h-4 mr-2" />
-                            Bid History
+                        <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700" asChild>
+                          <Link href={`/auctions/${auction.auction_id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
                           </Link>
                         </Button>
                       </div>

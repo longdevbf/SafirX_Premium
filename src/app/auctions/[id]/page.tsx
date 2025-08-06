@@ -5,15 +5,14 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   ArrowLeft, 
   ExternalLink, 
   Timer, 
-  DollarSign,
   Package,
   Users,
   Lock,
@@ -25,27 +24,25 @@ import {
   Gavel,
   Clock,
   AlertCircle,
-  Star,
   Info,
   Eye,
-  Calendar,
-  User
+  User,
+  History
 } from "lucide-react"
 import Image from "next/image"
 import { useSealedBidAuction } from "@/hooks/use-auctions"
 import { toast } from "react-hot-toast"
-import { parseEther } from "viem"
+import { parseEther, formatEther } from "viem"
 import { updateExpiredAuctions, calculateTimeLeft, isAuctionEnded } from "@/services/updateExpiredAuction"
 
-// Transaction Success Toast Component (same as marketplace)
+// Transaction Success Toast Component
 interface TransactionToastProps {
   isVisible: boolean
   txHash: string
-  message: string
   onClose: () => void
 }
 
-const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+const TransactionToast = ({ isVisible, txHash, onClose }: TransactionToastProps) => {
   const [progress, setProgress] = useState(100)
 
   useEffect(() => {
@@ -114,7 +111,7 @@ const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionTo
   )
 }
 
-// ENHANCED TYPE DEFINITIONS dựa vào API response mới
+// TYPE DEFINITIONS
 interface ContractInfo {
   address?: string
   eth_address?: string
@@ -170,6 +167,7 @@ interface AuctionDetails {
   created_at: string
   total_bid: number
   nft_count: number
+  reclaim_nft: number
   seller: {
     address: string
     is_verified: boolean
@@ -183,61 +181,211 @@ interface AuctionDetails {
   contract_info: ContractInfo
 }
 
+interface PublicBid {
+  bidder: string
+  amount: bigint
+  timestamp: bigint
+  deposit: bigint
+}
+
 export default function AuctionDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
   const { address, isConnected } = useAccount()
 
+  // State variables
   const [auction, setAuction] = useState<AuctionDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
-  // Bid modal states
+  // Modal states
   const [showBidModal, setShowBidModal] = useState(false)
   const [bidAmount, setBidAmount] = useState('')
+
+  // Loading states
   const [isPlacingBid, setIsPlacingBid] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false)
   const [isClaimingNFT, setIsClaimingNFT] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
+  const [isReclaimingNFT, setIsReclaimingNFT] = useState(false)
 
-  // Transaction toast state
+  // Bid history states
+  const [publicBids, setPublicBids] = useState<PublicBid[]>([])
+  const [loadingBids, setLoadingBids] = useState(false)
+  const [bidError, setBidError] = useState<string | null>(null)
+
+  // Contract data states
+  const [contractAuction, setContractAuction] = useState<any>(null)
+  const [loadingContractData, setLoadingContractData] = useState(false)
+
+  // Toast state
   const [transactionToast, setTransactionToast] = useState({
     isVisible: false,
-    txHash: '',
-    message: ''
+    txHash: ''
   })
 
-  // Blockchain hooks
+  // Time states
+  const [realTimeLeft, setRealTimeLeft] = useState('')
+  const [realReclaimTimeLeft, setRealReclaimTimeLeft] = useState('')
+
+  // State để theo dõi việc đã fetch hay chưa
+  const [contractDataFetched, setContractDataFetched] = useState(false)
+  const [bidHistoryFetched, setBidHistoryFetched] = useState(false)
+
+  // Hook functions
   const {
     placeBid,
     cancelAuction,
     claimNFT,
-    finalizeAuction
+    finalizeAuction,
+    reclaimNFT,
+    getAuctionAsync,
+    getAuctionBidsAsync
   } = useSealedBidAuction()
 
-  // Show transaction success toast
-  const showTransactionSuccess = (txHash: string, message: string) => {
-    setTransactionToast({
-      isVisible: true,
-      txHash,
-      message
-    })
+  // Helper functions
+  const showTransactionSuccess = (txHash: string) => {
+    setTransactionToast({ isVisible: true, txHash })
   }
 
-  // Hide transaction toast
   const hideTransactionToast = () => {
-    setTransactionToast({
-      isVisible: false,
-      txHash: '',
-      message: ''
-    })
+    setTransactionToast({ isVisible: false, txHash: '' })
   }
 
-  // Check if current user is the auction creator
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
+
+  const formatTimestamp = (timestamp: bigint) => {
+    return new Date(Number(timestamp) * 1000).toLocaleString()
+  }
+
   const isAuctionCreator = isConnected && address && auction && 
     address.toLowerCase() === auction.seller_address.toLowerCase()
+
+  const getCurrentNFT = (): NFTEnhanced | null => {
+    if (!auction || !auction.nft_individual || auction.nft_individual.length === 0) {
+      return null
+    }
+    return auction.nft_individual[selectedImageIndex] || auction.nft_individual[0]
+  }
+
+  const getRemainingAmount = (): bigint => {
+    if (!contractAuction || !Array.isArray(contractAuction)) return BigInt(0)
+    
+    try {
+      // contractAuction[14] là highestBid, cần tìm đúng index của startingPrice
+      const highestBidValue = contractAuction[14]
+      
+      // Tìm startingPrice trong array - có thể ở index 5, 6, hoặc khác
+      let startingPriceValue
+      for (let i = 5; i <= 7; i++) {
+        const value = contractAuction[i]
+        if (typeof value === 'bigint' && value > 0 && value < highestBidValue) {
+          console.log(`🔍 Found startingPrice at index ${i}:`, value.toString())
+          startingPriceValue = value
+          break
+        }
+      }
+      
+      // Chỉ convert khi value là number hoặc string số
+      let highestBid = BigInt(0)
+      let startingPrice = BigInt(0)
+      
+      if (typeof highestBidValue === 'bigint') {
+        highestBid = highestBidValue
+      } else if (typeof highestBidValue === 'number' || 
+                 (typeof highestBidValue === 'string' && !isNaN(Number(highestBidValue)))) {
+        highestBid = BigInt(highestBidValue)
+      }
+      
+      if (typeof startingPriceValue === 'bigint') {
+        startingPrice = startingPriceValue
+      } else if (typeof startingPriceValue === 'number' || 
+                 (typeof startingPriceValue === 'string' && !isNaN(Number(startingPriceValue)))) {
+        startingPrice = BigInt(startingPriceValue)
+      }
+      
+      console.log('🔍 getRemainingAmount:', {
+        highestBid: highestBid.toString(),
+        startingPrice: startingPrice.toString(),
+        remaining: (highestBid - startingPrice).toString()
+      })
+      
+      return highestBid > startingPrice ? highestBid - startingPrice : BigInt(0)
+    } catch (error) {
+      console.error('Error calculating remaining amount:', error)
+      return BigInt(0)
+    }
+  }
+
+  const isHighestBidder = (): boolean => {
+    if (!contractAuction || !address) return false
+    
+    try {
+      let winnerAddress
+      
+      // Nếu contract data là array, tìm địa chỉ winner ở index 13
+      if (Array.isArray(contractAuction)) {
+        winnerAddress = contractAuction[13] // highestBidder ở index 13
+      } 
+      // Nếu contract data là object
+      else if (typeof contractAuction === 'object' && contractAuction !== null) {
+        const contractObj = contractAuction as any
+        winnerAddress = contractObj.highestBidder || contractObj[13] || contractObj['13']
+      }
+      
+      return winnerAddress && 
+             typeof winnerAddress === 'string' && 
+             winnerAddress.toLowerCase() === address.toLowerCase()
+    } catch (error) {
+      console.error('Error checking highest bidder:', error)
+      return false
+    }
+  }
+
+  const isReclaimPeriodExpired = (): boolean => {
+    if (!auction || !auction.reclaim_nft) return false
+    const now = Math.floor(Date.now() / 1000)
+    return auction.reclaim_nft <= now
+  }
+
+  // Fetch contract auction data
+  const fetchContractAuctionData = async () => {
+    if (!auction || loadingContractData || contractDataFetched) return
+    
+    try {
+      setLoadingContractData(true)
+      const data = await getAuctionAsync(auction.auction_id)
+      
+      setContractAuction(data)
+      setContractDataFetched(true)
+    } catch (error) {
+      console.error('❌ Error fetching contract auction data:', error)
+    } finally {
+      setLoadingContractData(false)
+    }
+  }
+
+  // Fetch bid history
+  const fetchBidHistory = async () => {
+    if (!auction || auction.status !== 'finalized' || loadingBids || bidHistoryFetched) return
+    
+    try {
+      setLoadingBids(true)
+      setBidError(null)
+      const bids = await getAuctionBidsAsync(auction.auction_id)
+      setPublicBids(bids as PublicBid[] || [])
+      setBidHistoryFetched(true)
+    } catch (error) {
+      setBidError(error instanceof Error ? error.message : 'Failed to fetch bid history')
+      console.error('❌ Fetch bid history error:', error)
+    } finally {
+      setLoadingBids(false)
+    }
+  }
 
   // Fetch auction details
   useEffect(() => {
@@ -248,13 +396,11 @@ export default function AuctionDetailPage() {
       setError(null)
       
       try {
-        // Update expired auctions first
         await updateExpiredAuctions()
         
         const response = await fetch(`/api/auctions/${id}`)
         const data = await response.json()
         if (data.success) {
-          // Client-side validation
           const auctionData = data.data
           if (auctionData.status === 'active' && isAuctionEnded(auctionData.end_time)) {
             auctionData.status = 'ended'
@@ -273,15 +419,34 @@ export default function AuctionDetailPage() {
     }
 
     fetchData()
-    
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
   }, [id])
 
+  // Reset flags khi auction thay đổi
+  useEffect(() => {
+    setContractDataFetched(false)
+    setBidHistoryFetched(false)
+  }, [auction?.auction_id])
+
+  // Fetch contract data when auction finalized
+  useEffect(() => {
+    const shouldFetch = auction && 
+                       auction.status === 'finalized' && 
+                       (!contractDataFetched || !bidHistoryFetched)
+    
+    if (shouldFetch) {
+      // Delay nhỏ để tránh race condition
+      const timer = setTimeout(() => {
+        if (!contractDataFetched) fetchContractAuctionData()
+        if (!bidHistoryFetched) fetchBidHistory()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  })
+
   // Real-time countdown
-  const [realTimeLeft, setRealTimeLeft] = useState('')
-  
   useEffect(() => {
     if (!auction) return
     
@@ -289,13 +454,43 @@ export default function AuctionDetailPage() {
       setRealTimeLeft(calculateTimeLeft(auction.timeline.end_time))
     }
     
-    updateTime() // Initial update
-    const timer = setInterval(updateTime, 1000) // Update every second
-    
+    updateTime()
+    const timer = setInterval(updateTime, 1000)
     return () => clearInterval(timer)
   }, [auction])
 
-  // Handle place bid - SỬA LẠI TIMING (7s total: 5s toast + 2s wait)
+  // Real-time reclaim countdown
+  useEffect(() => {
+    if (!auction || !auction.reclaim_nft || auction.reclaim_nft === 0) return
+    
+    const updateReclaimTime = () => {
+      const now = Math.floor(Date.now() / 1000)
+      const timeLeft = auction.reclaim_nft - now
+      
+      if (timeLeft <= 0) {
+        setRealReclaimTimeLeft("Reclaim period expired")
+        return
+      }
+      
+      const days = Math.floor(timeLeft / 86400)
+      const hours = Math.floor((timeLeft % 86400) / 3600)
+      const minutes = Math.floor((timeLeft % 3600) / 60)
+      
+      if (days > 0) {
+        setRealReclaimTimeLeft(`${days}d ${hours}h ${minutes}m`)
+      } else if (hours > 0) {
+        setRealReclaimTimeLeft(`${hours}h ${minutes}m`)
+      } else {
+        setRealReclaimTimeLeft(`${minutes}m`)
+      }
+    }
+    
+    updateReclaimTime()
+    const timer = setInterval(updateReclaimTime, 1000)
+    return () => clearInterval(timer)
+  }, [auction])
+
+  // Event handlers
   const handlePlaceBid = async () => {
     if (!auction || !isConnected || !bidAmount) {
       toast.error('Please enter a valid bid amount')
@@ -326,11 +521,10 @@ export default function AuctionDetailPage() {
       
       if (result.receipt?.status === 'success') {
         toast.dismiss('place-bid')
-        showTransactionSuccess(result.hash, 'Bid placed successfully!')
+        showTransactionSuccess(result.hash)
         setShowBidModal(false)
         setBidAmount('')
         
-        // Wait total 7 seconds (5s toast + 2s extra) before reload
         setTimeout(() => {
           window.location.reload()
         }, 7000)
@@ -345,7 +539,6 @@ export default function AuctionDetailPage() {
     }
   }
 
-  // Handle cancel auction - SỬA LẠI TIMING
   const handleCancelAuction = async () => {
     if (!auction || !isConnected || !isAuctionCreator) {
       toast.error('You can only cancel your own auctions')
@@ -360,9 +553,8 @@ export default function AuctionDetailPage() {
       
       if (result.receipt?.status === 'success') {
         toast.dismiss('cancel-auction')
-        showTransactionSuccess(result.hash, 'Auction canceled successfully!')
+        showTransactionSuccess(result.hash)
         
-        // Wait total 7 seconds before redirect
         setTimeout(() => {
           router.push('/auctions')
         }, 7000)
@@ -377,7 +569,6 @@ export default function AuctionDetailPage() {
     }
   }
 
-  // Handle finalize auction - SỬA LẠI TIMING
   const handleFinalizeAuction = async () => {
     if (!auction || !isConnected) {
       toast.error('Please connect your wallet first')
@@ -392,9 +583,8 @@ export default function AuctionDetailPage() {
       
       if (result.receipt?.status === 'success') {
         toast.dismiss('finalize-auction')
-        showTransactionSuccess(result.hash, 'Auction finalized successfully!')
+        showTransactionSuccess(result.hash)
         
-        // Wait total 7 seconds before reload
         setTimeout(() => {
           window.location.reload()
         }, 7000)
@@ -409,10 +599,23 @@ export default function AuctionDetailPage() {
     }
   }
 
-  // Handle claim NFT - SỬA LẠI TIMING
   const handleClaimNFT = async () => {
     if (!auction || !isConnected) {
       toast.error('Please connect your wallet first')
+      return
+    }
+
+    if (!contractAuction || !Array.isArray(contractAuction)) {
+      toast.error('Loading auction data from contract...')
+      await fetchContractAuctionData()
+      return
+    }
+
+    // Kiểm tra xem user có phải là highest bidder không
+    const winnerAddress = contractAuction[13] // highestBidder address ở index 13
+    if (!winnerAddress || typeof winnerAddress !== 'string' || 
+        winnerAddress.toLowerCase() !== address?.toLowerCase()) {
+      toast.error('You are not the winner of this auction')
       return
     }
 
@@ -420,13 +623,55 @@ export default function AuctionDetailPage() {
     try {
       toast.loading('Claiming NFT...', { id: 'claim-nft' })
       
-      const result = await claimNFT(auction.auction_id, 0)
+      // Lấy highestBid và startingPrice từ contract an toàn
+      let highestBid = BigInt(0)
+      let startingPrice = BigInt(0)
+      
+      try {
+        const highestBidValue = contractAuction[14] // highestBid ở index 14
+        
+        // Tìm startingPrice - thử các index từ 5-7
+        let startingPriceValue
+        for (let i = 5; i <= 7; i++) {
+          const value = contractAuction[i]
+          if (typeof value === 'bigint' && value > 0 && value < highestBidValue) {
+            startingPriceValue = value
+            console.log(`🔍 Using startingPrice at index ${i}:`, value.toString())
+            break
+          }
+        }
+        
+        if (typeof highestBidValue === 'bigint') {
+          highestBid = highestBidValue
+        } else if (typeof highestBidValue === 'number' || 
+                   (typeof highestBidValue === 'string' && !isNaN(Number(highestBidValue)))) {
+          highestBid = BigInt(highestBidValue)
+        }
+        
+        if (typeof startingPriceValue === 'bigint') {
+          startingPrice = startingPriceValue
+        } else if (typeof startingPriceValue === 'number' || 
+                   (typeof startingPriceValue === 'string' && !isNaN(Number(startingPriceValue)))) {
+          startingPrice = BigInt(startingPriceValue)
+        }
+      } catch (parseError) {
+        console.error('Error parsing bid amounts:', parseError)
+        toast.error('Error reading auction data', { id: 'claim-nft' })
+        return
+      }
+      
+      console.log('Claim NFT data:', {
+        highestBid: highestBid.toString(),
+        startingPrice: startingPrice.toString(),
+        remainingAmount: (highestBid - startingPrice).toString()
+      })
+      
+      const result = await claimNFT(auction.auction_id, highestBid, startingPrice)
       
       if (result.receipt?.status === 'success') {
         toast.dismiss('claim-nft')
-        showTransactionSuccess(result.hash, 'NFT claimed successfully!')
+        showTransactionSuccess(result.hash)
         
-        // Wait total 7 seconds before reload
         setTimeout(() => {
           window.location.reload()
         }, 7000)
@@ -441,32 +686,50 @@ export default function AuctionDetailPage() {
     }
   }
 
-  // Calculate time left - SỬ DỤNG timeline từ API
-  const calculateTimeLeft = (endTime: number) => {
-    const now = Math.floor(Date.now() / 1000)
-    const timeLeft = endTime - now
-    
-    if (timeLeft <= 0) return "Ended"
-    
-    const days = Math.floor(timeLeft / 86400)
-    const hours = Math.floor((timeLeft % 86400) / 3600)
-    const minutes = Math.floor((timeLeft % 3600) / 60)
-    
-    if (days > 0) return `${days}d ${hours}h ${minutes}m`
-    if (hours > 0) return `${hours}h ${minutes}m`
-    return `${minutes}m`
-  }
-
-  // Get current selected NFT - SỬ DỤNG enhanced data từ API
-  const getCurrentNFT = (): NFTEnhanced | null => {
-    if (!auction || !auction.nft_individual || auction.nft_individual.length === 0) {
-      return null
+  const handleReclaimNFT = async () => {
+    if (!auction || !isConnected) {
+      toast.error('Please connect your wallet first')
+      return
     }
-    return auction.nft_individual[selectedImageIndex] || auction.nft_individual[0]
+
+    if (!isAuctionCreator) {
+      toast.error('Only auction creator can reclaim NFT')
+      return
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    if (auction.reclaim_nft > now) {
+      toast.error('Reclaim period has not expired yet')
+      return
+    }
+
+    setIsReclaimingNFT(true)
+    try {
+      toast.loading('Reclaiming NFT...', { id: 'reclaim-nft' })
+      
+      const result = await reclaimNFT(auction.auction_id)
+      
+      if (result.receipt?.status === 'success') {
+        toast.dismiss('reclaim-nft')
+        showTransactionSuccess(result.hash)
+        
+        setTimeout(() => {
+          window.location.reload()
+        }, 7000)
+      } else {
+        toast.error('Transaction failed', { id: 'reclaim-nft' })
+      }
+    } catch (error: any) {
+      console.error('❌ Reclaim NFT error:', error)
+      toast.error(error.message || 'Failed to reclaim NFT', { id: 'reclaim-nft' })
+    } finally {
+      setIsReclaimingNFT(false)
+    }
   }
 
   const currentNFT = getCurrentNFT()
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -487,6 +750,7 @@ export default function AuctionDetailPage() {
     )
   }
 
+  // Error state
   if (error || !auction) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -579,7 +843,7 @@ export default function AuctionDetailPage() {
               </div>
             </Card>
 
-            {/* Bundle Gallery - ENHANCED với dữ liệu mới */}
+            {/* Bundle Gallery */}
             {auction.auction_type === 'bundle' && auction.nft_individual && auction.nft_individual.length > 1 && (
               <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
                 <h4 className="text-lg font-semibold mb-4 text-gray-800">
@@ -618,7 +882,7 @@ export default function AuctionDetailPage() {
               </Card>
             )}
 
-            {/* NFT Details Card - ENHANCED với dữ liệu chi tiết */}
+            {/* NFT Details Card */}
             {currentNFT && (
               <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
                 <h4 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
@@ -650,40 +914,6 @@ export default function AuctionDetailPage() {
                     </div>
                   </div>
 
-                  {/* Creator & Ownership Info */}
-                  {(currentNFT.creator || currentNFT.owner?.eth_address) && (
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <h6 className="font-medium text-gray-800 mb-2 flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        Ownership
-                      </h6>
-                      {currentNFT.creator && (
-                        <div className="text-sm mb-1">
-                          <span className="text-gray-600">Creator: </span>
-                          <span className="font-mono text-xs bg-white px-2 py-1 rounded">
-                            {currentNFT.creator.toString().slice(0, 10)}...{currentNFT.creator.toString().slice(-8)}
-                          </span>
-                        </div>
-                      )}
-                      {currentNFT.owner?.eth_address && (
-                        <div className="text-sm">
-                          <span className="text-gray-600">Owner: </span>
-                          <span className="font-mono text-xs bg-white px-2 py-1 rounded">
-                            {currentNFT.owner.eth_address.slice(0, 10)}...{currentNFT.owner.eth_address.slice(-8)}
-                          </span>
-                        </div>
-                      )}
-                      {currentNFT.created_date && (
-                        <div className="text-sm mt-1">
-                          <span className="text-gray-600">Created: </span>
-                          <span className="text-xs">
-                            {new Date(currentNFT.created_date).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Attributes */}
                   {currentNFT.attributes && currentNFT.attributes.length > 0 && (
                     <div>
@@ -703,32 +933,6 @@ export default function AuctionDetailPage() {
                       )}
                     </div>
                   )}
-
-                  {/* Collection & Contract Info */}
-                  <div className="pt-2 border-t border-gray-100">
-                    <h6 className="font-medium text-gray-800 mb-1">Collection Info</h6>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div>
-                        <span className="font-medium">{currentNFT.collection || auction.collection_name}</span>
-                        {currentNFT.contract?.total_supply && (
-                          <span className="text-xs ml-2">
-                            (Supply: {currentNFT.contract.total_supply})
-                          </span>
-                        )}
-                      </div>
-                      {currentNFT.contract?.address && (
-                        <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                          {currentNFT.contract.address}
-                        </div>
-                      )}
-                      {currentNFT.num_transfers && (
-                        <div className="text-xs text-gray-500">
-                          <Eye className="w-3 h-3 inline mr-1" />
-                          {currentNFT.num_transfers} transfers
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   {/* External Links */}
                   {currentNFT.external_url && (
@@ -888,49 +1092,264 @@ export default function AuctionDetailPage() {
                   </Button>
                 )}
 
-                {auction.status === 'finalized' && !auction.nft_claimed && (
-                  <Button 
-                    onClick={handleClaimNFT} 
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                    disabled={isClaimingNFT || !isConnected}
-                  >
-                    {isClaimingNFT ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Crown className="w-4 h-4 mr-2" />
+                {auction.status === 'finalized' && (
+                  <>
+                    {/* Both NFT claimed and reclaimed are false */}
+                    {!auction.nft_claimed && !auction.nft_reclaimed && (
+                      <>
+                        {/* Claim Button - CHỈ HIỂN THỊ CHO HIGHEST BIDDER */}
+                        {isHighestBidder() ? (
+                          <div className="space-y-2">
+                            <Button 
+                              onClick={handleClaimNFT} 
+                              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                              disabled={isClaimingNFT || !isConnected || loadingContractData}
+                            >
+                              {isClaimingNFT ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Crown className="w-4 h-4 mr-2" />
+                              )}
+                              Claim NFT
+                            </Button>
+                            
+                            {/* Hiển thị remaining amount cần trả */}
+                            {contractAuction && getRemainingAmount() > BigInt(0) && (
+                              <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
+                                <p className="text-xs text-blue-700">
+                                  Additional payment required: <span className="font-semibold">{formatEther(getRemainingAmount())} ROSE</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-full p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-center text-gray-600">
+                              <Info className="w-5 h-5 mr-2" />
+                              <span className="font-medium">Only the highest bidder can claim the NFT</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Reclaim Button - CHỈ CHO AUCTION CREATOR */}
+                        {isAuctionCreator && (
+                          <Button 
+                            onClick={handleReclaimNFT} 
+                            variant="outline"
+                            className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+                            disabled={isReclaimingNFT || !isConnected || !isReclaimPeriodExpired()}
+                          >
+                            {isReclaimingNFT ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Clock className="w-4 h-4 mr-2" />
+                            )}
+                            {isReclaimPeriodExpired() ? 'Reclaim NFT' : `Reclaim in ${realReclaimTimeLeft}`}
+                          </Button>
+                        )}
+                      </>
                     )}
-                    Claim NFT
-                  </Button>
+
+                    {/* NFT has been claimed */}
+                    {auction.nft_claimed && (
+                      <div className="w-full p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-center text-blue-800">
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                          <span className="font-medium">NFT has been claimed by the winner</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* NFT has been reclaimed */}
+                    {auction.nft_reclaimed && (
+                      <div className="w-full p-4 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center justify-center text-orange-800">
+                          <Clock className="w-5 h-5 mr-2" />
+                          <span className="font-medium">NFT has been reclaimed by the creator</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </Card>
 
-            {/* Additional Info Card */}
-            <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
-              <h4 className="text-lg font-semibold mb-4 text-gray-800">Auction Information</h4>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Auction ID:</span>
-                  <span className="font-mono">#{auction.auction_id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Type:</span>
-                  <span className="capitalize">{auction.auction_type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Created:</span>
-                  <span>{new Date(auction.timeline.created_at).toLocaleDateString()}</span>
-                </div>
-                {auction.contract_info?.address && (
-                  <div className="pt-2 border-t border-gray-100">
-                    <span className="text-gray-600 block mb-1">Contract:</span>
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded block">
-                      {auction.contract_info.address}
-                    </span>
+            {/* Winning Bid Info Card */}
+            {auction.status === 'finalized' && contractAuction && (
+              <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+                <h4 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-yellow-600" />
+                  Winning Bid Details
+                </h4>
+                
+                {loadingContractData ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                    <span className="ml-2 text-gray-500">Loading bid details...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-sm">
+                    {contractAuction[13] && contractAuction[13] !== '0x0000000000000000000000000000000000000000' ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Winner:</span>
+                          <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                            {String(contractAuction[13]).slice(0, 10)}...{String(contractAuction[13]).slice(-8)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Winning Bid:</span>
+                          <span className="font-semibold text-green-600">
+                            {contractAuction[14] && (typeof contractAuction[14] === 'bigint' || !isNaN(Number(contractAuction[14]))) 
+                              ? formatEther(typeof contractAuction[14] === 'bigint' ? contractAuction[14] : BigInt(contractAuction[14])) 
+                              : '0'} ROSE
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Starting Price:</span>
+                          <span className="text-gray-900">
+                            {/* Tìm startingPrice từ contract data */}
+                            {(() => {
+                              for (let i = 5; i <= 7; i++) {
+                                const value = contractAuction[i]
+                                if (typeof value === 'bigint' && value > 0 && value < contractAuction[14]) {
+                                  return formatEther(value) + ' ROSE'
+                                }
+                              }
+                              return '0 ROSE'
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Additional Payment:</span>
+                          <span className="font-semibold text-blue-600">
+                            {formatEther(getRemainingAmount())} ROSE
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-500">No winning bid - reserve price not met</p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            </Card>
+              </Card>
+            )}
+
+            {/* BID HISTORY CARD */}
+            {auction.status === 'finalized' && (
+              <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+                <h4 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                  <History className="w-5 h-5 text-purple-600" />
+                  Bid History
+                </h4>
+                
+                {loadingBids ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+                    <span className="ml-2 text-gray-500">Loading bid history...</span>
+                  </div>
+                ) : bidError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-600 text-sm">{bidError}</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setBidHistoryFetched(false)
+                        setBidError(null)
+                        fetchBidHistory()
+                      }}
+                      className="mt-2"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : publicBids.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No bids found for this auction</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-sm text-gray-600 mb-4">
+                      Total bids: {publicBids.length}
+                    </div>
+                    
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {publicBids
+                        .sort((a, b) => Number(b.amount) - Number(a.amount))
+                        .map((bid, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-3 rounded-lg border transition-colors ${
+                            index === 0 
+                              ? 'bg-yellow-50 border-yellow-200'
+                              : 'bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {index === 0 && (
+                                <Crown className="w-4 h-4 text-yellow-600" />
+                              )}
+                              <span className="font-mono text-xs bg-white px-2 py-1 rounded border">
+                                {formatAddress(bid.bidder)}
+                              </span>
+                              {bid.bidder.toLowerCase() === address?.toLowerCase() && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900">
+                                {formatEther(bid.amount)} ROSE
+                              </div>
+                              {index === 0 && (
+                                <div className="text-xs text-yellow-600 font-medium">
+                                  Highest Bid
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTimestamp(bid.timestamp)}
+                            </div>
+                            <div>
+                              Deposit: {formatEther(bid.deposit)} ROSE
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {publicBids.length > 5 && (
+                      <div className="text-center pt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const bidContainer = document.querySelector('.max-h-64');
+                            if (bidContainer) {
+                              bidContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View All {publicBids.length} Bids
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -989,7 +1408,6 @@ export default function AuctionDetailPage() {
       <TransactionToast
         isVisible={transactionToast.isVisible}
         txHash={transactionToast.txHash}
-        message={transactionToast.message}
         onClose={hideTransactionToast}
       />
     </div>
