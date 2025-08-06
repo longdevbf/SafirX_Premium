@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useEffect } from "react"
 import { useUser } from "@/context/userContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel } from "lucide-react"
+import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel, CheckCircle, X } from "lucide-react"
 import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import Following from "@/components/pages/profile/following"
@@ -15,6 +15,84 @@ import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
 import { useNFTData } from "@/hooks/use-NFT-data"
 import { useWalletBalance } from "@/hooks/use-balance"
+
+// Transaction Success Toast Component
+interface TransactionToastProps {
+  isVisible: boolean
+  txHash: string
+  message: string
+  onClose: () => void
+}
+
+const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+  const [progress, setProgress] = useState(100)
+
+  useEffect(() => {
+    if (isVisible) {
+      setProgress(100)
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= 0) {
+            clearInterval(timer)
+            onClose()
+            return 0
+          }
+          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
+        })
+      }, 100)
+
+      return () => clearInterval(timer)
+    }
+  }, [isVisible, onClose])
+
+  if (!isVisible) return null
+
+  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
+            {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+            onClick={() => window.open(explorerUrl, '_blank')}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            View
+          </Button>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Interface cho NFT
 interface NFT {
@@ -50,12 +128,44 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     background: "",
   })
 
+  // Transaction toast state
+  const [transactionToast, setTransactionToast] = useState({
+    isVisible: false,
+    txHash: '',
+    message: ''
+  })
+
   // Sử dụng context và NFT data
   const { nfts, totalCount, isLoading: nftLoading, error: nftError } = useNFTData(address)
   const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
   
   // Get wallet balance for this address
-  const { formatted: walletBalance } = useWalletBalance(address)
+  const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
+
+  // Show transaction success toast (with optional auto-reload)
+  const showTransactionSuccess = (txHash: string, message: string, autoReload = true) => {
+    setTransactionToast({
+      isVisible: true,
+      txHash,
+      message
+    })
+    
+    // Auto reload page after 7 seconds (5s toast display + 2s delay) - only for blockchain transactions
+    if (autoReload) {
+      setTimeout(() => {
+        window.location.reload()
+      }, 7000)
+    }
+  }
+
+  // Hide transaction toast
+  const hideTransactionToast = () => {
+    setTransactionToast({
+      isVisible: false,
+      txHash: '',
+      message: ''
+    })
+  }
 
   // Handler để mở single auction từ NFT card
   const handleOpenSingleAuction = (nft: NFT) => {
@@ -191,7 +301,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       console.log("Profile updated successfully!");
       await refreshUser();
       setIsEditModalOpen(false);
-      alert("Profile updated successfully!");
+      
+      // Show success notification for profile update (no auto-reload)
+      showTransactionSuccess("profile-update", "Profile updated successfully!", false);
 
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -202,10 +314,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   // Loading state
   if (userLoading || nftLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="h-6 w-6 animate-spin border-2 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     )
@@ -214,241 +326,206 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   // Error state
   if (userError) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">Error loading profile: {userError}</p>
-          <Button 
-            onClick={() => window.location.reload()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            Try Again
-          </Button>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Banner Section */}
-      <div className="relative h-[400px] overflow-hidden">
-        {user.banner ? (
+    <div className="min-h-screen bg-background">
+      {/* Profile Banner */}
+      <div className="relative h-[504px] bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
+        {user.banner && (
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: `url('${user.banner}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center center',
+              backgroundRepeat: 'no-repeat'
             }}
           />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-blue-500" />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         
-        {/* Action Buttons */}
-        <div className="absolute bottom-6 right-6 flex gap-3">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
-          >
+        <div className="absolute bottom-4 right-4 flex gap-2">
+          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
-          >
+          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
             <Flag className="w-4 h-4 mr-2" />
             Report
           </Button>
         </div>
       </div>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8">
-        {/* Profile Section */}
-        <div className="relative -mt-16 pb-8">
-          <div className="flex flex-col items-start gap-6">
-            {/* Avatar */}
-            <Avatar className="w-32 h-32 border-[5px] border-white shadow-md bg-white relative z-10">
+      <div className="container mx-auto px-4">
+        {/* Profile Info */}
+        <div className="relative mb-8 pt-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <Avatar className="w-40 h-40 border-4 border-white shadow-lg bg-white -mt-25">
               <AvatarImage src={user.avatar || "/placeholder.svg"} />
-              <AvatarFallback className="text-2xl bg-gray-100 text-gray-600">
+              <AvatarFallback className="text-3xl bg-gray-100">
                 {user.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
 
-            {/* User Info - Below Avatar */}
-            <div className="w-full">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 w-full">
+            <div className="flex-1">
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                    {user.verified && (
-                      <div className="flex items-center" title="Verified">
-                        <Star className="w-6 h-6 text-sky-500 fill-current" />
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <h1 className="text-3xl font-bold text-foreground">{user.name}</h1>
+                    {user.verified && <Star className="w-6 h-6 text-blue-500 fill-current" />}
                   </div>
-                  <p className="text-gray-500 font-mono mb-3">{user.username}</p>
-                  <p className="text-gray-700 leading-relaxed max-w-3xl">{user.bio}</p>
+                  <p className="text-muted-foreground mb-2">{user.username}</p>
+                  <p className="text-foreground mb-4 max-w-2xl">{user.bio}</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleEditProfile}
-                  className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150 self-start"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
+                <div className="flex gap-2 ml-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEditProfile}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* User Details Strip */}
-          <div className="mt-6 flex flex-wrap gap-6 items-center text-sm text-gray-600 w-full">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4" />
-              <span className="font-mono">{user.address.slice(0, 8)}...{user.address.slice(-6)}</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={copyAddress}
-                className="h-6 w-6 p-0 hover:bg-gray-100"
-                aria-label="Copy address"
-              >
-                <Copy className="w-3 h-3" />
-              </Button>
-            </div>
-            {user.website && (
-              <Link 
-                href={user.website} 
-                className="flex items-center gap-2 hover:text-gray-900 transition-colors duration-150"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Website
-              </Link>
-            )}
-            <div className="flex items-center gap-2">
-              <span>📅</span>
-              <span>Joined {user.joined}</span>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Wallet className="w-4 h-4" />
+                  <span className="font-mono">{user.address}</span>
+                  <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0">
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+                <span>Joined {user.joined}</span>
+                {user.website && (
+                  <Link href={user.website} className="flex items-center gap-1 hover:text-foreground">
+                    <ExternalLink className="w-4 h-4" />
+                    Website
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8 w-full">
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.owned}</div>
-              <div className="text-sm text-gray-500">Owned</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.owned}</div>
+              <div className="text-sm text-muted-foreground">Owned</div>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.created}</div>
-              <div className="text-sm text-gray-500">Created</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.created}</div>
+              <div className="text-sm text-muted-foreground">Created</div>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.sold}</div>
-              <div className="text-sm text-gray-500">Sold</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.sold}</div>
+              <div className="text-sm text-muted-foreground">Sold</div>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.totalVolume}</div>
-              <div className="text-sm text-gray-500">Total Volume</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.totalVolume}</div>
+              <div className="text-sm text-muted-foreground">Total Volume</div>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.walletBalance}</div>
-              <div className="text-sm text-gray-500">Wallet</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.walletBalance}</div>
+              <div className="text-sm text-muted-foreground">Wallet Balance</div>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-md hover:scale-[1.02] transition-all duration-150 border-gray-200">
+          <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{user.stats.followers}</div>
-              <div className="text-sm text-gray-500">Followers</div>
+              <div className="text-2xl font-bold text-primary">{user.stats.following}</div>
+              <div className="text-sm text-muted-foreground">Following</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{user.stats.followers}</div>
+              <div className="text-sm text-muted-foreground">Followers</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs Navigation */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "nfts" | "following")} className="mb-8 w-full">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full">
-            <TabsList className="bg-gray-100 p-1 rounded-lg">
-              <TabsTrigger 
-                value="nfts" 
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 data-[state=active]:shadow-sm"
-              >
-                Owned NFTs ({user.stats.owned})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="following"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 data-[state=active]:shadow-sm"
-              >
-                Following ({user.stats.following})
-              </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "nfts" | "following")} className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <TabsList className="grid w-full sm:w-auto grid-cols-2">
+              <TabsTrigger value="nfts">Owned NFTs ({user.stats.owned})</TabsTrigger>
+              <TabsTrigger value="following">Following ({user.stats.following})</TabsTrigger>
             </TabsList>
 
             {/* Collection Actions */}
             {activeTab === "nfts" && totalCount > 0 && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => setIsListCollectionOpen(true)}
-                  className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
+                  className="flex items-center gap-2"
                 >
-                  <Package className="w-4 h-4 mr-2" />
+                  <Package className="w-4 h-4" />
                   List Collection
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    setSelectedNFTForAuction(null)
+                    setSelectedNFTForAuction(null) // Reset selected NFT for general auction
                     setIsSingleAuctionOpen(true)
                   }}
-                  className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
+                  className="flex items-center gap-2"
                 >
-                  <Gavel className="w-4 h-4 mr-2" />
+                  <Gavel className="w-4 h-4" />
                   Single Auction
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => setIsCollectionAuctionOpen(true)}
-                  className="border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all duration-150"
+                  className="flex items-center gap-2"
                 >
-                  <Gavel className="w-4 h-4 mr-2" />
+                  <Gavel className="w-4 h-4" />
                   Collection Auction
                 </Button>
               </div>
             )}
           </div>
 
-          <TabsContent value="nfts" className="w-full">
+          <TabsContent value="nfts">
             <OwnedNFTs 
               nfts={nfts} 
               totalCount={totalCount} 
               isLoading={nftLoading}
               error={nftError}
-              onOpenSingleAuction={handleOpenSingleAuction}
+              onOpenSingleAuction={handleOpenSingleAuction} // ✅ Truyền callback
+              showTransactionSuccess={showTransactionSuccess} // ✅ Pass transaction success callback
             />
           </TabsContent>
 
-          <TabsContent value="following" className="w-full">
+          <TabsContent value="following">
             <Following followingUsers={followingUsers} totalCount={user.stats.following} />
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Modals */}
+      {/* Edit Profile Modal */}
       <EditProfileModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -457,35 +534,51 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         onSave={handleSaveProfile}
       />
 
+      {/* List Collection Modal */}
       <ListCollectionModal
         isOpen={isListCollectionOpen}
         onClose={() => setIsListCollectionOpen(false)}
         nfts={nfts}
         mode="list"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
+      {/* Auction Collection Modal */}
       <ListCollectionModal
         isOpen={isAuctionCollectionOpen}
         onClose={() => setIsAuctionCollectionOpen(false)}
         nfts={nfts}
         mode="auction"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
+      {/* Single NFT Auction Modal */}
       <CreateAuctionModal
         isOpen={isSingleAuctionOpen}
         onClose={() => {
           setIsSingleAuctionOpen(false)
-          setSelectedNFTForAuction(null)
+          setSelectedNFTForAuction(null) // Reset selected NFT khi đóng modal
         }}
-        nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts}
+        nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts} // ✅ Nếu có NFT được chọn, chỉ hiển thị NFT đó
         mode="single"
+        showTransactionSuccess={showTransactionSuccess}
       />
 
+      {/* Collection Auction Modal */}
       <CreateAuctionModal
         isOpen={isCollectionAuctionOpen}
         onClose={() => setIsCollectionAuctionOpen(false)}
         nfts={nfts}
         mode="collection"
+        showTransactionSuccess={showTransactionSuccess}
+      />
+      
+      {/* Transaction Success Toast */}
+      <TransactionToast
+        isVisible={transactionToast.isVisible}
+        txHash={transactionToast.txHash}
+        message={transactionToast.message}
+        onClose={hideTransactionToast}
       />
     </div>
   )
