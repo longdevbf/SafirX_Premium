@@ -10,32 +10,89 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
-<<<<<<< HEAD
-import { Search, Filter, Grid3X3, List, Heart, Clock, Eye, Star, Package, RefreshCw, Edit, X, DollarSign } from "lucide-react"
-=======
-import { 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  Heart, 
-  Clock, 
-  Eye, 
-  Star, 
-  ChevronDown,
-  ArrowDown,
-  Sparkles,
-  Crown,
-  Gem,
-  Shield,
-  Award,
-  Zap
-} from "lucide-react"
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
+import { Search, Filter, Grid3X3, List, Heart, Clock, Eye, Star, Package, RefreshCw, Edit, X, DollarSign, ChevronLeft, ChevronRight, ExternalLink, CheckCircle, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { MarketplaceNFT } from "@/types/marketplace"
 import { fetchMarketplaceListings, getCollections, MarketplaceFilters } from "@/services/marketplace"
+
+// Transaction Success Toast Component
+interface TransactionToastProps {
+  isVisible: boolean
+  txHash: string
+  message: string
+  onClose: () => void
+}
+
+const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+  const [progress, setProgress] = useState(100)
+
+  useEffect(() => {
+    if (isVisible) {
+      setProgress(100)
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= 0) {
+            clearInterval(timer)
+            onClose()
+            return 0
+          }
+          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
+        })
+      }, 100)
+
+      return () => clearInterval(timer)
+    }
+  }, [isVisible, onClose])
+
+  if (!isVisible) return null
+
+  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
+            {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+            onClick={() => window.open(explorerUrl, '_blank')}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            View
+          </Button>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function MarketplacePage() {
   const { address, isConnected } = useAccount()
@@ -53,6 +110,13 @@ export default function MarketplacePage() {
   })
   const [rosePrice, setRosePrice] = useState<number | null>(null)
   
+  // Transaction toast state
+  const [transactionToast, setTransactionToast] = useState({
+    isVisible: false,
+    txHash: '',
+    message: ''
+  })
+  
   // Filter states
   const [filters, setFilters] = useState<MarketplaceFilters>({
     page: 1,
@@ -64,7 +128,24 @@ export default function MarketplacePage() {
   const [selectedCollections, setSelectedCollections] = useState<string[]>([])
   const [selectedListingTypes, setSelectedListingTypes] = useState<string[]>([])
 
-<<<<<<< HEAD
+  // Show transaction success toast
+  const showTransactionSuccess = (txHash: string, message: string) => {
+    setTransactionToast({
+      isVisible: true,
+      txHash,
+      message
+    })
+  }
+
+  // Hide transaction toast
+  const hideTransactionToast = () => {
+    setTransactionToast({
+      isVisible: false,
+      txHash: '',
+      message: ''
+    })
+  }
+
   // Check if user is owner of NFT
   const isOwner = (nft: MarketplaceNFT) => {
     return isConnected && address && address.toLowerCase() === nft.seller_address?.toLowerCase()
@@ -76,10 +157,23 @@ export default function MarketplacePage() {
     setError(null)
     
     try {
-      const response = await fetchMarketplaceListings(newFilters)
+      // Ensure we always have limit = 20 for consistent pagination
+      const filtersWithLimit = {
+        ...newFilters,
+        limit: 20
+      }
+      
+      console.log('🔄 Fetching data with filters:', filtersWithLimit)
+      
+      const response = await fetchMarketplaceListings(filtersWithLimit)
       setNfts(response.data)
       setPagination(response.pagination)
       setRosePrice(response.rose_price_usd)
+      
+      console.log('✅ Fetched data:', {
+        nfts: response.data.length,
+        pagination: response.pagination
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch marketplace data')
       console.error('❌ Error:', err)
@@ -109,6 +203,7 @@ export default function MarketplacePage() {
     const newFilters: MarketplaceFilters = {
       ...filters,
       page: 1, // Reset to first page when filtering
+      limit: 20, // Ensure 20 items per page
       search: searchTerm || undefined,
       minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
       maxPrice: priceRange[1] < 1000 ? priceRange[1] : undefined,
@@ -116,194 +211,115 @@ export default function MarketplacePage() {
       listingType: selectedListingTypes.length === 1 ? selectedListingTypes[0] as 'single' | 'bundle' : undefined
     }
     
+    console.log('🔍 Applying filters:', newFilters)
     setFilters(newFilters)
     fetchData(newFilters)
   }
 
   // Handle sort change
   const handleSortChange = (value: string) => {
-    const newFilters = { ...filters, sortBy: value as any, page: 1 }
+    const newFilters = { 
+      ...filters, 
+      sortBy: value as any, 
+      page: 1, // Reset to first page when sorting
+      limit: 20 
+    }
     setFilters(newFilters)
     fetchData(newFilters)
   }
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    const newFilters = { ...filters, page }
+    // Validate page number
+    if (page < 1 || page > pagination.total_pages) {
+      console.warn('❌ Invalid page number:', page)
+      return
+    }
+    
+    const newFilters = { 
+      ...filters, 
+      page,
+      limit: 20 
+    }
+    
+    console.log('📄 Changing to page:', page)
     setFilters(newFilters)
     fetchData(newFilters)
+    
+    // Scroll to top when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-=======
-  const nfts = [
-    {
-      id: 1,
-      name: "Cosmic Ape #1234",
-      collection: "Cosmic Apes",
-      image: "/assets/cosmic_ape.jpeg",
-      price: "3.2 ETH",
-      usdPrice: "$6,240",
-      lastSale: "2.8 ETH",
-      timeLeft: "2h 15m",
-      isAuction: true,
-      views: 1234,
-      likes: 89,
-      verified: true,
-      rarity: "Rare",
-    },
-    {
-      id: 2,
-      name: "Dream Walker #567",
-      collection: "Digital Dreams",
-      image: "/assets/digital_dream.jpg",
-      price: "2.1 ETH",
-      usdPrice: "$4,095",
-      lastSale: "1.9 ETH",
-      timeLeft: null,
-      isAuction: false,
-      views: 892,
-      likes: 156,
-      verified: true,
-      rarity: "Common",
-    },
-    {
-      id: 3,
-      name: "Pixel Warrior #890",
-      collection: "Pixel Warriors",
-      image: "/assets/pixel_warrior.png",
-      price: "1.5 ETH",
-      usdPrice: "$2,925",
-      lastSale: "1.2 ETH",
-      timeLeft: "5h 42m",
-      isAuction: true,
-      views: 567,
-      likes: 234,
-      verified: false,
-      rarity: "Epic",
-    },
-    {
-      id: 4,
-      name: "Cosmic Ape #5678",
-      collection: "Cosmic Apes",
-      image: "/assets/cosmic_apesss.webp",
-      price: "4.1 ETH",
-      usdPrice: "$7,995",
-      lastSale: "3.5 ETH",
-      timeLeft: null,
-      isAuction: false,
-      views: 2341,
-      likes: 445,
-      verified: true,
-      rarity: "Legendary",
-    },
-    {
-      id: 5,
-      name: "Cyber Dog #123",
-      collection: "Cyber Dogs",
-      image: "/assets/dog_pixel.jpeg",
-      price: "0.8 ETH",
-      usdPrice: "$1,560",
-      lastSale: "0.6 ETH",
-      timeLeft: "1d 3h",
-      isAuction: true,
-      views: 445,
-      likes: 67,
-      verified: true,
-      rarity: "Uncommon",
-    },
-    {
-      id: 6,
-      name: "Pixel King #456",
-      collection: "Pixel Collection",
-      image: "/assets/pixel_king.png",
-      price: "5.2 ETH",
-      usdPrice: "$10,140",
-      lastSale: "4.8 ETH",
-      timeLeft: null,
-      isAuction: false,
-      views: 1567,
-      likes: 289,
-      verified: false,
-      rarity: "Mythic",
-    },
-    {
-      id: 7,
-      name: "Dream Walker #999",
-      collection: "Digital Dreams",
-      image: "/assets/dream_walker.jpg",
-      price: "12.5 ETH",
-      usdPrice: "$24,375",
-      lastSale: "11.8 ETH",
-      timeLeft: "3h 15m",
-      isAuction: true,
-      views: 3456,
-      likes: 567,
-      verified: true,
-      rarity: "Legendary",
-    },
-    {
-      id: 8,
-      name: "Space Monkey #777",
-      collection: "Space Monkeys",
-      image: "/assets/monkey1.jpeg",
-      price: "2.8 ETH",
-      usdPrice: "$5,460",
-      lastSale: "2.5 ETH",
-      timeLeft: null,
-      isAuction: false,
-      views: 1890,
-      likes: 234,
-      verified: true,
-      rarity: "Rare",
-    },
-  ]
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = []
+    const totalPages = pagination.total_pages
+    const currentPage = pagination.current_page
+    
+    if (totalPages <= 7) {
+      // Show all pages if 7 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Always show first page
+      pages.push(1)
+      
+      if (currentPage > 4) {
+        pages.push('...')
+      }
+      
+      // Show pages around current page
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+      
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) {
+          pages.push(i)
+        }
+      }
+      
+      if (currentPage < totalPages - 3) {
+        pages.push('...')
+      }
+      
+      // Always show last page
+      if (!pages.includes(totalPages)) {
+        pages.push(totalPages)
+      }
+    }
+    
+    return pages
+  }
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case "Common":
-        return "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800"
+        return "bg-gray-100 text-gray-800 border-gray-200"
       case "Uncommon":
-        return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
+        return "bg-green-100 text-green-800 border-green-200"
       case "Rare":
-        return "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800"
+        return "bg-blue-100 text-blue-800 border-blue-200"
       case "Epic":
-        return "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800"
+        return "bg-purple-100 text-purple-800 border-purple-200"
       case "Legendary":
-        return "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800"
+        return "bg-orange-100 text-orange-800 border-orange-200"
       case "Mythic":
-        return "bg-gradient-to-r from-red-100 to-red-200 text-red-800"
+        return "bg-red-100 text-red-800 border-red-200"
       default:
-        return "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800"
-    }
-  }
-
-  const getRarityIcon = (rarity: string) => {
-    switch (rarity) {
-      case "Common":
-        return <Shield className="w-3 h-3" />
-      case "Uncommon":
-        return <Sparkles className="w-3 h-3" />
-      case "Rare":
-        return <Gem className="w-3 h-3" />
-      case "Epic":
-        return <Crown className="w-3 h-3" />
-      case "Legendary":
-        return <Award className="w-3 h-3" />
-      case "Mythic":
-        return <Zap className="w-3 h-3" />
-      default:
-        return <Shield className="w-3 h-3" />
+        return "bg-gray-100 text-gray-800 border-gray-200"
     }
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 max-w-md mx-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
+        <Card className="p-8 max-w-md mx-4 border-red-200 bg-red-50">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-4">Error Loading Marketplace</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => fetchData()} className="gap-2">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-4 text-red-800">Error Loading Marketplace</h2>
+            <p className="text-red-600 mb-6">{error}</p>
+            <Button onClick={() => fetchData()} className="gap-2 bg-red-600 hover:bg-red-700">
               <RefreshCw className="w-4 h-4" />
               Try Again
             </Button>
@@ -314,423 +330,236 @@ export default function MarketplacePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="w-full px-6 py-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 w-full">
-          <div>
-<<<<<<< HEAD
-            <h1 className="text-3xl font-bold mb-2">Marketplace</h1>
-            <p className="text-muted-foreground">Discover and collect extraordinary NFTs</p>
-            {rosePrice && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Current ROSE price: ${rosePrice.toFixed(4)} USD
-              </p>
-            )}
-            {isConnected && address && (
-              <p className="text-sm text-blue-600 mt-1">
-                Connected: {address.slice(0, 6)}...{address.slice(-4)}
-              </p>
-            )}
-=======
-            <h1 className="text-5xl font-bold mb-3 text-black">Explore Marketplace</h1>
-            <p className="text-xl text-gray-600">Discover and collect extraordinary NFTs 🔍</p>
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
-          </div>
-          <div className="flex items-center gap-3 justify-end">
-            <Button 
-              variant={viewMode === "grid" ? "default" : "outline"} 
-              size="lg" 
-              onClick={() => setViewMode("grid")}
-              className="hover:shadow-md transition-all duration-300 rounded-xl px-4 py-2"
-              title="Grid View"
-            >
-              <Grid3X3 className="w-5 h-5" />
-            </Button>
-            <Button 
-              variant={viewMode === "list" ? "default" : "outline"} 
-              size="lg" 
-              onClick={() => setViewMode("list")}
-              className="hover:shadow-md transition-all duration-300 rounded-xl px-4 py-2"
-              title="List View"
-            >
-              <List className="w-5 h-5" />
-            </Button>
-            <Button onClick={() => fetchData(filters)} size="sm" variant="outline" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8">
+        {/* Enhanced Header */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                NFT Marketplace
+              </h1>
+              <p className="text-gray-600 text-lg">Discover and collect extraordinary digital assets</p>
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                {rosePrice && (
+                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+                    💎 ROSE: ${rosePrice.toFixed(4)} USD
+                  </div>
+                )}
+                {isConnected && address && (
+                  <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-mono text-xs">
+                    🔗 {address.slice(0, 6)}...{address.slice(-4)}
+                  </div>
+                )}
+                <div className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full">
+                  📊 {pagination.total_items} Items Available
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-white rounded-lg border border-gray-200 p-1 flex">
+                <Button 
+                  variant={viewMode === "grid" ? "default" : "ghost"} 
+                  size="sm" 
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-md"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === "list" ? "default" : "ghost"} 
+                  size="sm" 
+                  onClick={() => setViewMode("list")}
+                  className="rounded-md"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button 
+                onClick={() => fetchData(filters)} 
+                size="sm" 
+                variant="outline" 
+                className="gap-2 bg-white hover:bg-gray-50"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-6">
-          {/* Filters Sidebar */}
-          <aside className="bg-white shadow-md rounded-xl p-4">
-            <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-black">
-              <Filter className="w-5 h-5 text-purple-600" />
-              Filters
-            </h3>
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Enhanced Filters Sidebar */}
+          <div className="lg:w-80 space-y-6">
+            <Card className="bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+              <div className="p-6">
+                <h3 className="font-semibold text-lg mb-6 flex items-center gap-2 text-gray-800">
+                  <Filter className="w-5 h-5 text-blue-600" />
+                  Filters & Search
+                </h3>
 
-<<<<<<< HEAD
-              <div className="space-y-4">
-                {/* Search */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Search</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input 
-                      placeholder="Search NFTs..." 
-                      className="pl-10" 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
-                    />
-                  </div>
-=======
-            {/* Search */}
-            <div className="space-y-6">
-              <div>
-                <label className="text-sm font-semibold mb-3 block text-gray-900">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input 
-                    placeholder="Search NFTs..." 
-                    className="pl-12 rounded-full border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent h-12 text-base" 
-                  />
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
-                </div>
-              </div>
-
-<<<<<<< HEAD
-                {/* Listing Type */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Listing Type</label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="single" 
-                        checked={selectedListingTypes.includes('single')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedListingTypes([...selectedListingTypes, 'single'])
-                          } else {
-                            setSelectedListingTypes(selectedListingTypes.filter(t => t !== 'single'))
-                          }
-                        }}
-                      />
-                      <label htmlFor="single" className="text-sm">Single NFT</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="bundle" 
-                        checked={selectedListingTypes.includes('bundle')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedListingTypes([...selectedListingTypes, 'bundle'])
-                          } else {
-                            setSelectedListingTypes(selectedListingTypes.filter(t => t !== 'bundle'))
-                          }
-                        }}
-                      />
-                      <label htmlFor="bundle" className="text-sm">
-                        <div className="flex items-center gap-1">
-                          <Package className="w-3 h-3" />
-                          Bundle
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Price Range (ROSE)</label>
-                  <Slider 
-                    value={priceRange} 
-                    onValueChange={setPriceRange} 
-                    max={1000} 
-                    step={1} 
-                    className="mb-2" 
-                  />
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{priceRange[0]} ROSE</span>
-                    <span>{priceRange[1]} ROSE</span>
-                  </div>
-                </div>
-
-                {/* Collections */}
-                {collections.length > 0 && (
+                <div className="space-y-6">
+                  {/* Enhanced Search */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Collections</label>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {collections.map((collection) => (
-                        <div key={collection} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`collection-${collection}`}
-                            checked={selectedCollections.includes(collection)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedCollections([collection]) // Only allow one collection for now
-                              } else {
-                                setSelectedCollections([])
-                              }
-                            }}
-                          />
-                          <label htmlFor={`collection-${collection}`} className="text-sm truncate">
-                            {collection}
-                          </label>
-                        </div>
-                      ))}
+                    <label className="text-sm font-medium mb-3 block text-gray-700">Search NFTs</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input 
+                        placeholder="Search by name, collection..." 
+                        className="pl-10 bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
+                      />
                     </div>
                   </div>
-                )}
 
-                <Button onClick={applyFilters} className="w-full">
-                  Apply Filters
-                </Button>
-=======
-              {/* Status */}
-              <div>
-                <label className="text-sm font-semibold mb-3 block text-gray-900">Status</label>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="buy-now" className="w-5 h-5" />
-                    <label htmlFor="buy-now" className="text-base text-gray-700">
-                      Buy Now
-                    </label>
+                  {/* Enhanced Listing Type */}
+                  <div>
+                    <label className="text-sm font-medium mb-3 block text-gray-700">Listing Type</label>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <Checkbox 
+                          id="single" 
+                          checked={selectedListingTypes.includes('single')}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedListingTypes([...selectedListingTypes, 'single'])
+                            } else {
+                              setSelectedListingTypes(selectedListingTypes.filter(t => t !== 'single'))
+                            }
+                          }}
+                        />
+                        <label htmlFor="single" className="text-sm font-medium cursor-pointer">Single NFT</label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <Checkbox 
+                          id="bundle" 
+                          checked={selectedListingTypes.includes('bundle')}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedListingTypes([...selectedListingTypes, 'bundle'])
+                            } else {
+                              setSelectedListingTypes(selectedListingTypes.filter(t => t !== 'bundle'))
+                            }
+                          }}
+                        />
+                        <label htmlFor="bundle" className="text-sm font-medium cursor-pointer">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-purple-600" />
+                            Collection Bundle
+                          </div>
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="auction" className="w-5 h-5" />
-                    <label htmlFor="auction" className="text-base text-gray-700">
-                      On Auction
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="new" className="w-5 h-5" />
-                    <label htmlFor="new" className="text-base text-gray-700">
-                      New
-                    </label>
-                  </div>
-                </div>
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
-              </div>
 
-              {/* Price Range */}
-              <div>
-                <label className="text-sm font-semibold mb-3 block text-gray-900">Price Range (ETH)</label>
-                <Slider 
-                  value={priceRange} 
-                  onValueChange={setPriceRange} 
-                  max={100} 
-                  step={1} 
-                  className="mb-4" 
-                />
-                <div className="flex justify-between text-sm text-gray-600 font-medium">
-                  <span>{priceRange[0]} ETH</span>
-                  <span>{priceRange[1]} ETH</span>
-                </div>
-              </div>
+                  {/* Enhanced Price Range */}
+                  <div>
+                    <label className="text-sm font-medium mb-3 block text-gray-700">Price Range (ROSE)</label>
+                    <div className="px-2">
+                      <Slider 
+                        value={priceRange} 
+                        onValueChange={setPriceRange} 
+                        max={1000} 
+                        step={1} 
+                        className="mb-4" 
+                      />
+                      <div className="flex justify-between text-sm text-gray-600 bg-gray-100 rounded-lg p-2">
+                        <span className="font-medium">{priceRange[0]} ROSE</span>
+                        <span className="font-medium">{priceRange[1]} ROSE</span>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Collections */}
-              <div>
-                <label className="text-sm font-semibold mb-3 block text-gray-900">Collections</label>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="cosmic-apes" className="w-5 h-5" />
-                    <label htmlFor="cosmic-apes" className="text-base text-gray-700">
-                      Cosmic Apes
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="digital-dreams" className="w-5 h-5" />
-                    <label htmlFor="digital-dreams" className="text-base text-gray-700">
-                      Digital Dreams
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="pixel-warriors" className="w-5 h-5" />
-                    <label htmlFor="pixel-warriors" className="text-base text-gray-700">
-                      Pixel Warriors
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="bored-apes" className="w-5 h-5" />
-                    <label htmlFor="bored-apes" className="text-base text-gray-700">
-                      Bored Ape Yacht Club
-                    </label>
-                  </div>
-                </div>
-              </div>
+                  {/* Enhanced Collections */}
+                  {collections.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium mb-3 block text-gray-700">Collections</label>
+                      <div className="space-y-2 max-h-40 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                        {collections.map((collection) => (
+                          <div key={collection} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
+                            <Checkbox 
+                              id={`collection-${collection}`}
+                              checked={selectedCollections.includes(collection)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCollections([collection])
+                                } else {
+                                  setSelectedCollections([])
+                                }
+                              }}
+                            />
+                            <label htmlFor={`collection-${collection}`} className="text-sm truncate cursor-pointer font-medium">
+                              {collection}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Rarity */}
-              <div>
-                <label className="text-sm font-semibold mb-3 block text-gray-900">Rarity</label>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="common" className="w-5 h-5" />
-                    <label htmlFor="common" className="text-base text-gray-700">
-                      Common
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="rare" className="w-5 h-5" />
-                    <label htmlFor="rare" className="text-base text-gray-700">
-                      Rare
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="epic" className="w-5 h-5" />
-                    <label htmlFor="epic" className="text-base text-gray-700">
-                      Epic
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Checkbox id="legendary" className="w-5 h-5" />
-                    <label htmlFor="legendary" className="text-base text-gray-700">
-                      Legendary
-                    </label>
-                  </div>
+                  <Button 
+                    onClick={applyFilters} 
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3"
+                  >
+                    Apply Filters
+                  </Button>
                 </div>
               </div>
-            </div>
-          </aside>
+            </Card>
+          </div>
 
           {/* Main Content */}
-          <div className="w-full">
-            {/* Sort and Results */}
-<<<<<<< HEAD
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <p className="text-muted-foreground">
-                Showing {pagination.total_items} results
-                {loading && <span className="ml-2">Loading...</span>}
-              </p>
-              <Select value={filters.sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created_at">Recently Listed</SelectItem>
-                  <SelectItem value="price">Price: Low to High</SelectItem>
-                  <SelectItem value="name">Name: A to Z</SelectItem>
-                  <SelectItem value="listing_id">Listing ID</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Loading State */}
-            {loading && (
-              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="overflow-hidden animate-pulse">
-                    <div className="aspect-square bg-gray-200" />
-                    <CardContent className="p-4">
-                      <div className="h-4 bg-gray-200 rounded mb-2" />
-                      <div className="h-6 bg-gray-200 rounded mb-2" />
-                      <div className="h-4 bg-gray-200 rounded w-1/2" />
-=======
-            <div className="flex justify-between items-center py-4 mb-6">
-              <p className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                🔎 Showing {nfts.length} results
-              </p>
-              <div className="flex items-center gap-4">
-                <Select defaultValue="recent">
-                  <SelectTrigger className="w-56 h-12 rounded-xl border-gray-200 text-base">
+          <div className="flex-1">
+            {/* Enhanced Sort and Results */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-6 mb-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="space-y-1">
+                  <p className="text-gray-800 font-medium">
+                    Showing {((pagination.current_page - 1) * pagination.items_per_page) + 1} - {Math.min(pagination.current_page * pagination.items_per_page, pagination.total_items)} of {pagination.total_items} results
+                  </p>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>Page {pagination.current_page} of {pagination.total_pages}</span>
+                    {loading && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Loading...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Select value={filters.sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger className="w-56 bg-white border-gray-200">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="recent">Recently Listed</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="most-liked">Most Liked</SelectItem>
-                    <SelectItem value="ending-soon">Ending Soon</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="created_at">📅 Recently Listed</SelectItem>
+                    <SelectItem value="price">💰 Price: Low to High</SelectItem>
+                    <SelectItem value="name">🔤 Name: A to Z</SelectItem>
+                    <SelectItem value="listing_id">🆔 Listing ID</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* NFT Grid */}
-            {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                {nfts.map((nft) => (
-                  <Card 
-                    key={nft.id} 
-                    className="w-full overflow-hidden bg-white shadow-sm hover:shadow-lg border border-gray-100 hover:border-purple-200 transition-all duration-300 group hover:scale-102 rounded-xl"
-                  >
-                    <Link href={`/nft/${nft.id}`}>
-                      <div className="aspect-square relative overflow-hidden">
-                        <Image
-                          src={nft.image || "/placeholder.svg"}
-                          alt={nft.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-3 right-3 flex flex-col gap-2">
-                          <div className="bg-white/80 backdrop-blur-sm text-gray-900 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
-                            <Eye className="w-3 h-3" />
-                            {nft.views}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white/90 hover:text-red-500 hover:scale-110 w-8 h-8 p-0 rounded-full shadow-sm transition-all duration-300"
-                          >
-                            <Heart className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {nft.isAuction && nft.timeLeft && (
-                          <div className="absolute top-3 left-3 bg-red-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
-                            <Clock className="w-3 h-3" />
-                            {nft.timeLeft}
-                          </div>
-                        )}
-                        <Badge className={`absolute bottom-3 left-3 ${getRarityColor(nft.rarity)} flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm`}>
-                          {getRarityIcon(nft.rarity)}
-                          {nft.rarity}
-                        </Badge>
-                      </div>
-                    </Link>
-                    <CardContent className="p-5 bg-white">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="text-sm text-gray-500 font-medium">{nft.collection}</div>
-                        {nft.verified && <Star className="w-4 h-4 text-blue-500 fill-current" />}
-                      </div>
-                      <h3 className="font-semibold mb-3 truncate text-gray-900 text-base">{nft.name}</h3>
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Current Price</div>
-                          <div className="font-bold text-gray-900 text-base">{nft.price}</div>
-                          <div className="text-xs text-gray-400">{nft.usdPrice}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-gray-500 mb-1">Last Sale</div>
-                          <div className="text-sm text-gray-600">{nft.lastSale}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Heart className="w-4 h-4" />
-                          <span className="font-medium">{nft.likes}</span>
-                        </div>
-                        <Button 
-                          className={`flex-1 ml-4 transition-all duration-300 hover:scale-105 rounded-xl ${
-                            nft.isAuction 
-                              ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white' 
-                              : 'bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white'
-                          }`}
-                          asChild
-                        >
-                          <Link href={`/nft/${nft.id}`}>{nft.isAuction ? "Place Bid" : "Buy Now"}</Link>
-                        </Button>
-                      </div>
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
+            {/* Loading State */}
+            {loading && (
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[...Array(20)].map((_, i) => (
+                  <Card key={i} className="overflow-hidden animate-pulse bg-white/80 border-white/20">
+                    <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300" />
+                    <CardContent className="p-4">
+                      <div className="h-4 bg-gray-200 rounded mb-2" />
+                      <div className="h-6 bg-gray-200 rounded mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
-<<<<<<< HEAD
             )}
 
-            {/* NFT Grid */}
+            {/* Enhanced NFT Grid */}
             {!loading && (
               <div
                 className={`grid gap-6 ${
@@ -741,91 +570,107 @@ export default function MarketplacePage() {
                   const isOwnerOfNft = isOwner(nft)
                   
                   return (
-                    <Card key={nft.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                    <Card key={nft.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 group bg-white/90 backdrop-blur-sm border-white/20 hover:scale-[1.02]">
                       <Link href={`/marketplace/${nft.id}`}>
                         <div
-                          className={`${viewMode === "grid" ? "aspect-square" : "aspect-video md:aspect-square"} relative`}
+                          className={`${viewMode === "grid" ? "aspect-square" : "aspect-video md:aspect-square"} relative overflow-hidden`}
                         >
                           <Image
                             src={nft.image || "/placeholder.svg"}
                             alt={nft.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform"
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
                           />
+                          {/* Enhanced Overlays */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          
+                          {/* Top Right Badges */}
                           <div className="absolute top-3 right-3 flex flex-col gap-2">
                             {nft.bundle_count && nft.bundle_count > 1 && (
-                              <div className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                              <div className="bg-blue-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs flex items-center gap-1 shadow-lg">
                                 <Package className="w-3 h-3" />
                                 {nft.bundle_count}
                               </div>
                             )}
-                            <div className="bg-black/70 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                            <div className="bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs flex items-center gap-1 shadow-lg">
                               <Eye className="w-3 h-3" />
                               {nft.views || 0}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="bg-black/70 text-white hover:bg-black/80 w-8 h-8 p-0 rounded-full"
+                              className="bg-black/70 backdrop-blur-sm text-white hover:bg-black/80 w-8 h-8 p-0 rounded-full shadow-lg"
                             >
                               <Heart className="w-4 h-4" />
                             </Button>
                           </div>
+
+                          {/* Top Left Badge for Bundle */}
                           {nft.listing_type === 'bundle' && (
-                            <div className="absolute top-3 left-3 bg-purple-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                            <div className="absolute top-3 left-3 bg-purple-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs flex items-center gap-1 shadow-lg">
                               <Package className="w-3 h-3" />
                               Bundle
                             </div>
                           )}
+
+                          {/* Owner Badge */}
                           {isOwnerOfNft && (
-                            <div className="absolute bottom-3 right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
+                            <div className="absolute bottom-3 right-3 bg-green-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs shadow-lg">
                               Your Listing
                             </div>
                           )}
-                          <Badge className={`absolute bottom-3 left-3 ${getRarityColor(nft.rarity || 'Common')}`}>
+
+                          {/* Rarity Badge */}
+                          <Badge className={`absolute bottom-3 left-3 ${getRarityColor(nft.rarity || 'Common')} shadow-lg border`}>
                             {nft.rarity || 'Common'}
                           </Badge>
                         </div>
                       </Link>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="text-sm text-muted-foreground truncate">{nft.collection}</div>
-                          {nft.verified && <Star className="w-3 h-3 text-blue-500 fill-current" />}
-                          {isOwnerOfNft && <Badge variant="outline" className="text-xs bg-green-50">Yours</Badge>}
+                      
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-sm text-gray-600 truncate font-medium">{nft.collection}</div>
+                          {nft.verified && <Star className="w-4 h-4 text-blue-500 fill-current" />}
+                          {isOwnerOfNft && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                              Yours
+                            </Badge>
+                          )}
                         </div>
-                        <h3 className="font-semibold mb-2 truncate">{nft.name}</h3>
-                        <div className="flex items-center justify-between mb-3">
+                        
+                        <h3 className="font-bold text-lg mb-3 truncate text-gray-800">{nft.name}</h3>
+                        
+                        <div className="flex items-center justify-between mb-4">
                           <div>
-                            <div className="text-sm text-muted-foreground">Current Price</div>
-                            <div className="font-bold">{nft.price}</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current Price</div>
+                            <div className="font-bold text-lg text-gray-900">{nft.price}</div>
                             {nft.usdPrice && (
-                              <div className="text-xs text-muted-foreground">{nft.usdPrice}</div>
+                              <div className="text-xs text-gray-500">{nft.usdPrice}</div>
                             )}
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Type</div>
-                            <div className="text-sm capitalize">{nft.listing_type}</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Type</div>
+                            <div className="text-sm font-medium capitalize text-gray-700">{nft.listing_type}</div>
                           </div>
                         </div>
+                        
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Heart className="w-3 h-3" />
-                            {nft.likes || 0}
+                          <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <Heart className="w-4 h-4" />
+                            <span className="font-medium">{nft.likes || 0}</span>
                           </div>
                           <div className="flex gap-2 flex-1 ml-4">
                             {isOwnerOfNft ? (
-                              <>
-                                <Button size="sm" variant="outline" className="flex-1" asChild>
-                                  <Link href={`/marketplace/${nft.id}`}>
-                                    <Edit className="w-3 h-3 mr-1" />
-                                    Manage
-                                  </Link>
-                                </Button>
-                              </>
+                              <Button size="sm" variant="outline" className="flex-1 hover:bg-gray-50" asChild>
+                                <Link href={`/marketplace/${nft.id}`}>
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Manage
+                                </Link>
+                              </Button>
                             ) : (
                               <Button 
-                                className="flex-1" 
-                                variant="outline" 
+                                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white" 
+                                size="sm"
                                 asChild
                                 disabled={!isConnected}
                               >
@@ -837,8 +682,9 @@ export default function MarketplacePage() {
                             )}
                           </div>
                         </div>
+                        
                         {!isConnected && !isOwnerOfNft && (
-                          <p className="text-xs text-muted-foreground mt-2 text-center">
+                          <p className="text-xs text-gray-500 mt-3 text-center bg-gray-50 rounded-lg py-2">
                             Connect wallet to purchase
                           </p>
                         )}
@@ -849,153 +695,132 @@ export default function MarketplacePage() {
               </div>
             )}
 
-            {/* Empty State */}
+            {/* Enhanced Empty State */}
             {!loading && nfts.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground">No NFTs found matching your criteria</div>
-                <Button onClick={() => {
-                  setSearchTerm('')
-                  setSelectedCollections([])
-                  setSelectedListingTypes([])
-                  setPriceRange([0, 1000])
-                  const resetFilters = { page: 1, limit: 20, sortBy: 'created_at' as const, sortOrder: 'DESC' as const }
-                  setFilters(resetFilters)
-                  fetchData(resetFilters)
-                }} variant="outline" className="mt-4">
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {!loading && pagination.total_pages > 1 && (
-              <div className="flex justify-center mt-12 gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => handlePageChange(pagination.current_page - 1)}
-                  disabled={pagination.current_page <= 1}
-                >
-                  Previous
-                </Button>
-                
-                {[...Array(Math.min(5, pagination.total_pages))].map((_, i) => {
-                  const page = i + 1
-                  return (
-                    <Button
-                      key={page}
-                      variant={pagination.current_page === page ? "default" : "outline"}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  )
-                })}
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => handlePageChange(pagination.current_page + 1)}
-                  disabled={pagination.current_page >= pagination.total_pages}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-=======
-            ) : (
-              <div className="flex flex-col gap-6">
-                {nfts.map((nft) => (
-                  <Card 
-                    key={nft.id} 
-                    className="w-full overflow-hidden bg-white shadow-sm hover:shadow-lg border border-gray-100 hover:border-purple-200 transition-all duration-300 group rounded-xl"
+              <div className="text-center py-16">
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg p-12 max-w-md mx-auto">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Search className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">No NFTs Found</h3>
+                  <p className="text-gray-600 mb-6">No NFTs match your current search criteria</p>
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm('')
+                      setSelectedCollections([])
+                      setSelectedListingTypes([])
+                      setPriceRange([0, 1000])
+                      const resetFilters = { page: 1, limit: 20, sortBy: 'created_at' as const, sortOrder: 'DESC' as const }
+                      setFilters(resetFilters)
+                      fetchData(resetFilters)
+                    }} 
+                    variant="outline" 
+                    className="bg-white hover:bg-gray-50"
                   >
-                    <div className="flex flex-col md:flex-row">
-                      <Link href={`/nft/${nft.id}`} className="md:w-64 flex-shrink-0">
-                        <div className="aspect-square md:aspect-square relative overflow-hidden">
-                          <Image
-                            src={nft.image || "/placeholder.svg"}
-                            alt={nft.name}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute top-3 right-3 flex flex-col gap-2">
-                            <div className="bg-white/80 backdrop-blur-sm text-gray-900 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
-                              <Eye className="w-3 h-3" />
-                              {nft.views}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white/90 hover:text-red-500 hover:scale-110 w-8 h-8 p-0 rounded-full shadow-sm transition-all duration-300"
-                            >
-                              <Heart className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          {nft.isAuction && nft.timeLeft && (
-                            <div className="absolute top-3 left-3 bg-red-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-sm">
-                              <Clock className="w-3 h-3" />
-                              {nft.timeLeft}
-                            </div>
-                          )}
-                          <Badge className={`absolute bottom-3 left-3 ${getRarityColor(nft.rarity)} flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm`}>
-                            {getRarityIcon(nft.rarity)}
-                            {nft.rarity}
-                          </Badge>
-                        </div>
-                      </Link>
-                      <CardContent className="flex-1 p-6 bg-white">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="text-sm text-gray-500 font-medium">{nft.collection}</div>
-                          {nft.verified && <Star className="w-4 h-4 text-blue-500 fill-current" />}
-                        </div>
-                        <h3 className="font-semibold mb-4 text-gray-900 text-xl">{nft.name}</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-                          <div>
-                            <div className="text-xs text-gray-500 mb-1">Current Price</div>
-                            <div className="font-bold text-gray-900 text-lg">{nft.price}</div>
-                            <div className="text-sm text-gray-400">{nft.usdPrice}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-gray-500 mb-1">Last Sale</div>
-                            <div className="text-base text-gray-600">{nft.lastSale}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-gray-500 mb-1">Likes</div>
-                            <div className="flex items-center gap-2 text-base text-gray-600">
-                              <Heart className="w-4 h-4" />
-                              <span className="font-medium">{nft.likes}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button 
-                            className={`px-8 py-3 transition-all duration-300 hover:scale-105 rounded-xl ${
-                              nft.isAuction 
-                                ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white' 
-                                : 'bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white'
-                            }`}
-                            asChild
-                          >
-                            <Link href={`/nft/${nft.id}`}>{nft.isAuction ? "Place Bid" : "Buy Now"}</Link>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </div>
-                  </Card>
-                ))}
+                    <X className="w-4 h-4 mr-2" />
+                    Clear All Filters
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* Load More */}
-            <div className="flex justify-center mt-10">
-              <Button className="bg-gradient-to-r from-indigo-500 to-cyan-500 text-white px-6 py-3 rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2">
-                <ArrowDown className="w-4 h-4" />
-                Load More NFTs
-              </Button>
-            </div>
->>>>>>> dfaf10def481ce1a5bfc7ec596f852b391690989
+            {/* Enhanced Pagination */}
+            {!loading && pagination.total_pages > 1 && (
+              <div className="mt-12 space-y-6">
+                <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-6">
+                  {/* Pagination Info */}
+                  <div className="text-center text-sm text-gray-600 mb-6">
+                    <span className="font-medium">
+                      Showing {((pagination.current_page - 1) * 20) + 1} - {Math.min(pagination.current_page * 20, pagination.total_items)} of {pagination.total_items} NFTs
+                    </span>
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  <div className="flex justify-center items-center gap-3 flex-wrap">
+                    {/* Previous Button */}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.current_page - 1)}
+                      disabled={pagination.current_page <= 1}
+                      className="gap-2 bg-white hover:bg-gray-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    
+                    {/* Page Numbers */}
+                    <div className="flex gap-2">
+                      {getPageNumbers().map((pageNum, index) => (
+                        <div key={index}>
+                          {pageNum === '...' ? (
+                            <span className="px-4 py-2 text-gray-400">...</span>
+                          ) : (
+                            <Button
+                              variant={pagination.current_page === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handlePageChange(pageNum as number)}
+                              className={`min-w-[44px] ${
+                                pagination.current_page === pageNum 
+                                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' 
+                                  : 'bg-white hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Next Button */}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.current_page + 1)}
+                      disabled={pagination.current_page >= pagination.total_pages}
+                      className="gap-2 bg-white hover:bg-gray-50"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Jump to Page */}
+                  {pagination.total_pages > 10 && (
+                    <div className="flex justify-center items-center gap-3 text-sm mt-6 pt-6 border-t border-gray-200">
+                      <span className="text-gray-600 font-medium">Jump to page:</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={pagination.total_pages}
+                        placeholder="Page"
+                        className="w-24 h-9 text-center bg-white border-gray-200"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const page = parseInt((e.target as HTMLInputElement).value)
+                            if (page >= 1 && page <= pagination.total_pages) {
+                              handlePageChange(page)
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Transaction Success Toast */}
+      <TransactionToast
+        isVisible={transactionToast.isVisible}
+        txHash={transactionToast.txHash}
+        message={transactionToast.message}
+        onClose={hideTransactionToast}
+      />
     </div>
   )
 }

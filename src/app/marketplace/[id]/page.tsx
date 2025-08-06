@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -29,7 +30,12 @@ import {
   Clock,
   Edit,
   X,
-  Loader2
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  Shield,
+  Zap
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -37,6 +43,84 @@ import { fetchNFTDetails, DetailedNFT } from "@/services/marketplace"
 import { useNFTMarketplace } from "@/hooks/use-market"
 import { toast } from "react-hot-toast"
 import { parseEther } from "viem"
+
+// Transaction Success Toast Component
+interface TransactionToastProps {
+  isVisible: boolean
+  txHash: string
+  message: string
+  onClose: () => void
+}
+
+const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+  const [progress, setProgress] = useState(100)
+
+  useEffect(() => {
+    if (isVisible) {
+      setProgress(100)
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= 0) {
+            clearInterval(timer)
+            onClose()
+            return 0
+          }
+          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
+        })
+      }, 100)
+
+      return () => clearInterval(timer)
+    }
+  }, [isVisible, onClose])
+
+  if (!isVisible) return null
+
+  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
+            {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+            onClick={() => window.open(explorerUrl, '_blank')}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            View
+          </Button>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function NFTDetailPage() {
   const params = useParams()
@@ -58,6 +142,13 @@ export default function NFTDetailPage() {
   const [isCanceling, setIsCanceling] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
 
+  // Transaction toast state
+  const [transactionToast, setTransactionToast] = useState({
+    isVisible: false,
+    txHash: '',
+    message: ''
+  })
+
   // Blockchain hooks
   const {
     buyNFT,
@@ -69,6 +160,24 @@ export default function NFTDetailPage() {
     updatePrice,
     updateBundlePrice
   } = useNFTMarketplace()
+
+  // Show transaction success toast
+  const showTransactionSuccess = (txHash: string, message: string) => {
+    setTransactionToast({
+      isVisible: true,
+      txHash,
+      message
+    })
+  }
+
+  // Hide transaction toast
+  const hideTransactionToast = () => {
+    setTransactionToast({
+      isVisible: false,
+      txHash: '',
+      message: ''
+    })
+  }
 
   // Check if current user is the seller
   const isOwner = isConnected && address && nft && 
@@ -136,16 +245,17 @@ export default function NFTDetailPage() {
       }
       
       if (result.receipt?.status === 'success') {
-        toast.success(
-          nft.listing_type === 'bundle' 
-            ? 'Collection bundle purchased successfully!' 
-            : 'NFT purchased successfully!', 
-          { id: 'buy-nft' }
-        )
-        // Refresh page after successful purchase
+        toast.dismiss('buy-nft')
+        const message = nft.listing_type === 'bundle' 
+          ? 'Collection bundle purchased successfully!' 
+          : 'NFT purchased successfully!'
+        
+        showTransactionSuccess(result.hash, message)
+        
+        // Wait total 7 seconds (5s toast + 2s after disappearance) before reloading
         setTimeout(() => {
           window.location.reload()
-        }, 2000)
+        }, 7000)
       } else {
         toast.error('Transaction failed', { id: 'buy-nft' })
       }
@@ -186,16 +296,17 @@ export default function NFTDetailPage() {
       }
       
       if (result.receipt?.status === 'success') {
-        toast.success(
-          nft.listing_type === 'bundle' 
-            ? 'Collection canceled successfully!' 
-            : 'Listing canceled successfully!', 
-          { id: 'cancel-listing' }
-        )
-        // Redirect back to marketplace after successful cancellation
+        toast.dismiss('cancel-listing')
+        const message = nft.listing_type === 'bundle' 
+          ? 'Collection canceled successfully!' 
+          : 'Listing canceled successfully!'
+        
+        showTransactionSuccess(result.hash, message)
+        
+        // Wait total 7 seconds before redirecting back to marketplace
         setTimeout(() => {
           router.push('/marketplace')
-        }, 2000)
+        }, 7000)
       } else {
         toast.error('Transaction failed', { id: 'cancel-listing' })
       }
@@ -240,17 +351,18 @@ export default function NFTDetailPage() {
       }
       
       if (result.receipt?.status === 'success') {
-        toast.success(
-          nft.listing_type === 'bundle' 
-            ? 'Bundle price updated successfully!' 
-            : 'Price updated successfully!', 
-          { id: 'update-price' }
-        )
+        toast.dismiss('update-price')
+        const message = nft.listing_type === 'bundle' 
+          ? 'Bundle price updated successfully!' 
+          : 'Price updated successfully!'
+        
+        showTransactionSuccess(result.hash, message)
         setShowEditPrice(false)
-        // Refresh page to show new price
+        
+        // Wait total 7 seconds before reloading page
         setTimeout(() => {
           window.location.reload()
-        }, 2000)
+        }, 7000)
       } else {
         toast.error('Transaction failed', { id: 'update-price' })
       }
@@ -342,16 +454,16 @@ export default function NFTDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-32 mb-8" />
+            <div className="h-8 bg-white/80 rounded-lg w-32 mb-8" />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="aspect-square bg-gray-200 rounded-lg" />
+              <div className="aspect-square bg-white/80 rounded-2xl" />
               <div className="space-y-4">
-                <div className="h-8 bg-gray-200 rounded w-3/4" />
-                <div className="h-6 bg-gray-200 rounded w-1/2" />
-                <div className="h-20 bg-gray-200 rounded" />
+                <div className="h-8 bg-white/80 rounded-lg w-3/4" />
+                <div className="h-6 bg-white/80 rounded-lg w-1/2" />
+                <div className="h-20 bg-white/80 rounded-lg" />
               </div>
             </div>
           </div>
@@ -362,17 +474,18 @@ export default function NFTDetailPage() {
 
   if (error || !nft) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 max-w-md mx-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <Card className="p-8 max-w-md mx-4 border-red-200 bg-red-50/80 backdrop-blur-sm">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-4">Error Loading NFT</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-4 text-red-800">Error Loading NFT</h2>
+            <p className="text-red-600 mb-6">{error}</p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={() => router.back()} variant="outline">
+              <Button onClick={() => router.back()} variant="outline" className="border-red-200 hover:bg-red-50">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Go Back
               </Button>
-              <Button onClick={() => window.location.reload()}>
+              <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700">
                 Try Again
               </Button>
             </div>
@@ -383,57 +496,62 @@ export default function NFTDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
+        {/* Enhanced Back Button */}
         <Button 
           variant="ghost" 
           onClick={() => router.back()}
-          className="mb-8"
+          className="mb-8 bg-white/80 backdrop-blur-sm border border-white/20 hover:bg-white/90 shadow-lg"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Marketplace
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Image Section */}
-          <div className="space-y-4">
+          {/* Enhanced Image Section */}
+          <div className="space-y-6">
             {/* Main Image */}
-            <Card className="overflow-hidden">
-              <div className="aspect-square relative">
+            <Card className="overflow-hidden bg-white/90 backdrop-blur-sm border-white/20 shadow-xl">
+              <div className="aspect-square relative overflow-hidden">
                 <Image
                   src={currentImage.url}
                   alt={currentImage.name}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-300 hover:scale-105"
                   priority
                 />
+                {/* Enhanced Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                
                 {nft.listing_type === 'bundle' && (
-                  <div className="absolute top-4 left-4 bg-purple-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                  <div className="absolute top-4 left-4 bg-purple-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg">
                     <Package className="w-4 h-4" />
                     Bundle ({nft.bundle_count} NFTs)
                   </div>
                 )}
                 {currentImage.token_id && (
-                  <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-mono">
+                  <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-mono shadow-lg">
                     Token ID: {currentImage.token_id}
                   </div>
                 )}
                 {isOwner && (
-                  <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm">
+                  <div className="absolute top-4 right-4 bg-green-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm shadow-lg">
+                    <Shield className="w-4 h-4 inline mr-1" />
                     Your Listing
                   </div>
                 )}
               </div>
             </Card>
 
-            {/* Image Gallery - Only show if there are multiple images */}
+            {/* Enhanced Image Gallery */}
             {galleryImages.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2 text-muted-foreground">
+              <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+                <h4 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-blue-600" />
                   {nft.listing_type === 'bundle' ? 'Bundle Items' : 'Gallery'} ({galleryImages.length})
                 </h4>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-3">
                   {galleryImages.map((img, index) => {
                     // For bundle, use direct index. For single, add 1 to skip main image
                     const actualIndex = nft.listing_type === 'bundle' ? index : index + 1
@@ -442,8 +560,10 @@ export default function NFTDetailPage() {
                     return (
                       <Card 
                         key={index}
-                        className={`overflow-hidden cursor-pointer border-2 transition-colors ${
-                          isSelected ? 'border-primary' : 'border-transparent hover:border-gray-300'
+                        className={`overflow-hidden cursor-pointer border-2 transition-all duration-200 hover:scale-105 ${
+                          isSelected 
+                            ? 'border-blue-500 shadow-lg ring-2 ring-blue-200' 
+                            : 'border-transparent hover:border-gray-300 bg-white/80'
                         }`}
                         onClick={() => setSelectedImageIndex(actualIndex)}
                       >
@@ -462,7 +582,7 @@ export default function NFTDetailPage() {
                             </div>
                           )}
                           {/* Show image number for better identification */}
-                          <div className="absolute top-1 right-1 bg-black/70 text-white px-1 py-0.5 rounded text-xs">
+                          <div className="absolute top-1 right-1 bg-blue-500/90 text-white px-1 py-0.5 rounded text-xs font-medium">
                             {index + 1}
                           </div>
                         </div>
@@ -470,47 +590,52 @@ export default function NFTDetailPage() {
                     )
                   })}
                 </div>
-              </div>
+              </Card>
             )}
           </div>
 
-          {/* Details Section */}
+          {/* Enhanced Details Section */}
           <div className="space-y-6">
-            {/* Header */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">{nft.collection}</Badge>
+            {/* Enhanced Header */}
+            <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="secondary" className="bg-gray-100 text-gray-800 px-3 py-1">
+                  {nft.collection}
+                </Badge>
                 {nft.listing_type === 'bundle' && (
-                  <Badge variant="outline" className="flex items-center gap-1">
+                  <Badge variant="outline" className="flex items-center gap-1 border-purple-200 text-purple-700 bg-purple-50">
                     <Package className="w-3 h-3" />
                     Bundle
                   </Badge>
                 )}
                 {isOwner && (
-                  <Badge variant="default" className="bg-green-500">
+                  <Badge className="bg-green-500 hover:bg-green-600">
+                    <Shield className="w-3 h-3 mr-1" />
                     Your Listing
                   </Badge>
                 )}
               </div>
-              <h1 className="text-3xl font-bold mb-2">{nft.name}</h1>
-              <p className="text-muted-foreground">{nft.description}</p>
-            </div>
+              <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {nft.name}
+              </h1>
+              <p className="text-gray-600 leading-relaxed">{nft.description}</p>
+            </Card>
 
-            {/* Price Section */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
+            {/* Enhanced Price Section */}
+            <Card className="p-6 bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Price</p>
-                  <p className="text-2xl font-bold">{nft.price}</p>
+                  <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">Current Price</p>
+                  <p className="text-3xl font-bold text-gray-900">{nft.price}</p>
                   {nft.usdPrice && (
-                    <p className="text-sm text-muted-foreground">{nft.usdPrice}</p>
+                    <p className="text-sm text-gray-500 mt-1">{nft.usdPrice}</p>
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setLiked(!liked)}>
+                  <Button variant="outline" size="sm" onClick={() => setLiked(!liked)} className="bg-white hover:bg-gray-50">
                     <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="bg-white hover:bg-gray-50">
                     <Share2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -518,22 +643,25 @@ export default function NFTDetailPage() {
               
               <div className="space-y-3">
                 {isOwner ? (
-                  // Owner actions
-                  <div className="flex gap-2">
+                  // Enhanced Owner actions
+                  <div className="flex gap-3">
                     <Dialog open={showEditPrice} onOpenChange={setShowEditPrice}>
                       <DialogTrigger asChild>
-                        <Button className="flex-1" variant="outline" disabled={isUpdatingPrice || isCanceling}>
+                        <Button 
+                          className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
+                          disabled={isUpdatingPrice || isCanceling}
+                        >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Price
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="bg-white/95 backdrop-blur-sm">
                         <DialogHeader>
-                          <DialogTitle>Update Price</DialogTitle>
+                          <DialogTitle className="text-xl font-semibold">Update Price</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium">
+                            <label className="text-sm font-medium text-gray-700 block mb-2">
                               New {nft.listing_type === 'bundle' ? 'Bundle ' : ''}Price (ROSE)
                             </label>
                             <Input
@@ -543,13 +671,14 @@ export default function NFTDetailPage() {
                               placeholder={`Enter new ${nft.listing_type === 'bundle' ? 'bundle ' : ''}price in ROSE`}
                               step="0.01"
                               min="0"
+                              className="bg-white border-gray-200"
                             />
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             <Button 
                               onClick={handleUpdatePrice} 
                               disabled={isUpdatingPrice || !newPrice}
-                              className="flex-1"
+                              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                             >
                               {isUpdatingPrice ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -562,6 +691,7 @@ export default function NFTDetailPage() {
                               variant="outline" 
                               onClick={() => setShowEditPrice(false)}
                               disabled={isUpdatingPrice}
+                              className="bg-white hover:bg-gray-50"
                             >
                               Cancel
                             </Button>
@@ -574,7 +704,7 @@ export default function NFTDetailPage() {
                       variant="destructive" 
                       onClick={handleCancelListing}
                       disabled={isCanceling || isUpdatingPrice}
-                      className="flex-1"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
                     >
                       {isCanceling ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -585,18 +715,17 @@ export default function NFTDetailPage() {
                     </Button>
                   </div>
                 ) : (
-                  // Buyer actions
+                  // Enhanced Buyer actions
                   <div className="space-y-3">
                     <Button 
-                      className="w-full" 
-                      size="lg"
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-4 text-lg" 
                       onClick={handleBuyNFT}
                       disabled={isBuying || !isConnected}
                     >
                       {isBuying ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       ) : (
-                        <DollarSign className="w-4 h-4 mr-2" />
+                        <Zap className="w-5 h-5 mr-2" />
                       )}
                       {!isConnected 
                         ? 'Connect Wallet to Buy' 
@@ -605,7 +734,8 @@ export default function NFTDetailPage() {
                           : 'Buy NFT'
                       }
                     </Button>
-                    <Button variant="outline" className="w-full" size="lg" disabled>
+                    <Button variant="outline" className="w-full bg-white hover:bg-gray-50" size="lg" disabled>
+                      <Activity className="w-4 h-4 mr-2" />
                       Make Offer (Coming Soon)
                     </Button>
                   </div>
@@ -613,80 +743,81 @@ export default function NFTDetailPage() {
               </div>
             </Card>
 
-            {/* Details Tabs */}
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="properties">Properties</TabsTrigger>
-                {nft.listing_type === 'bundle' && (
-                  <TabsTrigger value="items">Items</TabsTrigger>
-                )}
-              </TabsList>
+            {/* Enhanced Details Tabs */}
+            <Card className="bg-white/90 backdrop-blur-sm border-white/20 shadow-lg">
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg m-4 mb-0">
+                  <TabsTrigger value="details" className="rounded-md">Details</TabsTrigger>
+                  <TabsTrigger value="properties" className="rounded-md">Properties</TabsTrigger>
+                  {nft.listing_type === 'bundle' && (
+                    <TabsTrigger value="items" className="rounded-md">Items</TabsTrigger>
+                  )}
+                </TabsList>
 
-              <TabsContent value="details" className="space-y-4">
-                <Card className="p-6">
+                <TabsContent value="details" className="p-6 pt-4">
                   <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Contract Address</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 font-medium">Contract Address</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{formatAddress(nft.nft_contract_address)}</span>
+                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">{formatAddress(nft.nft_contract_address)}</span>
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           onClick={() => copyToClipboard(nft.nft_contract_address, 'Contract Address')}
+                          className="h-8 w-8 p-0"
                         >
-                          {copied === 'Contract Address' ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {copied === 'Contract Address' ? <CheckCheck className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                         </Button>
                       </div>
                     </div>
                     
                     <Separator />
                     
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Listing Type</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={nft.listing_type === 'bundle' ? 'default' : 'secondary'}>
-                          {nft.listing_type === 'bundle' ? 'Collection Bundle' : 'Single NFT'}
-                        </Badge>
-                      </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 font-medium">Listing Type</span>
+                      <Badge variant={nft.listing_type === 'bundle' ? 'default' : 'secondary'} className="text-sm">
+                        {nft.listing_type === 'bundle' ? 'Collection Bundle' : 'Single NFT'}
+                      </Badge>
                     </div>
                     
                     <Separator />
                     
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Token ID{nft.listing_type === 'bundle' ? 's' : ''}</span>
+                    <div className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 font-medium">Token ID{nft.listing_type === 'bundle' ? 's' : ''}</span>
                       <div className="text-right">
                         {nft.listing_type === 'single' ? (
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-bold bg-gray-100 px-2 py-1 rounded">
+                            <span className="font-mono text-sm font-bold bg-white px-3 py-1 rounded border">
                               {nft.token_ids[0]}
                             </span>
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               onClick={() => copyToClipboard(nft.token_ids[0], 'Token ID')}
+                              className="h-8 w-8 p-0"
                             >
-                              {copied === 'Token ID' ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                              {copied === 'Token ID' ? <CheckCheck className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                             </Button>
                           </div>
                         ) : (
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             {nft.token_ids.slice(0, 3).map((tokenId, index) => (
                               <div key={index} className="flex items-center gap-2">
-                                <span className="font-mono text-sm font-bold bg-gray-100 px-2 py-1 rounded">
+                                <span className="font-mono text-sm font-bold bg-white px-3 py-1 rounded border">
                                   {tokenId}
                                 </span>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
                                   onClick={() => copyToClipboard(tokenId, `Token ID ${index + 1}`)}
+                                  className="h-8 w-8 p-0"
                                 >
-                                  {copied === `Token ID ${index + 1}` ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                  {copied === `Token ID ${index + 1}` ? <CheckCheck className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                                 </Button>
                               </div>
                             ))}
                             {nft.token_ids.length > 3 && (
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
                                 +{nft.token_ids.length - 3} more tokens
                               </p>
                             )}
@@ -697,65 +828,66 @@ export default function NFTDetailPage() {
                     
                     <Separator />
                     
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Seller</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 font-medium">Seller</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{formatAddress(nft.seller_address)}</span>
-                        {isOwner && <span className="text-xs text-green-600">(You)</span>}
+                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">{formatAddress(nft.seller_address)}</span>
+                        {isOwner && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">You</Badge>}
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           onClick={() => copyToClipboard(nft.seller_address, 'Seller Address')}
+                          className="h-8 w-8 p-0"
                         >
-                          {copied === 'Seller Address' ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {copied === 'Seller Address' ? <CheckCheck className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                         </Button>
                       </div>
                     </div>
                     
                     <Separator />
                     
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Listed Date</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 font-medium">Listed Date</span>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{new Date(nft.created_at).toLocaleDateString()}</span>
+                        <Clock className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium">{new Date(nft.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
-                </Card>
-              </TabsContent>
+                </TabsContent>
 
-              <TabsContent value="properties" className="space-y-4">
-                <Card className="p-6">
+                <TabsContent value="properties" className="p-6 pt-4">
                   {nft.metadata?.metadata?.attributes && nft.metadata.metadata.attributes.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
                       {nft.metadata.metadata.attributes.map((attr: any, index: number) => (
-                        <div key={index} className="border rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                        <div key={index} className="border rounded-lg p-4 bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-shadow">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
                             {attr.trait_type}
                           </p>
-                          <p className="font-semibold">{attr.value}</p>
+                          <p className="font-semibold text-gray-900">{attr.value}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Info className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">No properties available</p>
+                    <div className="text-center py-12">
+                      <Info className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No properties available</p>
+                      <p className="text-gray-400 text-sm mt-1">This NFT doesn't have any metadata attributes</p>
                     </div>
                   )}
-                </Card>
-              </TabsContent>
+                </TabsContent>
 
-              {nft.listing_type === 'bundle' && (
-                <TabsContent value="items" className="space-y-4">
-                  <Card className="p-6">
+                {nft.listing_type === 'bundle' && (
+                  <TabsContent value="items" className="p-6 pt-4">
                     <div className="space-y-4">
-                      <h3 className="font-semibold">Items in this collection bundle ({nft.bundle_count})</h3>
+                      <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+                        <Package className="w-5 h-5 text-purple-600" />
+                        Items in this collection bundle ({nft.bundle_count})
+                      </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {nft.nft_individual.map((item, index) => (
-                          <div key={index} className="border rounded-lg p-4 flex items-center gap-4">
-                            <div className="w-16 h-16 relative rounded-lg overflow-hidden">
+                          <div key={index} className="border rounded-xl p-4 flex items-center gap-4 bg-gradient-to-br from-white to-gray-50 hover:shadow-lg transition-all duration-200">
+                            <div className="w-16 h-16 relative rounded-lg overflow-hidden border-2 border-gray-200">
                               <Image
                                 src={item.metadata?.image || item.metadata?.metadata?.image || '/placeholder.svg'}
                                 alt={item.metadata?.name || `NFT #${item.token_id}`}
@@ -764,14 +896,14 @@ export default function NFTDetailPage() {
                               />
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-medium">
+                              <h4 className="font-medium text-gray-900 mb-1">
                                 {item.metadata?.name || item.metadata?.metadata?.name || `NFT #${item.token_id}`}
                               </h4>
-                              <p className="text-sm text-muted-foreground font-mono bg-gray-100 px-2 py-1 rounded inline-block">
-                                <strong>Token ID: {item.token_id}</strong>
+                              <p className="text-sm text-gray-500 font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded inline-block">
+                                Token ID: {item.token_id}
                               </p>
                               {item.metadata?.metadata?.description && (
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                <p className="text-xs text-gray-500 mt-2 line-clamp-2">
                                   {item.metadata.metadata.description}
                                 </p>
                               )}
@@ -780,13 +912,21 @@ export default function NFTDetailPage() {
                         ))}
                       </div>
                     </div>
-                  </Card>
-                </TabsContent>
-              )}
-            </Tabs>
+                  </TabsContent>
+                )}
+              </Tabs>
+            </Card>
           </div>
         </div>
       </div>
+
+      {/* Transaction Success Toast */}
+      <TransactionToast
+        isVisible={transactionToast.isVisible}
+        txHash={transactionToast.txHash}
+        message={transactionToast.message}
+        onClose={hideTransactionToast}
+      />
     </div>
   )
 }
