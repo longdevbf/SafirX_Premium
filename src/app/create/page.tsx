@@ -2,7 +2,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,13 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import {
-  Upload,
-  Music,
-  FileText,
   Plus,
   X,
   Info,
@@ -24,11 +20,91 @@ import {
   Loader2,
   CheckCircle,
   AlertTriangle,
-  Grid3X3
+  Grid3X3,
+  ExternalLink
 } from "lucide-react"
 import Image from "next/image"
 import { useAccount } from "wagmi"
 import { useNFTMint } from "@/hooks/use-mint"
+import { toast } from "react-hot-toast"
+
+// Transaction Success Toast Component
+interface TransactionToastProps {
+  isVisible: boolean
+  txHash: string
+  message: string
+  onClose: () => void
+}
+
+const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+  const [progress, setProgress] = useState(100)
+
+  useEffect(() => {
+    if (isVisible) {
+      setProgress(100)
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= 0) {
+            clearInterval(timer)
+            onClose()
+            return 0
+          }
+          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
+        })
+      }, 100)
+
+      return () => clearInterval(timer)
+    }
+  }, [isVisible, onClose])
+
+  if (!isVisible) return null
+
+  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
+            {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+            onClick={() => window.open(explorerUrl, '_blank')}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            View
+          </Button>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ✅ THAY ĐỔI INTERFACE - KHÔNG EXTEND FILE
 interface FileWithPreview {
@@ -75,8 +151,33 @@ export default function CreatePage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
+  // Transaction toast state
+  const [transactionToast, setTransactionToast] = useState({
+    isVisible: false,
+    txHash: '',
+    message: ''
+  })
+
   // Get contract limits
   const maxBatchSize = getMaxBatchSize() as number || 50
+
+  // Show transaction success toast
+  const showTransactionSuccess = (txHash: string, message: string) => {
+    setTransactionToast({
+      isVisible: true,
+      txHash,
+      message
+    })
+  }
+
+  // Hide transaction toast
+  const hideTransactionToast = () => {
+    setTransactionToast({
+      isVisible: false,
+      txHash: '',
+      message: ''
+    })
+  }
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,22 +382,22 @@ export default function CreatePage() {
   // Main mint function
   const handleMintCollection = async () => {
     if (!isConnected || !address) {
-      setError("Please connect your wallet first")
+      toast.error("Please connect your wallet first")
       return
     }
 
     if (selectedFiles.length === 0) {
-      setError("Please select at least one file")
+      toast.error("Please select at least one file")
       return
     }
 
     if (!collectionName.trim()) {
-      setError("Please enter a collection name")
+      toast.error("Please enter a collection name")
       return
     }
 
     if (selectedFiles.length > maxBatchSize) {
-      setError(`Maximum ${maxBatchSize} NFTs allowed per collection`)
+      toast.error(`Maximum ${maxBatchSize} NFTs allowed per collection`)
       return
     }
 
@@ -307,22 +408,32 @@ export default function CreatePage() {
     try {
       // Step 1: Upload images to IPFS
       console.log("📤 Uploading images to IPFS...")
+      toast.loading("Uploading images to IPFS...", { id: 'mint-nft' })
       const imageUrls = await uploadFilesToIPFS()
 
       // Step 2: Create metadata
       console.log("📝 Creating metadata...")
+      toast.loading("Creating metadata...", { id: 'mint-nft' })
       const metadataList = createMetadata(imageUrls)
 
       // Step 3: Upload metadata to IPFS
       console.log("📤 Uploading metadata to IPFS...")
+      toast.loading("Uploading metadata to IPFS...", { id: 'mint-nft' })
       const metadataUrls = await uploadMetadataToIPFS(metadataList)
 
       // Step 4: Mint NFT collection
       console.log("⛏️ Minting NFT collection...")
+      toast.loading("Minting NFT collection...", { id: 'mint-nft' })
       const result = await mintMyCollection(metadataUrls)
 
       console.log("✅ Collection minted successfully!", result)
-      setSuccess(`Successfully minted ${selectedFiles.length} NFTs! Transaction: ${result.hash}`)
+      toast.dismiss('mint-nft')
+      
+      // Show transaction success toast
+      showTransactionSuccess(
+        result.hash, 
+        `Successfully minted ${selectedFiles.length} NFTs!`
+      )
       
       // ✅ THAY ĐỔI RESET FORM - SỬ DỤNG fileItem.preview
       selectedFiles.forEach(fileItem => URL.revokeObjectURL(fileItem.preview))
@@ -337,6 +448,7 @@ export default function CreatePage() {
 
     } catch (error: any) {
       console.error("Minting error:", error)
+      toast.error(error.message || "Failed to mint NFT collection", { id: 'mint-nft' })
       setError(error.message || "Failed to mint NFT collection")
     } finally {
       setIsMinting(false)
@@ -357,8 +469,6 @@ export default function CreatePage() {
     updated[index][field] = value
     setProperties(updated)
   }
-
-  const canMint = isConnected && selectedFiles.length > 0 && collectionName.trim() && !isUploading && !isMinting
 
   return (
     <div className="min-h-screen bg-background">
@@ -639,14 +749,12 @@ export default function CreatePage() {
 
                     <div>
                       <Label htmlFor="blockchain">Blockchain</Label>
-                      <Select defaultValue="ethereum">
+                      <Select defaultValue="oasis-sapphire">
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="ethereum">Ethereum</SelectItem>
-                          <SelectItem value="polygon">Polygon</SelectItem>
-                          <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                          <SelectItem value="oasis-sapphire">Oasis Sapphire Network</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -671,12 +779,27 @@ export default function CreatePage() {
               </div>
 
               <Button className="w-full" size="lg" disabled={!selectedFiles.length || isUploading || isMinting} onClick={handleMintCollection}>
-                {isMinting ? "Minting..." : "Create NFT Collection"}
+                {isMinting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Minting Collection...
+                  </>
+                ) : (
+                  "Create NFT Collection"
+                )}
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Transaction Success Toast */}
+      <TransactionToast
+        isVisible={transactionToast.isVisible}
+        txHash={transactionToast.txHash}
+        message={transactionToast.message}
+        onClose={hideTransactionToast}
+      />
     </div>
   )
 }

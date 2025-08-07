@@ -13,7 +13,6 @@ export async function POST(
   try {
     const { id } = params;
 
-    // Validate ID
     if (!id) {
       return NextResponse.json(
         { error: 'ID is required' },
@@ -21,7 +20,6 @@ export async function POST(
       );
     }
 
-    // Increment views count
     const result = await pool.query(
       'UPDATE market_listings SET views_count = views_count + 1 WHERE listing_id = $1 RETURNING views_count',
       [id]
