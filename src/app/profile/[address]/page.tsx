@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel, CheckCircle, X } from "lucide-react"
 import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
-import Following from "@/components/pages/profile/following"
 import EditProfileModal from "@/components/pages/profile/editProfileModal"
 import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
@@ -24,7 +23,7 @@ interface TransactionToastProps {
   onClose: () => void
 }
 
-const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+const TransactionToast = ({ isVisible, txHash, onClose }: Omit<TransactionToastProps, 'message'>) => {
   const [progress, setProgress] = useState(100)
 
   useEffect(() => {
@@ -110,12 +109,10 @@ interface NFT {
 
 export default function PublicProfilePage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params)
-  const [activeTab, setActiveTab] = useState<"nfts" | "following">("nfts")
+  const [activeTab, setActiveTab] = useState<"nfts">("nfts")
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isListCollectionOpen, setIsListCollectionOpen] = useState(false)
-  const [isAuctionCollectionOpen, setIsAuctionCollectionOpen] = useState(false)
   const [isSingleAuctionOpen, setIsSingleAuctionOpen] = useState(false)
-  const [isCollectionAuctionOpen, setIsCollectionAuctionOpen] = useState(false)
   
   // Thêm state để lưu NFT được chọn từ card
   const [selectedNFTForAuction, setSelectedNFTForAuction] = useState<NFT | null>(null)
@@ -140,7 +137,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   const { user: userData, isLoading: userLoading, error: userError, refreshUser } = useUser()
   
   // Get wallet balance for this address
-  const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
+  const { formatted: walletBalance } = useWalletBalance(address)
 
   // Show transaction success toast (with optional auto-reload)
   const showTransactionSuccess = (txHash: string, message: string, autoReload = true) => {
@@ -187,12 +184,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     website: null,
     stats: {
       owned: totalCount,
-      created: userData.created,
-      sold: userData.sold,
-      totalVolume: `${userData.total_volume.toFixed(1)} ROSE`,
       walletBalance: walletBalance,
-      following: userData.followed,
-      followers: userData.follower,
     },
   } : {
     address: address,
@@ -206,58 +198,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     website: null,
     stats: {
       owned: totalCount,
-      created: 0,
-      sold: 0,
-      totalVolume: "0.0 ROSE",
-      walletBalance: "0.00 ROSE",
-      following: 0,
-      followers: 0,
+      walletBalance: walletBalance,
     },
   }
-
-  // Mock following data
-  const followingUsers = [
-    {
-      address: "0x1234567890abcdef1234567890abcdef12345678",
-      name: "CryptoArtist",
-      username: "@cryptoartist",
-      avatar: "/placeholder-user.jpg",
-      verified: true,
-      followers: 2345,
-      nftsOwned: 156,
-      joinDate: "March 2021"
-    },
-    {
-      address: "0x2345678901bcdef23456789012cdef345678901",
-      name: "DigitalCreator",
-      username: "@digitalcreator",
-      avatar: "/placeholder-user.jpg",
-      verified: false,
-      followers: 1234,
-      nftsOwned: 89,
-      joinDate: "July 2021"
-    },
-    {
-      address: "0x3456789012cdef34567890123def4567890123",
-      name: "NFTCollector",
-      username: "@nftcollector",
-      avatar: "/placeholder-user.jpg",
-      verified: true,
-      followers: 567,
-      nftsOwned: 234,
-      joinDate: "January 2022"
-    },
-    {
-      address: "0x4567890123def45678901234ef567890123456",
-      name: "ArtLover",
-      username: "@artlover",
-      avatar: "/placeholder-user.jpg",
-      verified: false,
-      followers: 890,
-      nftsOwned: 45,
-      joinDate: "September 2021"
-    },
-  ]
 
   const copyAddress = () => {
     navigator.clipboard.writeText(user.address)
@@ -314,10 +257,76 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   // Loading state
   if (userLoading || nftLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading profile...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        {/* Loading Banner Skeleton */}
+        <div className="relative h-[300px] bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+        </div>
+
+        <div className="container mx-auto px-4">
+          {/* Profile Info Skeleton */}
+          <div className="relative mb-8 pt-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Avatar Skeleton */}
+              <div className="w-32 h-32 rounded-full bg-white shadow-lg -mt-16 relative">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse"></div>
+              </div>
+
+              <div className="flex-1 space-y-4">
+                {/* Name & Username Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-8 bg-gray-200 rounded-lg w-48 animate-pulse"></div>
+                  <div className="h-5 bg-gray-200 rounded-lg w-32 animate-pulse"></div>
+                </div>
+                
+                {/* Bio Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-full max-w-2xl animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                </div>
+
+                {/* Stats Skeleton */}
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit Button Skeleton */}
+              <div className="h-9 bg-gray-200 rounded-lg w-28 animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Tabs Skeleton */}
+          <div className="mb-6">
+            <div className="flex space-x-4 border-b">
+              <div className="h-10 bg-gray-200 rounded-t-lg w-24 animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded-t-lg w-20 animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* NFT Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm">
+                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -336,9 +345,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Profile Banner */}
-      <div className="relative h-[504px] bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Profile Banner - Reduced Height */}
+      <div className="relative h-[300px] bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 overflow-hidden">
         {user.banner && (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -350,179 +359,169 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
             }}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
         
-        <div className="absolute bottom-4 right-4 flex gap-2">
-          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
+        {/* Banner Action Buttons */}
+        <div className="absolute bottom-6 right-6 flex gap-3">
+          <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-md transition-all duration-300 shadow-lg">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm">
+          <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-md transition-all duration-300 shadow-lg">
             <Flag className="w-4 h-4 mr-2" />
             Report
           </Button>
         </div>
+
+        {/* Floating decorative elements */}
+        <div className="absolute top-10 left-10 w-4 h-4 bg-white/20 rounded-full animate-pulse"></div>
+        <div className="absolute top-20 right-20 w-6 h-6 bg-white/10 rounded-full animate-pulse delay-75"></div>
+        <div className="absolute bottom-20 left-20 w-3 h-3 bg-white/30 rounded-full animate-pulse delay-150"></div>
       </div>
 
-      <div className="container mx-auto px-4">
-        {/* Profile Info */}
-        <div className="relative mb-8 pt-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <Avatar className="w-40 h-40 border-4 border-white shadow-lg bg-white -mt-25">
-              <AvatarImage src={user.avatar || "/placeholder.svg"} />
-              <AvatarFallback className="text-3xl bg-gray-100">
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-3xl font-bold text-foreground">{user.name}</h1>
-                    {user.verified && <Star className="w-6 h-6 text-blue-500 fill-current" />}
+      <div className="container mx-auto px-4 lg:px-8">
+        {/* Profile Info - Enhanced Design */}
+        <div className="relative mb-12 pt-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
+              {/* Enhanced Avatar */}
+              <div className="relative -mt-20 lg:-mt-24">
+                <Avatar className="w-36 h-36 lg:w-44 lg:h-44 border-4 border-white shadow-2xl bg-gradient-to-br from-blue-100 to-indigo-100 ring-4 ring-blue-100">
+                  <AvatarImage src={user.avatar || "/placeholder.svg"} className="object-cover" />
+                  <AvatarFallback className="text-4xl lg:text-5xl bg-gradient-to-br from-blue-200 to-indigo-200 text-blue-700 font-bold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {user.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-blue-500 rounded-full p-2 shadow-lg">
+                    <Star className="w-6 h-6 text-white fill-current" />
                   </div>
-                  <p className="text-muted-foreground mb-2">{user.username}</p>
-                  <p className="text-foreground mb-4 max-w-2xl">{user.bio}</p>
-                </div>
-                <div className="flex gap-2 ml-4">
+                )}
+              </div>
+
+              <div className="flex-1 space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="space-y-3">
+                    {/* Enhanced Name & Username */}
+                    <div className="space-y-2">
+                      <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+                        {user.name}
+                      </h1>
+                      <p className="text-xl text-blue-600 font-medium">{user.username}</p>
+                    </div>
+                    
+                    {/* Enhanced Bio */}
+                    <p className="text-gray-600 text-lg leading-relaxed max-w-3xl">
+                      {user.bio}
+                    </p>
+                  </div>
+
+                  {/* Enhanced Edit Button */}
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size="lg"
                     onClick={handleEditProfile}
+                    className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-300 shadow-md hover:shadow-lg"
                   >
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className="w-5 h-5 mr-2" />
                     Edit Profile
                   </Button>
                 </div>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Wallet className="w-4 h-4" />
-                  <span className="font-mono">{user.address}</span>
-                  <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0">
-                    <Copy className="w-3 h-3" />
-                  </Button>
+                {/* Enhanced Wallet Info */}
+                <div className="flex flex-wrap items-center gap-6 text-sm">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-2 rounded-full border border-gray-200">
+                    <Wallet className="w-4 h-4 text-blue-600" />
+                    <span className="font-mono text-gray-700">{user.address.slice(0, 12)}...{user.address.slice(-8)}</span>
+                    <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0 hover:bg-blue-100">
+                      <Copy className="w-3 h-3 text-blue-600" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                    <span>Joined {user.joined}</span>
+                  </div>
+                  {user.website && (
+                    <Link href={user.website} className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors">
+                      <ExternalLink className="w-4 h-4" />
+                      Website
+                    </Link>
+                  )}
                 </div>
-                <span>Joined {user.joined}</span>
-                {user.website && (
-                  <Link href={user.website} className="flex items-center gap-1 hover:text-foreground">
-                    <ExternalLink className="w-4 h-4" />
-                    Website
-                  </Link>
-                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.owned}</div>
-              <div className="text-sm text-muted-foreground">Owned</div>
+        {/* Stats - Simplified */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6 text-center">
+              <div className="text-4xl font-bold text-blue-600 mb-2">{user.stats.owned}</div>
+              <div className="text-sm font-medium text-blue-500 uppercase tracking-wide">NFTs Owned</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.created}</div>
-              <div className="text-sm text-muted-foreground">Created</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.sold}</div>
-              <div className="text-sm text-muted-foreground">Sold</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.totalVolume}</div>
-              <div className="text-sm text-muted-foreground">Total Volume</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.walletBalance}</div>
-              <div className="text-sm text-muted-foreground">Wallet Balance</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.following}</div>
-              <div className="text-sm text-muted-foreground">Following</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{user.stats.followers}</div>
-              <div className="text-sm text-muted-foreground">Followers</div>
+          <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6 text-center">
+              <div className="text-4xl font-bold text-emerald-600 mb-2">{user.stats.walletBalance}</div>
+              <div className="text-sm font-medium text-emerald-500 uppercase tracking-wide">Wallet Balance</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs Navigation */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "nfts" | "following")} className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <TabsList className="grid w-full sm:w-auto grid-cols-2">
-              <TabsTrigger value="nfts">Owned NFTs ({user.stats.owned})</TabsTrigger>
-              <TabsTrigger value="following">Following ({user.stats.following})</TabsTrigger>
-            </TabsList>
-
-            {/* Collection Actions */}
-            {activeTab === "nfts" && totalCount > 0 && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsListCollectionOpen(true)}
-                  className="flex items-center gap-2"
+        {/* Enhanced Tabs Navigation */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "nfts")} className="">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              <TabsList className="grid w-full sm:w-auto grid-cols-1 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                <TabsTrigger 
+                  value="nfts" 
+                  className="text-lg font-semibold px-8 py-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white transition-all duration-300"
                 >
-                  <Package className="w-4 h-4" />
-                  List Collection
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setSelectedNFTForAuction(null) // Reset selected NFT for general auction
-                    setIsSingleAuctionOpen(true)
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Gavel className="w-4 h-4" />
-                  Single Auction
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsCollectionAuctionOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Gavel className="w-4 h-4" />
-                  Collection Auction
-                </Button>
-              </div>
-            )}
-          </div>
+                  🎨 Owned NFTs ({user.stats.owned})
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="nfts">
-            <OwnedNFTs 
-              nfts={nfts} 
-              totalCount={totalCount} 
-              isLoading={nftLoading}
-              error={nftError}
-              onOpenSingleAuction={handleOpenSingleAuction} // ✅ Truyền callback
-              showTransactionSuccess={showTransactionSuccess} // ✅ Pass transaction success callback
-            />
-          </TabsContent>
+              {/* Enhanced Collection Actions */}
+              {activeTab === "nfts" && totalCount > 0 && (
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsListCollectionOpen(true)}
+                    className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-700 hover:bg-gradient-to-r hover:from-emerald-100 hover:to-green-100 hover:border-emerald-300 transition-all duration-300 shadow-md hover:shadow-lg"
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    List Collection
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedNFTForAuction(null)
+                      setIsSingleAuctionOpen(true)
+                    }}
+                    className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:border-purple-300 transition-all duration-300 shadow-md hover:shadow-lg"
+                  >
+                    <Gavel className="w-4 h-4 mr-2" />
+                    Collection Auction
+                  </Button>
+                </div>
+              )}
+            </div>
 
-          <TabsContent value="following">
-            <Following followingUsers={followingUsers} totalCount={user.stats.following} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="nfts" className="mt-8">
+              <OwnedNFTs 
+                nfts={nfts} 
+                totalCount={totalCount} 
+                isLoading={nftLoading}
+                error={nftError}
+                onOpenSingleAuction={handleOpenSingleAuction}
+                showTransactionSuccess={showTransactionSuccess}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       {/* Edit Profile Modal */}
@@ -543,33 +542,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         showTransactionSuccess={showTransactionSuccess}
       />
 
-      {/* Auction Collection Modal */}
-      <ListCollectionModal
-        isOpen={isAuctionCollectionOpen}
-        onClose={() => setIsAuctionCollectionOpen(false)}
-        nfts={nfts}
-        mode="auction"
-        showTransactionSuccess={showTransactionSuccess}
-      />
-
       {/* Single NFT Auction Modal */}
       <CreateAuctionModal
         isOpen={isSingleAuctionOpen}
         onClose={() => {
           setIsSingleAuctionOpen(false)
-          setSelectedNFTForAuction(null) // Reset selected NFT khi đóng modal
+          setSelectedNFTForAuction(null)
         }}
-        nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts} // ✅ Nếu có NFT được chọn, chỉ hiển thị NFT đó
+        nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts}
         mode="single"
-        showTransactionSuccess={showTransactionSuccess}
-      />
-
-      {/* Collection Auction Modal */}
-      <CreateAuctionModal
-        isOpen={isCollectionAuctionOpen}
-        onClose={() => setIsCollectionAuctionOpen(false)}
-        nfts={nfts}
-        mode="collection"
         showTransactionSuccess={showTransactionSuccess}
       />
       
@@ -577,7 +558,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       <TransactionToast
         isVisible={transactionToast.isVisible}
         txHash={transactionToast.txHash}
-        message={transactionToast.message}
         onClose={hideTransactionToast}
       />
     </div>

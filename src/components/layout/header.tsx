@@ -88,11 +88,11 @@ export default function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/marketplace" className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
-                    Marketplace
+                    Market
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/create/collection" className="flex items-center gap-2">
+                  <Link href="/create" className="flex items-center gap-2">
                     <Grid3X3 className="w-4 h-4" />
                     Collections
                   </Link>
@@ -106,13 +106,13 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Link href="/marketplace" className="text-sm font-medium hover:text-primary transition-colors">
-              Marketplace
+              Market
             </Link>
             <Link href="/auctions" className="text-sm font-medium hover:text-primary transition-colors">
               Auctions
             </Link>
             <Link href="/create" className="text-sm font-medium hover:text-primary transition-colors">
-              Create
+              Mint
             </Link>
           </nav>
 
@@ -264,10 +264,10 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <TrendingUp className="w-4 h-4" />
-                  Marketplace
+                  Market
                 </Link>
                 <Link
-                  href="/collections"
+                  href="/marketplace"
                   className="flex items-center gap-2 px-2 py-2 text-sm font-medium hover:bg-muted rounded-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
