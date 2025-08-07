@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink, X } from "lucide-react"
+import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink} from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import SellNFTModal from "@/components/pages/profile/sellNFTModal"
@@ -31,13 +31,6 @@ interface OwnedNFTsProps {
   onOpenSingleAuction?: (nft: NFT) => void
   showTransactionSuccess?: (txHash: string, message: string) => void
 }
-interface SellNFTModalProps {
-  isOpen: boolean
-  onClose: () => void
-  nft: NFT | null
-  showTransactionSuccess?: (txHash: string, message: string) => void
-}
-
 // Component để handle NFT image với fallback
 function NFTImage({ src, alt, className }: { src: string; alt: string; className: string }) {
   const [error, setError] = useState(false);

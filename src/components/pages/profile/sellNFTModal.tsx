@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+//import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -15,7 +15,7 @@ import { Loader2, DollarSign, AlertTriangle, CheckCircle, Copy } from "lucide-re
 import { useAccount } from "wagmi"
 import { useNFTMarketplace } from "@/hooks/use-market"
 import { useNFTApproval } from "@/hooks/use-approval-market"
-import { formatEther, parseEther } from "viem"
+import { parseEther } from "viem"
 //interfaces
 interface NFT {
   id: string

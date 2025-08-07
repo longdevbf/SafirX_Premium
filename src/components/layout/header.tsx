@@ -39,7 +39,7 @@ export default function Header() {
   const { user: userData, isLoading: userLoading } = useUser()
   
   // Get wallet balance for connected address
-  const { balance, formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
+  const { formatted: walletBalance, isLoading: balanceLoading } = useWalletBalance(address)
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`

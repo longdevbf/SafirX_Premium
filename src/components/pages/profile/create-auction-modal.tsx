@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs,  TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
@@ -20,20 +20,19 @@ import {
   Circle, 
   Gavel, 
   Package,
-  Grid3X3,
+ 
   AlertTriangle,
-  X,
+
   Filter,
   Loader2,
-  Clock,
-  DollarSign,
+  
   Info
 } from "lucide-react"
 import Image from "next/image"
 import { useAccount } from "wagmi"
 import { parseEther } from "viem"
 import { useSealedBidAuction } from "@/hooks/use-auctions"
-import { useNFTAuctionApproval } from "@/hooks/use-approval-auction"
+//import { useNFTAuctionApproval } from "@/hooks/use-approval-auction"
 
 interface NFT {
   id: string
@@ -122,8 +121,6 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
   const { 
     createSingleNFTAuctionWithApproval, 
     createCollectionAuctionWithApproval,
-    checkSingleNFTApproval,
-    checkCollectionApproval,
     getMinAuctionDuration,
     getMaxAuctionDuration,
     getMinBidIncrement,
@@ -148,11 +145,6 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
   const [error, setError] = useState("")
   const [selectedCollectionForAuction, setSelectedCollectionForAuction] = useState<string | null>(null)
 
-  // Get contract constants
-  const minDuration = getMinAuctionDuration() // 1 hour in seconds
-  const maxDuration = getMaxAuctionDuration() // 30 days in seconds
-  const minBidIncrement = getMinBidIncrement() // 0.001 ether
-  const platformFee = getPlatformFee() // 250 (2.5%)
 
   // Get selected NFTs list
   const selectedNFTsList = useMemo(() => 

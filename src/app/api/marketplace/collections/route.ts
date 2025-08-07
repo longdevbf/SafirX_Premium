@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 
@@ -14,7 +15,7 @@ export async function GET() {
 
     client.release();
 
-    const collections = result.rows.map(row => row.collection_name);
+    const collections = result.rows.map((row: { collection_name: any; }) => row.collection_name);
 
     return NextResponse.json({
       success: true,

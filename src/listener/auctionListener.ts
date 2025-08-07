@@ -2,7 +2,6 @@
 import { ethers } from 'ethers';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
 import axios from 'axios';
-import { Pool } from 'pg';
 
 // Địa chỉ contract
 const auctionAddress = '0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9';
@@ -62,20 +61,7 @@ async function saveToDatabase(data: any) {
     }
 }
 
-// Hàm cập nhật trạng thái đấu giá
-async function updateAuctionStatus(auctionId: string, auctionType: string, status: string) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `UPDATE auctions SET status = $1 WHERE auction_id = $2 AND auction_type = $3`,
-            [status, auctionId, auctionType]
-        );
-    } catch (error) {
-        console.error('Lỗi khi cập nhật trạng thái:', error);
-    } finally {
-        client.release();
-    }
-}
+
 
 // Hàm cập nhật trạng thái đấu giá và reclaim_nft - THÊM MỚI
 async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string) {

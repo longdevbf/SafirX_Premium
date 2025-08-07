@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -18,13 +18,11 @@ import {
   Heart, 
   Share2, 
   Package, 
-  User, 
-  Calendar, 
+ 
   DollarSign,
   Image as ImageIcon,
   Info,
-  Star,
-  Eye,
+  
   Copy,
   CheckCheck,
   Clock,
@@ -38,7 +36,7 @@ import {
   Zap
 } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
+
 import { fetchNFTDetails, DetailedNFT } from "@/services/marketplace"
 import { useNFTMarketplace } from "@/hooks/use-market"
 import { toast } from "react-hot-toast"
@@ -52,7 +50,7 @@ interface TransactionToastProps {
   onClose: () => void
 }
 
-const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
+const TransactionToast = ({ isVisible, txHash,  onClose }: TransactionToastProps) => {
   const [progress, setProgress] = useState(100)
 
   useEffect(() => {

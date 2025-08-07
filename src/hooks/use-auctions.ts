@@ -16,7 +16,6 @@ export function useSealedBidAuction() {
     checkSingleNFTApproval, 
     checkCollectionApproval, 
     approveCollection,
-    setApprovalForAll,
     approveNFT
   } = useNFTAuctionApproval();
 
