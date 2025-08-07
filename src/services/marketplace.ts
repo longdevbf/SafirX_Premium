@@ -44,6 +44,8 @@ export interface DetailedNFT {
   nft_individual: any[];
   bundle_count?: number;
   metadata?: any;
+  views_count?: number;
+  love_count?: number;
 }
 
 export interface DetailedNFTResponse {

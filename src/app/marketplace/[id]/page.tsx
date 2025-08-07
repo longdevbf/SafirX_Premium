@@ -133,6 +133,7 @@ export default function NFTDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [liked, setLiked] = useState(false)
+  const [loveCount, setLoveCount] = useState(0)
   const [copied, setCopied] = useState('')
 
   // Edit price modal states
@@ -194,12 +195,27 @@ export default function NFTDetailPage() {
       try {
         const response = await fetchNFTDetails(id)
         setNft(response.data)
+        // Set initial love count from database
+        setLoveCount(response.data.love_count || 0)
         // Set initial price for edit modal
         const priceInRose = response.data.price.replace(' ROSE', '')
         setNewPrice(priceInRose)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch NFT details')
-        console.error('❌ Error:', err)
+        
+        // Increment view count when viewing NFT detail
+        try {
+          await fetch(`/api/marketplace/${id}/views`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+        } catch (viewError) {
+          console.log('Failed to increment view count:', viewError)
+          // Don't show error to user for view increment failure
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to fetch NFT details')
+        console.error('❌ Error:', error)
       } finally {
         setLoading(false)
       }
@@ -386,6 +402,37 @@ export default function NFTDetailPage() {
     }
   }
 
+  // Handle love button click
+  const handleLoveClick = async () => {
+    if (!nft) return
+    
+    try {
+      const response = await fetch(`/api/marketplace/${id}/love`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setLoveCount(data.love_count)
+        setLiked(true)
+        toast.success('❤️ Loved!')
+        
+        // Reset liked state after 2 seconds
+        setTimeout(() => {
+          setLiked(false)
+        }, 2000)
+      } else {
+        toast.error('Failed to love this NFT')
+      }
+    } catch (error) {
+      console.error('Failed to increment love count:', error)
+      toast.error('Failed to love this NFT')
+    }
+  }
+
   // Format address for display
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -448,7 +495,6 @@ export default function NFTDetailPage() {
     }
   }
 
-  const allImages = getAllImages()
   const galleryImages = getGalleryImages()
   const currentImage = getCurrentDisplayImage()
 
@@ -632,8 +678,14 @@ export default function NFTDetailPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setLiked(!liked)} className="bg-white hover:bg-gray-50">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleLoveClick} 
+                    className="bg-white hover:bg-gray-50 flex items-center gap-2"
+                  >
                     <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : ''}`} />
+                    <span className="text-sm font-medium">{loveCount}</span>
                   </Button>
                   <Button variant="outline" size="sm" className="bg-white hover:bg-gray-50">
                     <Share2 className="w-4 h-4" />

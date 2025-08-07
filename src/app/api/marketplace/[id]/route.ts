@@ -25,7 +25,9 @@ export async function GET(
         description,
         name,
         created_at,
-        nft_individual
+        nft_individual,
+        views_count,
+        love_count
       FROM market_listings
       WHERE listing_id = $1
     `, [id]);
@@ -66,7 +68,9 @@ export async function GET(
       bundle_count: listing.listing_type === 'bundle' ? (Array.isArray(listing.token_ids) ? listing.token_ids.length : 1) : undefined,
       metadata: listing.listing_type === 'single' && listing.nft_individual && listing.nft_individual.length > 0 
         ? listing.nft_individual[0].metadata 
-        : null
+        : null,
+      views_count: listing.views_count || 0,
+      love_count: listing.love_count || 0
     };
 
     return NextResponse.json({

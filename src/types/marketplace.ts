@@ -74,4 +74,6 @@ export interface MarketplaceNFT {
   nft_contract_address: string
   created_at: string
   bundle_count?: number
+  views_count?: number
+  love_count?: number
 }

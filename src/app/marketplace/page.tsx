@@ -594,15 +594,12 @@ export default function MarketplacePage() {
                             )}
                             <div className="bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs flex items-center gap-1 shadow-lg">
                               <Eye className="w-3 h-3" />
-                              {nft.views || 0}
+                              {nft.views_count || nft.views || 0}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="bg-black/70 backdrop-blur-sm text-white hover:bg-black/80 w-8 h-8 p-0 rounded-full shadow-lg"
-                            >
-                              <Heart className="w-4 h-4" />
-                            </Button>
+                            <div className="bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs flex items-center gap-1 shadow-lg">
+                              <Heart className="w-3 h-3" />
+                              {nft.love_count || nft.likes || 0}
+                            </div>
                           </div>
 
                           {/* Top Left Badge for Bundle */}

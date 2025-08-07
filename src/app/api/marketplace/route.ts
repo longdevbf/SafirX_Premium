@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
         description,
         name,
         created_at,
-        nft_individual
+        nft_individual,
+        views_count,
+        love_count
       FROM market_listings
       WHERE 1=1
     `;
@@ -173,8 +175,8 @@ export async function GET(request: NextRequest) {
         lastSale: null, // You can add this field to your database if needed
         timeLeft: null, // This would be for auctions
         isAuction: false, // Marketplace listings are not auctions
-        views: 0, // You can add view tracking later
-        likes: 0, // You can add like functionality later
+        views: row.views_count || 0,
+        likes: row.love_count || 0,
         verified: false, // You can add verification logic
         rarity: 'Common', // You can extract this from metadata
         listing_type: row.listing_type,
@@ -182,6 +184,8 @@ export async function GET(request: NextRequest) {
         nft_contract_address: row.nft_contract_address,
         created_at: row.created_at,
         bundle_count: row.listing_type === 'bundle' ? bundleCount : undefined,
+        views_count: row.views_count || 0,
+        love_count: row.love_count || 0,
         token_ids: row.token_ids,
         nft_individual: row.nft_individual
       };
