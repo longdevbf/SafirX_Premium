@@ -101,6 +101,7 @@ export default function EditProfileModal({
     e.target.value = ''
   }
 
+  // Sửa onImageLoad function:
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     console.log('Image loaded, setting up crop for:', cropType)
     const { width, height } = e.currentTarget
@@ -109,8 +110,8 @@ export default function EditProfileModal({
     let cropWidth = 80
     
     if (cropType === 'background') {
-      // Banner 400px height với container ~1200px = 3:1 ratio (chuẩn)
-      aspectRatio = 3  // Quay về 3:1 ratio chuẩn
+      // Banner 5:1 ratio thay vì 3:1
+      aspectRatio = 5  // Đổi từ 3 thành 5
       cropWidth = 95
     } else {
       aspectRatio = 1  // 1:1 ratio for avatar
@@ -259,11 +260,11 @@ export default function EditProfileModal({
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            {/* Background Image - Tăng height để khớp với tỷ lệ 3:1 */}
+            {/* Background Image - Điều chỉnh height cho tỷ lệ 5:1 */}
             <div className="space-y-2">
               <Label>Banner Image</Label>
               <div 
-                className="relative h-[202px] bg-gray-100 rounded-lg overflow-hidden group cursor-pointer" 
+                className="relative h-[120px] bg-gray-100 rounded-lg overflow-hidden group cursor-pointer"  // Đổi từ 202px xuống 120px
                 onClick={() => handleImageSelect('background')}
               >
                 {editForm.background ? (
@@ -276,7 +277,7 @@ export default function EditProfileModal({
                     <div className="text-center">
                       <Upload className="w-8 h-8 mx-auto mb-2" />
                       <p className="text-sm">Click to upload banner image</p>
-                      <p className="text-xs opacity-75">Recommended: 1200x400 (3:1 ratio)</p>
+                      <p className="text-xs opacity-75">Recommended: 1200x240 (5:1 ratio)</p>  {/* Đổi text */}
                     </div>
                   </div>
                 )}
@@ -504,9 +505,9 @@ export default function EditProfileModal({
                       console.log('Crop completed:', c)
                       setCompletedCrop(c)
                     }}
-                    aspect={cropType === 'avatar' ? 1 : 3} // Quay về 3:1 ratio chuẩn
-                    minWidth={cropType === 'avatar' ? 100 : 400}
-                    minHeight={cropType === 'avatar' ? 100 : 133} // 400/3 ≈ 133
+                    aspect={cropType === 'avatar' ? 1 : 5} // Đổi từ 3 thành 5
+                    minWidth={cropType === 'avatar' ? 100 : 500}  // Tăng minWidth cho banner
+                    minHeight={cropType === 'avatar' ? 100 : 100} // 500/5 = 100
                     circularCrop={cropType === 'avatar'}
                     keepSelection
                     ruleOfThirds
@@ -532,7 +533,7 @@ export default function EditProfileModal({
                 <p className="text-sm text-muted-foreground mb-2">
                   {cropType === 'avatar' 
                     ? 'Drag to adjust the square crop area for your profile picture'
-                    : 'Drag to adjust the 3:1 banner crop area for your banner image'
+                    : 'Drag to adjust the 5:1 banner crop area for your banner image'  // Đổi từ 3:1 thành 5:1
                   }
                 </p>
                 {completedCrop && (
