@@ -1,97 +1,23 @@
 "use client"
 
-import { useState, use, useEffect } from "react"
+import { useState, use } from "react"
 import { useUser } from "@/context/userContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel, CheckCircle, X } from "lucide-react"
+import { Share2, ExternalLink, Star, Copy, Wallet, Flag, Edit, Package, Gavel, X } from "lucide-react"
 import Link from "next/link"
 import OwnedNFTs from "@/components/pages/profile/ownedNFTs"
 import EditProfileModal from "@/components/pages/profile/editProfileModal"
 import ListCollectionModal from "@/components/pages/profile/listCollectionModal"
 import CreateAuctionModal from "@/components/pages/profile/create-auction-modal"
+import ProfileLoading from "@/components/ui/profile-loading"
+import TransactionToast from "@/components/ui/transaction-toast"
 import { useNFTData } from "@/hooks/use-NFT-data"
 import { useWalletBalance } from "@/hooks/use-balance"
 
-// Transaction Success Toast Component
-interface TransactionToastProps {
-  isVisible: boolean
-  txHash: string
-  message: string
-  onClose: () => void
-}
-
-const TransactionToast = ({ isVisible, txHash, onClose }: Omit<TransactionToastProps, 'message'>) => {
-  const [progress, setProgress] = useState(100)
-
-  useEffect(() => {
-    if (isVisible) {
-      setProgress(100)
-      const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev <= 0) {
-            clearInterval(timer)
-            onClose()
-            return 0
-          }
-          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
-        })
-      }, 100)
-
-      return () => clearInterval(timer)
-    }
-  }, [isVisible, onClose])
-
-  if (!isVisible) return null
-
-  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
-      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
-            onClick={onClose}
-          >
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
-            {txHash.slice(0, 10)}...{txHash.slice(-8)}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
-            onClick={() => window.open(explorerUrl, '_blank')}
-          >
-            <ExternalLink className="w-3 h-3 mr-1" />
-            View
-          </Button>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-          <div 
-            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
+// Transaction Success Toast Component - Remove local component and use imported one
 
 // Interface cho NFT
 interface NFT {
@@ -141,11 +67,21 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   // Show transaction success toast (with optional auto-reload)
   const showTransactionSuccess = (txHash: string, message: string, autoReload = true) => {
+    // Clear any existing toast first
     setTransactionToast({
-      isVisible: true,
-      txHash,
-      message
+      isVisible: false,
+      txHash: '',
+      message: ''
     })
+    
+    // Show new toast after a brief delay to ensure cleanup
+    setTimeout(() => {
+      setTransactionToast({
+        isVisible: true,
+        txHash,
+        message
+      })
+    }, 100)
     
     // Auto reload page after 7 seconds (5s toast display + 2s delay) - only for blockchain transactions
     if (autoReload) {
@@ -157,11 +93,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   // Hide transaction toast
   const hideTransactionToast = () => {
-    setTransactionToast({
-      isVisible: false,
-      txHash: '',
-      message: ''
-    })
+    setTransactionToast(prev => ({
+      ...prev,
+      isVisible: false
+    }))
+    
+    // Clear the state completely after animation
+    setTimeout(() => {
+      setTransactionToast({
+        isVisible: false,
+        txHash: '',
+        message: ''
+      })
+    }, 300)
   }
 
   // Handler để mở single auction từ NFT card
@@ -257,88 +201,50 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   // Loading state
   if (userLoading || nftLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        {/* Loading Banner Skeleton */}
-        <div className="relative h-[300px] bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-        </div>
-
-        <div className="container mx-auto px-4">
-          {/* Profile Info Skeleton */}
-          <div className="relative mb-8 pt-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              {/* Avatar Skeleton */}
-              <div className="w-32 h-32 rounded-full bg-white shadow-lg -mt-16 relative">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse"></div>
-              </div>
-
-              <div className="flex-1 space-y-4">
-                {/* Name & Username Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-8 bg-gray-200 rounded-lg w-48 animate-pulse"></div>
-                  <div className="h-5 bg-gray-200 rounded-lg w-32 animate-pulse"></div>
-                </div>
-                
-                {/* Bio Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-full max-w-2xl animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                </div>
-
-                {/* Stats Skeleton */}
-                <div className="flex flex-wrap gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Edit Button Skeleton */}
-              <div className="h-9 bg-gray-200 rounded-lg w-28 animate-pulse"></div>
-            </div>
-          </div>
-
-          {/* Tabs Skeleton */}
-          <div className="mb-6">
-            <div className="flex space-x-4 border-b">
-              <div className="h-10 bg-gray-200 rounded-t-lg w-24 animate-pulse"></div>
-              <div className="h-10 bg-gray-200 rounded-t-lg w-20 animate-pulse"></div>
-            </div>
-          </div>
-
-          {/* NFT Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm">
-                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-                  <div className="flex justify-between">
-                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ProfileLoading 
+        isCreatingUser={userLoading && !user} 
+        loadingNFTs={nftLoading} 
+      />
     )
   }
 
-  // Error state
+  // Error state - Enhanced
   if (userError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Error loading profile: {userError}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-rose-100 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-red-200 p-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-rose-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                <X className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Oops! Something went wrong</h3>
+            <p className="text-red-600 mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <strong>Error:</strong> {userError}
+            </p>
+            
+            <div className="space-y-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg"
+              >
+                🔄 Try Again
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => window.history.back()}
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                ← Go Back
+              </Button>
+            </div>
+            
+            <div className="mt-6 text-sm text-gray-500">
+              If this problem persists, please try refreshing the page or check your internet connection.
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -558,6 +464,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       <TransactionToast
         isVisible={transactionToast.isVisible}
         txHash={transactionToast.txHash}
+        message={transactionToast.message}
         onClose={hideTransactionToast}
       />
     </div>

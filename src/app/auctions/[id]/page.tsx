@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,7 @@ import {
   Gavel,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Info,
   Eye,
   User,
@@ -68,7 +69,13 @@ const TransactionToast = ({ isVisible, txHash, onClose }: TransactionToastProps)
   const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+    <div 
+      className={`fixed bottom-4 right-4 z-50 transition-all duration-300 transform ${
+        isVisible 
+          ? 'translate-x-0 opacity-100 scale-100' 
+          : 'translate-x-full opacity-0 scale-95'
+      }`}
+    >
       <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -199,6 +206,10 @@ export default function AuctionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  
+  // Related auctions state
+  const [relatedAuctions, setRelatedAuctions] = useState<any[]>([])
+  const [loadingRelated, setLoadingRelated] = useState(false)
 
   // Modal states
   const [showBidModal, setShowBidModal] = useState(false)
@@ -489,6 +500,39 @@ export default function AuctionDetailPage() {
     const timer = setInterval(updateReclaimTime, 1000)
     return () => clearInterval(timer)
   }, [auction])
+
+  // Fetch related auctions by collection
+  const fetchRelatedAuctions = useCallback(async () => {
+    if (!auction?.collection_name) return
+    
+    setLoadingRelated(true)
+    try {
+      const response = await fetch('/api/auctions')
+      const data = await response.json()
+      if (data.success) {
+        // Filter related auctions (same collection, different auction_id, active status)
+        const related = data.data.filter((a: any) => 
+          a.collection_name === auction.collection_name &&
+          a.auction_id !== auction.auction_id &&
+          a.status === 'active' &&
+          !isAuctionEnded(a.end_time)
+        ).slice(0, 3) // Limit to 3 related auctions
+        
+        setRelatedAuctions(related)
+      }
+    } catch (error) {
+      console.error('Error fetching related auctions:', error)
+    } finally {
+      setLoadingRelated(false)
+    }
+  }, [auction])
+
+  // Fetch related auctions when auction is loaded
+  useEffect(() => {
+    if (auction) {
+      fetchRelatedAuctions()
+    }
+  }, [auction, fetchRelatedAuctions])
 
   // Event handlers
   const handlePlaceBid = async () => {
@@ -1078,18 +1122,34 @@ export default function AuctionDetailPage() {
                 )}
 
                 {auction.status === 'ended' && (
-                  <Button 
-                    onClick={handleFinalizeAuction} 
-                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                    disabled={isFinalizing || !isConnected}
-                  >
-                    {isFinalizing ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Gavel className="w-4 h-4 mr-2" />
-                    )}
-                    Finalize Auction
-                  </Button>
+                  <div className="space-y-3">
+                    {/* Finalization Guide */}
+                    <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-4 h-4 text-cyan-600" />
+                        <span className="font-medium text-cyan-800">Ready to Finalize</span>
+                      </div>
+                      <div className="text-sm text-cyan-700 space-y-1">
+                        <p>• <strong>Anyone can finalize</strong> this ended auction</p>
+                        <p>• <strong>Reveals the winner</strong> and makes bid history public</p>
+                        <p>• <strong>Automatic outcomes:</strong> No bids or below reserve = NFT returns to seller</p>
+                        <p>• <strong>Winner revealed:</strong> Highest bidder gets 3 days to claim</p>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleFinalizeAuction} 
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                      disabled={isFinalizing || !isConnected}
+                    >
+                      {isFinalizing ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Gavel className="w-4 h-4 mr-2" />
+                      )}
+                      🔍 Finalize Auction & Reveal Winner
+                    </Button>
+                  </div>
                 )}
 
                 {auction.status === 'finalized' && (
@@ -1099,7 +1159,35 @@ export default function AuctionDetailPage() {
                       <>
                         {/* Claim Button - CHỈ HIỂN THỊ CHO HIGHEST BIDDER */}
                         {isHighestBidder() ? (
-                          <div className="space-y-2">
+                          <div className="space-y-3">
+                            {/* Winner Claim Guide */}
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Crown className="w-4 h-4 text-green-600" />
+                                <span className="font-medium text-green-800">🎉 Congratulations! You Won!</span>
+                              </div>
+                              <div className="text-sm text-green-700 space-y-1">
+                                <p>• <strong>You are the highest bidder</strong> for this auction</p>
+                                <p>• <strong>Claim within 3 days</strong> or forfeit your deposit</p>
+                                {contractAuction && getRemainingAmount() > BigInt(0) ? (
+                                  <p>• <strong>Pay remaining:</strong> {formatEther(getRemainingAmount())} ROSE to complete purchase</p>
+                                ) : (
+                                  <p>• <strong>No additional payment</strong> required - your deposit covers the full amount!</p>
+                                )}
+                                <p>• <strong>Instant transfer:</strong> NFT transfers to your wallet immediately</p>
+                              </div>
+                              
+                              {/* Countdown Timer */}
+                              {auction.reclaim_nft > 0 && (
+                                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-yellow-700 font-medium">⏰ Claim deadline:</span>
+                                    <span className="text-yellow-800 font-semibold">{realReclaimTimeLeft}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
                             <Button 
                               onClick={handleClaimNFT} 
                               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
@@ -1110,42 +1198,73 @@ export default function AuctionDetailPage() {
                               ) : (
                                 <Crown className="w-4 h-4 mr-2" />
                               )}
-                              Claim NFT
+                              🏆 Claim Your NFT
+                              {contractAuction && getRemainingAmount() > BigInt(0) && (
+                                <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded">
+                                  +{formatEther(getRemainingAmount())} ROSE
+                                </span>
+                              )}
                             </Button>
-                            
-                            {/* Hiển thị remaining amount cần trả */}
-                            {contractAuction && getRemainingAmount() > BigInt(0) && (
-                              <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
-                                <p className="text-xs text-blue-700">
-                                  Additional payment required: <span className="font-semibold">{formatEther(getRemainingAmount())} ROSE</span>
-                                </p>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <div className="w-full p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center justify-center text-gray-600">
+                            <div className="flex items-center justify-center text-gray-600 mb-2">
                               <Info className="w-5 h-5 mr-2" />
-                              <span className="font-medium">Only the highest bidder can claim the NFT</span>
+                              <span className="font-medium">Waiting for Winner to Claim</span>
+                            </div>
+                            <div className="text-center text-sm text-gray-500 space-y-1">
+                              <p>Only the highest bidder can claim this NFT</p>
+                              <p>Winner has 3 days from finalization to claim</p>
+                              {auction.reclaim_nft > 0 && !isReclaimPeriodExpired() && (
+                                <p className="text-yellow-600 font-medium">
+                                  ⏰ Time remaining: {realReclaimTimeLeft}
+                                </p>
+                              )}
                             </div>
                           </div>
                         )}
                         
                         {/* Reclaim Button - CHỈ CHO AUCTION CREATOR */}
                         {isAuctionCreator && (
-                          <Button 
-                            onClick={handleReclaimNFT} 
-                            variant="outline"
-                            className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
-                            disabled={isReclaimingNFT || !isConnected || !isReclaimPeriodExpired()}
-                          >
-                            {isReclaimingNFT ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Clock className="w-4 h-4 mr-2" />
-                            )}
-                            {isReclaimPeriodExpired() ? 'Reclaim NFT' : `Reclaim in ${realReclaimTimeLeft}`}
-                          </Button>
+                          <div className="space-y-3">
+                            {/* Reclaim Guide */}
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-4 h-4 text-orange-600" />
+                                <span className="font-medium text-orange-800">Reclaim Your NFT</span>
+                              </div>
+                              <div className="text-sm text-orange-700 space-y-1">
+                                {isReclaimPeriodExpired() ? (
+                                  <>
+                                    <p>• <strong>Winner didn&apos;t claim:</strong> 3-day deadline has passed</p>
+                                    <p>• <strong>Winner forfeits deposit:</strong> You keep their deposit as compensation</p>
+                                    <p>• <strong>Your rights:</strong> You can now reclaim your NFT back to your wallet</p>
+                                    <p>• <strong>Next steps:</strong> Relist, keep, or sell elsewhere</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p>• <strong>Winner has time:</strong> They have {realReclaimTimeLeft} to claim</p>
+                                    <p>• <strong>Be patient:</strong> Reclaim only available after 3-day grace period</p>
+                                    <p>• <strong>Automatic rights:</strong> You can reclaim if they don&apos;t claim</p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              onClick={handleReclaimNFT} 
+                              variant="outline"
+                              className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+                              disabled={isReclaimingNFT || !isConnected || !isReclaimPeriodExpired()}
+                            >
+                              {isReclaimingNFT ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Clock className="w-4 h-4 mr-2" />
+                              )}
+                              {isReclaimPeriodExpired() ? '🔄 Reclaim Your NFT' : `⏰ Reclaim in ${realReclaimTimeLeft}`}
+                            </Button>
+                          </div>
                         )}
                       </>
                     )}
@@ -1356,14 +1475,54 @@ export default function AuctionDetailPage() {
 
       {/* Bid Modal */}
       <Dialog open={showBidModal} onOpenChange={setShowBidModal}>
-        <DialogContent className="bg-white/95 backdrop-blur-sm">
+        <DialogContent className="bg-white/95 backdrop-blur-sm max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Place Sealed Bid</DialogTitle>
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <Gavel className="w-5 h-5 text-blue-600" />
+              Place Sealed Bid
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Bidding Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-blue-800">How Sealed Bidding Works</span>
+              </div>
+              <div className="space-y-2 text-sm text-blue-700">
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-start gap-2">
+                    <span className="bg-blue-200 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">1</span>
+                    <div>
+                      <strong>Pay Deposit Only:</strong> You only pay <span className="font-semibold text-green-600">{auction?.starting_price} ROSE</span> now (starting price)
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="bg-blue-200 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">2</span>
+                    <div>
+                      <strong>Hidden Bids:</strong> Your bid amount stays secret until auction ends
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="bg-blue-200 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">3</span>
+                    <div>
+                      <strong>If You Win:</strong> Pay remaining amount (your bid - {auction?.starting_price} ROSE) to claim NFT
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="bg-blue-200 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">4</span>
+                    <div>
+                      <strong>If You Lose:</strong> Get your {auction?.starting_price} ROSE deposit back automatically
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bid Input */}
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">
-                Your Bid Amount (ROSE)
+                Your Secret Bid Amount (ROSE)
               </label>
               <Input
                 type="number"
@@ -1372,16 +1531,53 @@ export default function AuctionDetailPage() {
                 placeholder={`Minimum ${auction?.starting_price} ROSE`}
                 step="0.01"
                 min={auction ? parseFloat(auction.starting_price) : 0}
-                className="bg-white border-gray-200"
+                className="bg-white border-gray-200 text-lg font-semibold"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Only {auction?.starting_price} ROSE will be charged now. Remaining amount (if any) will be charged when you claim the NFT if you win.
-              </p>
+              
+              {/* Payment Breakdown */}
+              {bidAmount && parseFloat(bidAmount) >= parseFloat(auction?.starting_price || '0') && (
+                <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                  <h4 className="font-medium text-green-800 mb-2">💳 Payment Breakdown</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between text-green-700">
+                      <span>Pay Now (Deposit):</span>
+                      <span className="font-semibold">{auction?.starting_price} ROSE</span>
+                    </div>
+                    <div className="flex justify-between text-green-700">
+                      <span>If You Win, Pay Later:</span>
+                      <span className="font-semibold">
+                        {(parseFloat(bidAmount) - parseFloat(auction?.starting_price || '0')).toFixed(4)} ROSE
+                      </span>
+                    </div>
+                    <div className="border-t border-green-300 pt-1 mt-2">
+                      <div className="flex justify-between text-green-800 font-semibold">
+                        <span>Total Bid Amount:</span>
+                        <span>{parseFloat(bidAmount).toFixed(4)} ROSE</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Warning */}
+              <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <span className="font-medium text-yellow-800 text-sm">Important Reminder</span>
+                </div>
+                <ul className="text-xs text-yellow-700 space-y-1 list-disc ml-4">
+                  <li>This is a binding commitment - you must claim and pay if you win</li>
+                  <li>You have 3 days to claim after auction ends, or forfeit your deposit</li>
+                  <li>Bid strategically - your amount will be revealed when auction finalizes</li>
+                </ul>
+              </div>
             </div>
+
+            {/* Action Buttons */}
             <div className="flex gap-3">
               <Button 
                 onClick={handlePlaceBid} 
-                disabled={isPlacingBid || !bidAmount}
+                disabled={isPlacingBid || !bidAmount || parseFloat(bidAmount) < parseFloat(auction?.starting_price || '0')}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 {isPlacingBid ? (
@@ -1389,7 +1585,7 @@ export default function AuctionDetailPage() {
                 ) : (
                   <Gavel className="w-4 h-4 mr-2" />
                 )}
-                Place Bid
+                Place Sealed Bid
               </Button>
               <Button 
                 variant="outline" 

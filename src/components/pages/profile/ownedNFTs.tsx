@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Grid3X3, List, Filter, Search, DollarSign, Gavel, CheckCircle, ChevronLeft, ChevronRight, Copy, ExternalLink} from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
 import SellNFTModal from "@/components/pages/profile/sellNFTModal"
 
 interface NFT {
@@ -288,30 +287,28 @@ export default function OwnedNFTs({
         >
         {currentNFTs.map((nft) => (
           <Card key={nft.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-          <Link href={`/nft/${nft.id}`}>
-            <div className="aspect-square relative">
-            <NFTImage
-              src={nft.image || "/placeholder.svg"}
-              alt={nft.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-            />
-            <div className="absolute top-3 left-3 flex flex-col gap-2">
-              {nft.isVerified && (
-              <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Verified
-              </Badge>
+            <div className="aspect-square relative cursor-pointer">
+              <NFTImage
+                src={nft.image || "/placeholder.svg"}
+                alt={nft.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
+              <div className="absolute top-3 left-3 flex flex-col gap-2">
+                {nft.isVerified && (
+                  <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Verified
+                  </Badge>
+                )}
+              </div>
+              {nft.edition && (
+                <div className="absolute top-3 right-3">
+                  <Badge variant="secondary" className="text-xs">
+                    {nft.edition}
+                  </Badge>
+                </div>
               )}
             </div>
-            {nft.edition && (
-              <div className="absolute top-3 right-3">
-              <Badge variant="secondary" className="text-xs">
-                {nft.edition}
-              </Badge>
-              </div>
-            )}
-            </div>
-          </Link>
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
             {nft.collection}

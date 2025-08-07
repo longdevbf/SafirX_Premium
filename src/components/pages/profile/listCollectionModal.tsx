@@ -20,11 +20,10 @@ import {
   DollarSign, 
   Gavel, 
   Package,
-  
   AlertTriangle,
-  
   Filter,
-  Loader2
+  Loader2,
+  Info
 } from "lucide-react"
 import Image from "next/image"
 import { useAccount } from "wagmi"
@@ -944,15 +943,90 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
                 </Alert>
               )}
 
-              {/* Warning */}
-              <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="font-medium mb-1">Important:</p>
-                  <p>
-                    Make sure you have approved the marketplace contract to transfer these NFTs. 
-                    You&apos;ll need to confirm the transaction in your wallet.
-                  </p>
+              {/* Important Collection Auction Guide */}
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-800">Collection Auction Process Guide</span>
+                  </div>
+                  <div className="space-y-4 text-sm text-blue-700">
+                    {/* Quick Overview */}
+                    <div className="bg-white/70 rounded-lg p-3 border border-blue-200">
+                      <h4 className="font-semibold text-blue-800 mb-2">📋 Collection Auction Overview</h4>
+                      <p className="text-blue-700">
+                        List multiple NFTs from the same collection as a bundle. Bidders compete for the entire collection, 
+                        creating higher value opportunities and streamlined transactions.
+                      </p>
+                    </div>
+
+                    {/* Auction Flow */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-white/70 rounded-lg p-3 border border-blue-200">
+                        <h5 className="font-semibold text-blue-800 mb-2">🎯 Bidding Process</h5>
+                        <ul className="space-y-1 text-xs list-disc ml-4">
+                          <li>Sealed bid auction for fairness</li>
+                          <li>Bidders pay starting price as deposit</li>
+                          <li>All bids hidden until finalization</li>
+                          <li>Winner gets entire collection</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-white/70 rounded-lg p-3 border border-blue-200">
+                        <h5 className="font-semibold text-blue-800 mb-2">⏰ Timeline</h5>
+                        <ul className="space-y-1 text-xs list-disc ml-4">
+                          <li>Auction runs for set duration</li>
+                          <li>Auto-extends if last-minute bids</li>
+                          <li>Anyone can finalize after end</li>
+                          <li>Winner has 3 days to claim</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Benefits */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
+                      <h4 className="font-semibold text-green-800 mb-2">✨ Collection Auction Benefits</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <strong className="text-green-800">Higher Value:</strong>
+                          <span className="text-green-700"> Bundle pricing often exceeds individual sales</span>
+                        </div>
+                        <div>
+                          <strong className="text-green-800">Single Transaction:</strong>
+                          <span className="text-green-700"> One auction, one winner, simplified process</span>
+                        </div>
+                        <div>
+                          <strong className="text-green-800">Collector Appeal:</strong>
+                          <span className="text-green-700"> Attracts serious collectors seeking complete sets</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Warning */}
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                        <strong className="text-yellow-800">Important Considerations</strong>
+                      </div>
+                      <ul className="space-y-1 text-xs text-yellow-700 list-disc ml-4">
+                        <li>All NFTs must be from the same collection/contract</li>
+                        <li>Winner claims entire bundle or loses deposit</li>
+                        <li>Cannot split collection after auction starts</li>
+                        <li>Reserve price applies to the entire collection</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div className="text-sm text-green-800">
+                    <p className="font-medium mb-1">Ready to List:</p>
+                    <p>
+                      Make sure you have approved the marketplace contract to transfer these NFTs. 
+                      You&apos;ll need to confirm the transaction in your wallet.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

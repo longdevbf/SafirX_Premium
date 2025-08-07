@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react/no-unescaped-entities */
 "use client"
@@ -8,6 +7,7 @@ import { useAccount } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -16,17 +16,17 @@ import {
   Gavel, 
   Eye, 
   Users, 
-  Star, 
   Timer, 
   Lock, 
   HelpCircle,
   CheckCircle,
   AlertCircle,
-  History,
   Crown,
   X,
-  ExternalLink,
-  Loader2
+  Loader2,
+  Search,
+  Filter,
+  SortAsc
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -105,83 +105,7 @@ const ReclaimCountdown = ({ reclaimTime, className = "" }: ReclaimCountdownProps
   )
 }
 
-// Transaction Success Toast Component
-interface TransactionToastProps {
-  isVisible: boolean
-  txHash: string
-  message: string
-  onClose: () => void
-}
-
-const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionToastProps) => {
-  const [progress, setProgress] = useState(100)
-
-  useEffect(() => {
-    if (isVisible) {
-      setProgress(100)
-      const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev <= 0) {
-            clearInterval(timer)
-            onClose()
-            return 0
-          }
-          return prev - 2 // Decrease by 2% every 100ms (5 seconds total)
-        })
-      }, 100)
-
-      return () => clearInterval(timer)
-    }
-  }, [isVisible, onClose])
-
-  if (!isVisible) return null
-
-  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
-      <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-semibold text-green-800">Transaction Successful</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
-            onClick={onClose}
-          >
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded flex-1 mr-2 truncate">
-            {txHash.slice(0, 10)}...{txHash.slice(-8)}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
-            onClick={() => window.open(explorerUrl, '_blank')}
-          >
-            <ExternalLink className="w-3 h-3 mr-1" />
-            View
-          </Button>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-          <div 
-            className="bg-green-500 h-1 rounded-full transition-all duration-100 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
+import TransactionToast from "@/components/ui/transaction-toast"
 
 // Real-time countdown component
 interface CountdownProps {
@@ -214,6 +138,17 @@ export default function AuctionsPage() {
   const [showGuideModal, setShowGuideModal] = useState(false)
   const [cancelingAuctions, setCancelingAuctions] = useState<Set<number>>(new Set())
   const [finalizingAuctions, setFinalizingAuctions] = useState<Set<number>>(new Set())
+  
+  // Search and Filter states - separate for each tab
+  const [liveSearchTerm, setLiveSearchTerm] = useState("")
+  const [endedSearchTerm, setEndedSearchTerm] = useState("")
+  const [finalizedSearchTerm, setFinalizedSearchTerm] = useState("")
+  const [liveSortBy, setLiveSortBy] = useState("ending-soon")
+  const [endedSortBy, setEndedSortBy] = useState("ending-soon")
+  const [finalizedSortBy, setFinalizedSortBy] = useState("ending-soon")
+  const [liveFilterBy, setLiveFilterBy] = useState("all")
+  const [endedFilterBy, setEndedFilterBy] = useState("all")
+  const [finalizedFilterBy, setFinalizedFilterBy] = useState("all")
 
   // Transaction toast state
   const [transactionToast, setTransactionToast] = useState({
@@ -280,22 +215,65 @@ export default function AuctionsPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Enhanced filter with real-time status using useMemo
-  const liveAuctions = useMemo(() => 
-    auctions.filter(auction => 
+  // Enhanced filter with real-time status using useMemo - separate for each tab
+  const filterAndSortAuctions = useCallback((auctionList: Auction[], searchTerm: string, sortBy: string, filterBy: string) => {
+    let filtered = auctionList.filter(auction => {
+      // Search filter - search in auction title, collection name, and NFT names
+      const matchesSearch = searchTerm === "" || 
+        auction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        auction.collection_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        auction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (auction.nft_individual && auction.nft_individual.some(nft => 
+          nft.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+      
+      // Type filter
+      const matchesType = filterBy === "all" || 
+        (filterBy === "single" && auction.auction_type === "single") ||
+        (filterBy === "bundle" && auction.auction_type === "bundle")
+      
+      return matchesSearch && matchesType
+    })
+
+    // Sort logic
+    switch (sortBy) {
+      case "ending-soon":
+        filtered = filtered.sort((a, b) => a.end_time - b.end_time)
+        break
+      case "most-bids":
+        filtered = filtered.sort((a, b) => b.total_bid - a.total_bid)
+        break
+      case "highest-price":
+        filtered = filtered.sort((a, b) => parseFloat(b.starting_price) - parseFloat(a.starting_price))
+        break
+      case "recently-started":
+        filtered = filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        break
+      default:
+        break
+    }
+
+    return filtered
+  }, [])
+
+  const filteredLiveAuctions = useMemo(() => {
+    const liveList = auctions.filter(auction => 
       auction.status === 'active' && !isAuctionEnded(auction.end_time)
-    ), [auctions]
-  )
+    )
+    return filterAndSortAuctions(liveList, liveSearchTerm, liveSortBy, liveFilterBy)
+  }, [auctions, liveSearchTerm, liveSortBy, liveFilterBy, filterAndSortAuctions])
   
-  const endedAuctions = useMemo(() => 
-    auctions.filter(auction => 
+  const filteredEndedAuctions = useMemo(() => {
+    const endedList = auctions.filter(auction => 
       auction.status === 'ended' || (auction.status === 'active' && isAuctionEnded(auction.end_time))
-    ), [auctions]
-  )
+    )
+    return filterAndSortAuctions(endedList, endedSearchTerm, endedSortBy, endedFilterBy)
+  }, [auctions, endedSearchTerm, endedSortBy, endedFilterBy, filterAndSortAuctions])
   
-  const finalizedAuctions = useMemo(() => 
-    auctions.filter(auction => auction.status === 'finalized'), [auctions]
-  )
+  const filteredFinalizedAuctions = useMemo(() => {
+    const finalizedList = auctions.filter(auction => auction.status === 'finalized')
+    return filterAndSortAuctions(finalizedList, finalizedSearchTerm, finalizedSortBy, finalizedFilterBy)
+  }, [auctions, finalizedSearchTerm, finalizedSortBy, finalizedFilterBy, filterAndSortAuctions])
 
   // Check if current user is the auction creator
   const isAuctionCreator = useCallback((auction: Auction) => {
@@ -465,33 +443,84 @@ export default function AuctionsPage() {
             <TabsList className="grid w-full sm:w-auto grid-cols-3 bg-white/80 backdrop-blur-sm">
               <TabsTrigger value="live" className="flex items-center gap-2">
                 <Timer className="w-4 h-4" />
-                Live ({liveAuctions.length})
+                Live ({filteredLiveAuctions.length})
               </TabsTrigger>
               <TabsTrigger value="ended" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Ended ({endedAuctions.length})
+                Ended ({filteredEndedAuctions.length})
               </TabsTrigger>
               <TabsTrigger value="finalized" className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4" />
-                Finalized ({finalizedAuctions.length})
+                Finalized ({filteredFinalizedAuctions.length})
               </TabsTrigger>
             </TabsList>
-
-            <Select defaultValue="ending-soon">
-              <SelectTrigger className="w-48 bg-white/80 backdrop-blur-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ending-soon">Ending Soon</SelectItem>
-                <SelectItem value="most-bids">Most Bids</SelectItem>
-                <SelectItem value="highest-bid">Highest Bid</SelectItem>
-                <SelectItem value="recently-started">Recently Started</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Live Auctions */}
           <TabsContent value="live" className="space-y-6">
+            {/* Search and Filter for Live Tab */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input 
+                    placeholder="Search live auctions by title or NFT name..."
+                    value={liveSearchTerm}
+                    onChange={(e) => setLiveSearchTerm(e.target.value)}
+                    className="pl-10 bg-white/90"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Select value={liveFilterBy} onValueChange={setLiveFilterBy}>
+                    <SelectTrigger className="w-40 bg-white/90">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="single">Single NFT</SelectItem>
+                      <SelectItem value="bundle">Bundle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={liveSortBy} onValueChange={setLiveSortBy}>
+                    <SelectTrigger className="w-48 bg-white/90">
+                      <SortAsc className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ending-soon">Ending Soon</SelectItem>
+                      <SelectItem value="most-bids">Most Bids</SelectItem>
+                      <SelectItem value="highest-price">Highest Price</SelectItem>
+                      <SelectItem value="recently-started">Recently Started</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {(liveSearchTerm || liveFilterBy !== "all" || liveSortBy !== "ending-soon") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setLiveSearchTerm("")
+                        setLiveFilterBy("all")
+                        setLiveSortBy("ending-soon")
+                      }}
+                      className="bg-white/80 backdrop-blur-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {liveSearchTerm && (
+                <div className="mt-3 text-sm text-gray-600">
+                  Found {filteredLiveAuctions.length} live auction(s) matching "{liveSearchTerm}"
+                </div>
+              )}
+            </div>
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
                 <Lock className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -505,7 +534,7 @@ export default function AuctionsPage() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {liveAuctions.map((auction) => (
+              {filteredLiveAuctions.map((auction) => (
                 <Card key={auction.id} className="overflow-hidden hover:shadow-lg transition-all duration-200 bg-white/90 backdrop-blur-sm border-white/20">
                   <div className="aspect-square relative cursor-pointer" onClick={() => router.push(`/auctions/${auction.auction_id}`)}>
                     <Image 
@@ -589,7 +618,7 @@ export default function AuctionsPage() {
               ))}
             </div>
 
-            {liveAuctions.length === 0 && (
+            {filteredLiveAuctions.length === 0 && (
               <div className="text-center py-12">
                 <Timer className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 font-medium">No live auctions at the moment</p>
@@ -600,6 +629,69 @@ export default function AuctionsPage() {
 
           {/* Ended Auctions */}
           <TabsContent value="ended" className="space-y-6">
+            {/* Search and Filter for Ended Tab */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input 
+                    placeholder="Search ended auctions by title or NFT name..."
+                    value={endedSearchTerm}
+                    onChange={(e) => setEndedSearchTerm(e.target.value)}
+                    className="pl-10 bg-white/90"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Select value={endedFilterBy} onValueChange={setEndedFilterBy}>
+                    <SelectTrigger className="w-40 bg-white/90">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="single">Single NFT</SelectItem>
+                      <SelectItem value="bundle">Bundle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={endedSortBy} onValueChange={setEndedSortBy}>
+                    <SelectTrigger className="w-48 bg-white/90">
+                      <SortAsc className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ending-soon">Recently Ended</SelectItem>
+                      <SelectItem value="most-bids">Most Bids</SelectItem>
+                      <SelectItem value="highest-price">Highest Price</SelectItem>
+                      <SelectItem value="recently-started">Recently Started</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {(endedSearchTerm || endedFilterBy !== "all" || endedSortBy !== "ending-soon") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setEndedSearchTerm("")
+                        setEndedFilterBy("all")
+                        setEndedSortBy("ending-soon")
+                      }}
+                      className="bg-white/80 backdrop-blur-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {endedSearchTerm && (
+                <div className="mt-3 text-sm text-gray-600">
+                  Found {filteredEndedAuctions.length} ended auction(s) matching "{endedSearchTerm}"
+                </div>
+              )}
+            </div>
+
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
@@ -613,7 +705,7 @@ export default function AuctionsPage() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {endedAuctions.map((auction) => (
+              {filteredEndedAuctions.map((auction) => (
                 <Card key={auction.id} className="overflow-hidden bg-white/90 backdrop-blur-sm border-white/20">
                   <div className="aspect-square relative cursor-pointer" onClick={() => router.push(`/auctions/${auction.auction_id}`)}>
                     <Image 
@@ -676,7 +768,7 @@ export default function AuctionsPage() {
               ))}
             </div>
 
-            {endedAuctions.length === 0 && (
+            {filteredEndedAuctions.length === 0 && (
               <div className="text-center py-12">
                 <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 font-medium">No ended auctions waiting for finalization</p>
@@ -686,6 +778,69 @@ export default function AuctionsPage() {
 
           {/* Finalized Auctions - CẬP NHẬT */}
           <TabsContent value="finalized" className="space-y-6">
+            {/* Search and Filter for Finalized Tab */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input 
+                    placeholder="Search finalized auctions by title or NFT name..."
+                    value={finalizedSearchTerm}
+                    onChange={(e) => setFinalizedSearchTerm(e.target.value)}
+                    className="pl-10 bg-white/90"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Select value={finalizedFilterBy} onValueChange={setFinalizedFilterBy}>
+                    <SelectTrigger className="w-40 bg-white/90">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="single">Single NFT</SelectItem>
+                      <SelectItem value="bundle">Bundle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={finalizedSortBy} onValueChange={setFinalizedSortBy}>
+                    <SelectTrigger className="w-48 bg-white/90">
+                      <SortAsc className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ending-soon">Recently Finalized</SelectItem>
+                      <SelectItem value="most-bids">Most Bids</SelectItem>
+                      <SelectItem value="highest-price">Highest Price</SelectItem>
+                      <SelectItem value="recently-started">Recently Started</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {(finalizedSearchTerm || finalizedFilterBy !== "all" || finalizedSortBy !== "ending-soon") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setFinalizedSearchTerm("")
+                        setFinalizedFilterBy("all")
+                        setFinalizedSortBy("ending-soon")
+                      }}
+                      className="bg-white/80 backdrop-blur-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {finalizedSearchTerm && (
+                <div className="mt-3 text-sm text-gray-600">
+                  Found {filteredFinalizedAuctions.length} finalized auction(s) matching "{finalizedSearchTerm}"
+                </div>
+              )}
+            </div>
+
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -699,7 +854,7 @@ export default function AuctionsPage() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {finalizedAuctions.map((auction) => (
+              {filteredFinalizedAuctions.map((auction) => (
                 <Card key={auction.id} className="overflow-hidden bg-white/90 backdrop-blur-sm border-white/20">
                   <div className="aspect-square relative cursor-pointer" onClick={() => router.push(`/auctions/${auction.auction_id}`)}>
                     <Image 
@@ -794,7 +949,7 @@ export default function AuctionsPage() {
               ))}
             </div>
 
-            {finalizedAuctions.length === 0 && (
+            {filteredFinalizedAuctions.length === 0 && (
               <div className="text-center py-12">
                 <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 font-medium">No finalized auctions yet</p>
@@ -829,7 +984,6 @@ export default function AuctionsPage() {
       <TransactionToast
         isVisible={transactionToast.isVisible}
         txHash={transactionToast.txHash}
-        message={transactionToast.message}
         onClose={hideTransactionToast}
       />
     </div>

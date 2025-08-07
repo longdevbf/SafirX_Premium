@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useWallet } from './walletContext'
 
 interface UserData {
@@ -33,7 +33,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { address, isConnected } = useWallet()
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async (retryCount = 0) => {
     if (!address || !isConnected) {
       setUser(null)
       return
@@ -43,28 +43,66 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setError(null)
     
     try {
+      // Thử fetch user data
       const response = await fetch(`/api/users?address=${address}`)
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('User not found')
-        }
-        throw new Error('Failed to fetch user data')
+      if (response.ok) {
+        // User đã tồn tại
+        const data = await response.json()
+        setUser(data.user)
+        return
       }
 
-      const data = await response.json()
-      setUser(data.user)
+      if (response.status === 404) {
+        // User chưa tồn tại, tự động tạo mới
+        console.log('User not found, creating new user...')
+        
+        const createResponse = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ address })
+        })
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json()
+          throw new Error(errorData.error || 'Failed to create new user')
+        }
+
+        const createData = await createResponse.json()
+        console.log('New user created successfully:', createData)
+        
+        // Set user data từ response của create API
+        if (createData.user) {
+          setUser(createData.user)
+          return
+        }
+      }
+
+      // Lỗi khác
+      throw new Error(`HTTP ${response.status}: Failed to fetch user data`)
+
     } catch (err) {
-      console.error('Error fetching user:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      console.error('Error in fetchUser:', err)
+      
+      // Retry logic cho network errors (tối đa 2 lần retry)
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      if (retryCount < 2 && (err instanceof TypeError || errorMessage.includes('Network'))) {
+        console.log(`Retrying fetchUser... (attempt ${retryCount + 1})`)
+        setTimeout(() => fetchUser(retryCount + 1), 1000) // Retry sau 1 giây
+        return
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [address, isConnected])
 
   useEffect(() => {
     fetchUser()
-  }, [address, isConnected])
+  }, [address, isConnected, fetchUser])
 
   // Reset user when wallet disconnects
   useEffect(() => {

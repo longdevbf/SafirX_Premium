@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mysql from 'mysql2/promise';
+import { pool } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
-  let connection: mysql.Connection | null = null;
+  let client;
   
   try {
     const { address } = await req.json();
@@ -12,60 +12,60 @@ export async function POST(req: NextRequest) {
     }
 
     // Kết nối database
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-    });
+    client = await pool.connect();
 
     // Kiểm tra xem user đã tồn tại chưa
-    const [existingUser] = await connection.execute(
-      'SELECT address FROM users WHERE address = ?',
+    const existingUserResult = await client.query(
+      'SELECT address FROM users WHERE address = $1',
       [address]
-    ) as mysql.RowDataPacket[][];
+    );
 
-    if (existingUser.length > 0) {
+    if (existingUserResult.rows.length > 0) {
       return NextResponse.json({ message: 'User already exists', exists: true });
     }
 
     // Tạo user mới với giá trị mặc định
-    await connection.execute(
+    const insertResult = await client.query(
       `INSERT INTO users (address, created, sold, total_volume, name, followed, follower, created_at) 
-       VALUES (?, 0, 0, 0.0, 'Unnamed User', 0, 0, NOW())`,
+       VALUES ($1, 0, 0, 0.0, 'Unnamed User', 0, 0, CURRENT_TIMESTAMP) 
+       RETURNING *`,
       [address]
     );
+
+    const newUser = insertResult.rows[0];
+    const formattedUser = {
+      address: newUser.address,
+      name: newUser.name || 'Unnamed User',
+      username: newUser.username ? newUser.username.replace('@', '') : null,
+      bio: newUser.bio || null,
+      avatar: newUser.avatar || null,
+      banner: newUser.banner || null,
+      created: parseInt(newUser.created) || 0,
+      sold: parseInt(newUser.sold) || 0,
+      total_volume: parseFloat(newUser.total_volume) || 0,
+      followed: parseInt(newUser.followed) || 0,
+      follower: parseInt(newUser.follower) || 0,
+      created_at: newUser.created_at
+    };
 
     return NextResponse.json({ 
       message: 'User created successfully', 
       exists: false,
-      user: {
-        address,
-        name: 'Unnamed User',
-        username: null,
-        bio: null,
-        avatar: null,
-        banner: null,
-        created: 0,
-        sold: 0,
-        total_volume: 0.0,
-        followed: 0,
-        follower: 0
-      }
+      user: formattedUser
     });
 
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
-    if (connection) {
-      await connection.end();
+    if (client) {
+      client.release();
     }
   }
 }
 
 export async function GET(req: NextRequest) {
-  let connection: mysql.Connection | null = null;
+  let client;
   
   try {
     const { searchParams } = new URL(req.url);
@@ -75,23 +75,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
     }
 
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-    });
+    client = await pool.connect();
 
-    const [users] = await connection.execute(
-      'SELECT * FROM users WHERE address = ?',
+    const result = await client.query(
+      'SELECT * FROM users WHERE address = $1',
       [address]
-    ) as mysql.RowDataPacket[][];
+    );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const user = users[0];
+    const user = result.rows[0];
     
     // Format dữ liệu trước khi trả về
     const formattedUser = {
@@ -115,15 +110,15 @@ export async function GET(req: NextRequest) {
     console.error('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
-    if (connection) {
-      await connection.end();
+    if (client) {
+      client.release();
     }
   }
 }
 
 // Thêm API để update user profile
 export async function PUT(req: NextRequest) {
-  let connection: mysql.Connection | null = null;
+  let client;
   
   try {
     const { address, name, username, bio, avatar, banner } = await req.json();
@@ -132,39 +127,34 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });
     }
 
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-    });
+    client = await pool.connect();
 
     // Clean username (remove @ if present)
     const cleanUsername = username ? username.replace('@', '') : null;
 
     // Update user profile
-    await connection.execute(
+    await client.query(
       `UPDATE users SET 
-        name = COALESCE(?, name),
-        username = ?,
-        bio = ?,
-        avatar = ?,
-        banner = ?
-       WHERE address = ?`,
+        name = COALESCE($1, name),
+        username = $2,
+        bio = $3,
+        avatar = $4,
+        banner = $5
+       WHERE address = $6`,
       [name, cleanUsername, bio, avatar, banner, address]
     );
 
     // Fetch updated user data
-    const [users] = await connection.execute(
-      'SELECT * FROM users WHERE address = ?',
+    const result = await client.query(
+      'SELECT * FROM users WHERE address = $1',
       [address]
-    ) as mysql.RowDataPacket[][];
+    );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const updatedUser = users[0];
+    const updatedUser = result.rows[0];
     const formattedUser = {
       address: updatedUser.address,
       name: updatedUser.name || 'Unnamed User',
@@ -189,8 +179,8 @@ export async function PUT(req: NextRequest) {
     console.error('Error updating user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
-    if (connection) {
-      await connection.end();
+    if (client) {
+      client.release();
     }
   }
 }

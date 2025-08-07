@@ -882,15 +882,73 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <span className="font-medium text-yellow-800">Important Notes</span>
+                  <span className="font-medium text-yellow-800">Complete Auction Process Guide</span>
                 </div>
-                <ul className="space-y-1 text-sm text-yellow-700">
-                  <li>• This is a sealed bid auction - bids are hidden until auction ends</li>
-                  <li>• Bidders must deposit the starting price when placing bids</li>
-                  <li>• Winner pays the full bid amount and gets their deposit back</li>
-                  <li>• NFT(s) will be transferred to auction contract upon creation</li>
-                  <li>• Auction can be extended by 10 minutes if bids are placed near the end</li>
-                </ul>
+                <div className="space-y-4 text-sm text-yellow-700">
+                  {/* Phase 1: Auction Creation */}
+                  <div className="bg-white/50 rounded-lg p-3 border border-yellow-200">
+                    <h4 className="font-semibold text-yellow-800 mb-2">🚀 Phase 1: Auction Creation</h4>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li><strong>Setup:</strong> Configure auction parameters (duration, starting price, reserve price)</li>
+                      <li><strong>NFT Lock:</strong> Your NFT(s) will be securely transferred to auction contract</li>
+                      <li><strong>Go Live:</strong> Auction becomes active immediately after creation</li>
+                    </ul>
+                  </div>
+
+                  {/* Phase 2: Bidding Period */}
+                  <div className="bg-white/50 rounded-lg p-3 border border-yellow-200">
+                    <h4 className="font-semibold text-yellow-800 mb-2">🎯 Phase 2: Sealed Bidding Period</h4>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li><strong>Continuous Bidding:</strong> Users can place bids throughout your set duration</li>
+                      <li><strong>Sealed Bids:</strong> All bid amounts are hidden until auction ends for fair competition</li>
+                      <li><strong>Deposit System:</strong> Bidders only pay <span className="font-semibold text-blue-600">starting price</span> as deposit when bidding</li>
+                      <li><strong>Auto-Extension:</strong> Auction extends 10 minutes if bids placed in final moments</li>
+                    </ul>
+                  </div>
+
+                  {/* Phase 3: Finalization */}
+                  <div className="bg-white/50 rounded-lg p-3 border border-yellow-200">
+                    <h4 className="font-semibold text-yellow-800 mb-2">⚡ Phase 3: Auction Finalization</h4>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li><strong>Anyone Can Finalize:</strong> After auction ends, anyone can trigger finalization</li>
+                      <li><strong>No Bids:</strong> NFT automatically returns to your wallet</li>
+                      <li><strong>Below Reserve:</strong> All bids refunded, NFT returns to you</li>
+                      <li><strong>Successful Auction:</strong> Winner is revealed and claim process begins</li>
+                    </ul>
+                  </div>
+
+                  {/* Phase 4: Claim Process */}
+                  <div className="bg-white/50 rounded-lg p-3 border border-yellow-200">
+                    <h4 className="font-semibold text-yellow-800 mb-2">🏆 Phase 4: Winner Claim Process</h4>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li><strong>Winner Revealed:</strong> Highest bidder is publicly shown after finalization</li>
+                      <li><strong>3-Day Window:</strong> Winner has exactly <span className="font-semibold text-red-600">72 hours</span> to claim NFT</li>
+                      <li><strong>Payment Due:</strong> Winner pays remaining amount (full bid - deposit already paid)</li>
+                      <li><strong>NFT Transfer:</strong> Upon payment, NFT transfers to winner instantly</li>
+                    </ul>
+                  </div>
+
+                  {/* Phase 5: Reclaim Rights */}
+                  <div className="bg-white/50 rounded-lg p-3 border border-red-200">
+                    <h4 className="font-semibold text-red-800 mb-2">🔄 Phase 5: Reclaim Rights (If Winner Defaults)</h4>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li><strong>Winner Forfeit:</strong> If winner doesn&apos;t claim within 3 days, they lose deposit</li>
+                      <li><strong>Seller Rights:</strong> You can reclaim your NFT after the 3-day deadline</li>
+                      <li><strong>Penalty Applied:</strong> Winner&apos;s deposit is forfeited as penalty</li>
+                      <li><strong>Second Chance:</strong> You can relist or keep your NFT</li>
+                    </ul>
+                  </div>
+
+                  {/* Transparency */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                    <h4 className="font-semibold text-green-800 mb-2">🔍 Complete Transparency</h4>
+                    <ul className="space-y-1 ml-4 list-disc text-green-700">
+                      <li><strong>Public Records:</strong> All auction history becomes public after finalization</li>
+                      <li><strong>Bid History:</strong> Full bidding timeline revealed for transparency</li>
+                      <li><strong>Fair Process:</strong> Blockchain ensures all transactions are verifiable</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -981,15 +1039,38 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
                 </Alert>
               )}
 
-              {/* Final Warning */}
-              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-                <div className="text-sm text-red-800">
-                  <p className="font-medium mb-1">Final Warning:</p>
-                  <p>
-                    Creating this auction will transfer your NFT(s) to the auction contract. 
-                    Make sure all details are correct before proceeding.
-                  </p>
+              {/* Final Warning & Complete Rules */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium mb-1">Final Warning:</p>
+                    <p>
+                      Creating this auction will transfer your NFT(s) to the auction contract. 
+                      Make sure all details are correct before proceeding.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Complete Auction Rules */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-800">Complete Auction Rules</span>
+                  </div>
+                  <div className="space-y-2 text-sm text-blue-700">
+                    <div><strong>After Auction Ends:</strong></div>
+                    <ul className="space-y-1 ml-4 list-disc">
+                      <li>Winner must <strong>claim NFT within 3 days</strong> and pay remaining amount</li>
+                      <li>If winner fails to claim, they <strong>forfeit their deposit</strong></li>
+                      <li>Seller can <strong>reclaim NFT after 3-day period</strong> expires</li>
+                      <li><strong>Full bid history</strong> will be revealed when auction finalizes</li>
+                      <li>All transactions are <strong>transparent on blockchain</strong></li>
+                    </ul>
+                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-xs">
+                      <strong>📋 Note:</strong> These rules ensure fair play and protect both buyers and sellers in the auction process.
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

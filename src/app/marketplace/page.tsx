@@ -50,7 +50,13 @@ const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionTo
   const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-right-2 duration-300">
+    <div 
+      className={`fixed bottom-4 right-4 z-50 transition-all duration-300 transform ${
+        isVisible 
+          ? 'translate-x-0 opacity-100 scale-100' 
+          : 'translate-x-full opacity-0 scale-95'
+      }`}
+    >
       <div className="bg-white border border-green-200 rounded-lg shadow-lg p-3 w-80">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
