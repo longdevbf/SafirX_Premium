@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/bfcfdc1a-6a64-4fb1-802a-bae7dbff26b4" alt="SafirX Logo" width="150"/>
+</p>
 
-## Getting Started
 
-First, run the development server:
+# SafirX - Private NFT Marketplace on Oasis Sapphire
+
+---
+🔧 Features
+✅ Mint single NFT
+
+✅ Mint NFT collection
+
+✅ Private auction for single NFTs
+
+✅ Private auction for NFT collections
+
+✅ Public NFT marketplace where:
+
+Users can buy/sell NFTs.
+
+Sellers can update prices or cancel listings.
+
+✅ Private Auction Mode:
+
+Real-time updates.
+
+All bids are encrypted using Oasis Sapphire — other users can't see them.
+
+When the auction ends, anyone can finalize the result.
+
+The winner receives the NFT.
+
+Others get refunded automatically.
+
+If all bids are lower than the reverse price, no one wins.
+
+If the seller chose to make bid history public after the auction, users can view auction details post-completion.
+
+----
+
+## 🚀 Getting Started
+Link Project: https://safir-x.vercel.app/<br>
+Link Contract: https://github.com/longdevbf/SafirX-Contract<br>
+To clone and run the project locally:
 
 ```bash
+git clone https://github.com/longdevbf/SafirX
+cd SafirX
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+.
+```
+----
+
+And you need to create an env file as follows
+.env
+```bash
+NEXT_PUBLIC_JWT=`Your_JWT`
+GATEWAY=`Your_Pinata_GateWay`
+DATABASE_URL=`Your_Database_Url`
+PROJECT_ID='Your_Project_ID`  
+GOOGLE_DRIVE_CLIENT_EMAIL=`Your_Drivee_Client_Email`
+GOOGLE_DRIVE_PRIVATE_KEY=`Your_Drive_Pivate_Key`
+GOOGLE_DRIVE_FOLDER_ID=`Your_Drive_Folder_Id`
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
