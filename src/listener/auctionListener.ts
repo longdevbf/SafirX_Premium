@@ -2,6 +2,7 @@
 import { ethers } from 'ethers';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
 import axios from 'axios';
+import { server } from './keepAlive';
 
 // Địa chỉ contract
 const auctionAddress = '0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9';
@@ -130,7 +131,9 @@ async function deleteFromDatabase(auctionId: string, auctionType: string) {
 }
 
 async function main() {
-    console.log('Đang lắng nghe các sự kiện từ auction...');
+    console.log('🚀 Đang khởi động auction listener...');
+    console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
+    console.log('🎯 Đang lắng nghe các sự kiện từ auction...');
 
     // Sự kiện AuctionCreated
     auctionContract.on('AuctionCreated', async (auctionId, seller, nftContract, auctionType, tokenId, tokenIds, startingPrice, endTime, title) => {
@@ -234,7 +237,7 @@ async function main() {
         await updateClaimStatus(auctionIdStr, 'bundle', 'nft_reclaimed', true);
     });
 
-    // Giữ script chạy liên tục mãi mãi
+    
     await new Promise(() => {});
 }
 

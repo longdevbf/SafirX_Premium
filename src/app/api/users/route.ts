@@ -24,12 +24,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'User already exists', exists: true });
     }
 
-    // Tạo user mới với giá trị mặc định
+    // Tạo avatar random từ địa chỉ wallet
+    const generateRandomAvatar = (address: string) => {
+      const avatarSites = [
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`,
+        `https://api.dicebear.com/7.x/personas/svg?seed=${address}`,
+        `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`,
+        `https://api.dicebear.com/7.x/initials/svg?seed=${address}`,
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${address}`,
+      ];
+      
+      // Sử dụng địa chỉ để chọn avatar style nhất quán
+      const index = parseInt(address.slice(-2), 16) % avatarSites.length;
+      return avatarSites[index];
+    };
+
+    const randomAvatar = generateRandomAvatar(address);
+
+    // Tạo user mới với avatar random
     const insertResult = await client.query(
-      `INSERT INTO users (address, created, sold, total_volume, name, followed, follower, created_at) 
-       VALUES ($1, 0, 0, 0.0, 'Unnamed User', 0, 0, CURRENT_TIMESTAMP) 
+      `INSERT INTO users (address, created, sold, total_volume, name, followed, follower, avatar, created_at) 
+       VALUES ($1, 0, 0, 0.0, 'Unnamed User', 0, 0, $2, CURRENT_TIMESTAMP) 
        RETURNING *`,
-      [address]
+      [address, randomAvatar]
     );
 
     const newUser = insertResult.rows[0];

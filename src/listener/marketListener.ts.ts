@@ -2,6 +2,7 @@
 import { ethers } from 'ethers';
 import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
 import axios from 'axios';
+import { server } from './keepAlive';
 
 // Địa chỉ contract
 const marketAddress = '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932';
@@ -86,7 +87,9 @@ async function deleteFromDatabase(listingId: string, listingType: string) {
 }
 
 async function main() {
-    console.log('Đang lắng nghe các sự kiện từ marketplace...');
+    console.log('🚀 Đang khởi động market listener...');
+    console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
+    console.log('🎯 Đang lắng nghe các sự kiện từ marketplace...');
 
     // Sự kiện NFTListed
     marketContract.on('NFTListed', async (listingId, nftContract, tokenId, seller, price, listingType) => {

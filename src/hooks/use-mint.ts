@@ -11,6 +11,48 @@ export function useNFTMint() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
 
+  // Hàm mint single NFT cho địa chỉ cụ thể
+  const mintSingleNFT = async (to: string, metadataURI: string) => {
+    try {
+      const hash = await writeContractAsync({
+        address: ABI_CONFIG.mintNFT.address as `0x${string}`,
+        abi: ABI_CONFIG.mintNFT.abi,
+        functionName: "mintSingleNFT",
+        args: [to, metadataURI],
+      });
+      
+      console.log("Txhash:", hash);
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
+      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      
+      return { hash, receipt };
+    } catch (error: any) {
+      console.error("Lỗi:", error.message);
+      throw error;
+    }
+  };
+
+  // Hàm mint NFT cho chính mình (single NFT)
+  const mintNFT = async (metadataURI: string) => {
+    try {
+      const hash = await writeContractAsync({
+        address: ABI_CONFIG.mintNFT.address as `0x${string}`,
+        abi: ABI_CONFIG.mintNFT.abi,
+        functionName: "mintNFT",
+        args: [metadataURI],
+      });
+      
+      console.log("Txhash:", hash);
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
+      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      
+      return { hash, receipt };
+    } catch (error: any) {
+      console.error("Lỗi:", error.message);
+      throw error;
+    }
+  };
+
   // Hàm mint NFT collection cho địa chỉ cụ thể (có thể mint 1 hoặc nhiều NFT)
   const mintNFTCollection = async (to: string, metadataURIs: string[]) => {
     try {
@@ -209,7 +251,9 @@ export function useNFTMint() {
   };
 
   return {
-    // Write functions - Chỉ giữ các hàm mint collection cần thiết
+    // Write functions - Hàm mint
+    mintSingleNFT,          // Mint single NFT cho địa chỉ cụ thể
+    mintNFT,                // Mint single NFT cho chính mình
     mintNFTCollection,      // Mint cho địa chỉ cụ thể với metadata URIs
     mintMyCollection,       // Mint cho chính mình với metadata URIs
     mintCollectionWithBaseURI, // Mint với base URI pattern
