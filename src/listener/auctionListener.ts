@@ -2,7 +2,8 @@
 import { ethers } from 'ethers';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
 import axios from 'axios';
-import { server } from './keepAlive';
+// Import keep-alive server to ensure it runs
+import './keepAlive';
 
 // Địa chỉ contract
 const auctionAddress = '0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9';

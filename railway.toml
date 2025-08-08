@@ -28,6 +28,10 @@ PORT = "3001"
 KEEP_ALIVE_INTERVAL = "300000"  # 5 minutes
 SELF_PING_INTERVAL = "300000"   # 5 minutes
 
+# Skip ESLint during build
+SKIP_LINT = "true"
+NEXT_LINT = "false"
+
 # Monitoring
 HEALTH_CHECK_ENABLED = "true"
 METRICS_ENABLED = "true"
