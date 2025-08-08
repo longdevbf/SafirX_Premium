@@ -1,0 +1,11 @@
+[providers]
+node = "18"
+
+[start]
+cmd = "npm run listeners"
+
+[build]
+cmd = "npm install && npm run build"
+
+[variables]
+NODE_ENV = "production"

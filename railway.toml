@@ -1,6 +1,4 @@
 # Railway deployment configuration for persistent listeners
-# Đặt file này ở root project với tên: railway.toml
-
 [build]
 builder = "NIXPACKS"
 
@@ -10,36 +8,3 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-
-[environments.production.variables]
-# Database connection
-DATABASE_URL = "${{ DATABASE_URL }}"
-
-# Blockchain RPC URLs
-OASIS_RPC_WSS = "wss://testnet.sapphire.oasis.io/ws"
-OASIS_RPC_HTTP = "https://testnet.sapphire.oasis.io"
-
-# Contract addresses
-AUCTION_CONTRACT_ADDRESS = "0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9"
-MARKET_CONTRACT_ADDRESS = "0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932"
-
-# Keep-alive settings
-PORT = "3001"
-KEEP_ALIVE_INTERVAL = "300000"  # 5 minutes
-SELF_PING_INTERVAL = "300000"   # 5 minutes
-
-# Skip ESLint during build
-SKIP_LINT = "true"
-NEXT_LINT = "false"
-
-# Monitoring
-HEALTH_CHECK_ENABLED = "true"
-METRICS_ENABLED = "true"
-
-[environments.production.build]
-watchPatterns = ["src/listener/**"]
-
-# Resource allocation để đảm bảo không sleep
-[environments.production.resources]
-replicas = 1
-restartPolicy = "always"
