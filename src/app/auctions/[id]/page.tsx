@@ -28,7 +28,8 @@ import {
   Info,
   Eye,
   User,
-  History
+  History,
+  Target
 } from "lucide-react"
 import Image from "next/image"
 import { useSealedBidAuction } from "@/hooks/use-auctions"
@@ -283,25 +284,36 @@ export default function AuctionDetailPage() {
     return auction.nft_individual[selectedImageIndex] || auction.nft_individual[0]
   }
 
+  const getReservePrice = (): bigint => {
+    if (!contractAuction || !Array.isArray(contractAuction)) return BigInt(0)
+    
+    try {
+      // Reserve price ở index 6 theo data thực tế từ console
+      const reservePriceValue = contractAuction[6]
+      
+      if (typeof reservePriceValue === 'bigint') {
+        return reservePriceValue
+      } else if (typeof reservePriceValue === 'number' || 
+                 (typeof reservePriceValue === 'string' && !isNaN(Number(reservePriceValue)))) {
+        return BigInt(reservePriceValue)
+      }
+      
+      return BigInt(0)
+    } catch (error) {
+      console.error('Error getting reserve price:', error)
+      return BigInt(0)
+    }
+  }
+
   const getRemainingAmount = (): bigint => {
     if (!contractAuction || !Array.isArray(contractAuction)) return BigInt(0)
     
     try {
-      // contractAuction[14] là highestBid, cần tìm đúng index của startingPrice
+      // Theo data thực tế: highestBid ở index 14, startingPrice ở index 5
       const highestBidValue = contractAuction[14]
+      const startingPriceValue = contractAuction[5]
       
-      // Tìm startingPrice trong array - có thể ở index 5, 6, hoặc khác
-      let startingPriceValue
-      for (let i = 5; i <= 7; i++) {
-        const value = contractAuction[i]
-        if (typeof value === 'bigint' && value > 0 && value < highestBidValue) {
-          console.log(`🔍 Found startingPrice at index ${i}:`, value.toString())
-          startingPriceValue = value
-          break
-        }
-      }
-      
-      // Chỉ convert khi value là number hoặc string số
+      // Convert sang BigInt
       let highestBid = BigInt(0)
       let startingPrice = BigInt(0)
       
@@ -336,20 +348,12 @@ export default function AuctionDetailPage() {
     if (!contractAuction || !address) return false
     
     try {
-      let winnerAddress
-      
-      // Nếu contract data là array, tìm địa chỉ winner ở index 13
-      if (Array.isArray(contractAuction)) {
-        winnerAddress = contractAuction[13] // highestBidder ở index 13
-      } 
-      // Nếu contract data là object
-      else if (typeof contractAuction === 'object' && contractAuction !== null) {
-        const contractObj = contractAuction as any
-        winnerAddress = contractObj.highestBidder || contractObj[13] || contractObj['13']
-      }
+      // Theo data thực tế: highestBidder ở index 13
+      const winnerAddress = contractAuction[13]
       
       return winnerAddress && 
              typeof winnerAddress === 'string' && 
+             winnerAddress !== '0x0000000000000000000000000000000000000000' &&
              winnerAddress.toLowerCase() === address.toLowerCase()
     } catch (error) {
       console.error('Error checking highest bidder:', error)
@@ -1063,6 +1067,52 @@ export default function AuctionDetailPage() {
                 </div>
               </div>
 
+              {/* Reserve Price - Show only when auction is finalized and contract data is available */}
+              {auction.status === 'finalized' && contractAuction && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-amber-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <Target className="w-4 h-4" />
+                        Reserve Price
+                      </p>
+                      <p className="text-xl font-bold text-amber-800">
+                        {formatEther(getReservePrice())} ROSE
+                      </p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Minimum price seller will accept
+                      </p>
+                    </div>
+                    {contractAuction && Array.isArray(contractAuction) && contractAuction[14] && BigInt(contractAuction[14]) > BigInt(0) ? (
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500 mb-1">Winning Bid</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatEther(contractAuction[14])} ROSE
+                        </p>
+                        {BigInt(contractAuction[14]) >= getReservePrice() ? (
+                          <Badge className="mt-1 bg-green-100 text-green-800 text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Reserve Met ✓
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="mt-1 text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Below Reserve
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500 mb-1">Winning Bid</p>
+                        <p className="text-lg font-semibold text-red-600">
+                          No winning bid - reserve price not met
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Timeline Status */}
               {isAuctionEnded(auction.timeline.end_time) ? (
                 <div className="text-center mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
@@ -1327,16 +1377,10 @@ export default function AuctionDetailPage() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Starting Price:</span>
                           <span className="text-gray-900">
-                            {/* Tìm startingPrice từ contract data */}
-                            {(() => {
-                              for (let i = 5; i <= 7; i++) {
-                                const value = contractAuction[i]
-                                if (typeof value === 'bigint' && value > 0 && value < contractAuction[14]) {
-                                  return formatEther(value) + ' ROSE'
-                                }
-                              }
-                              return '0 ROSE'
-                            })()}
+                            {/* Starting price ở index 5 */}
+                            {contractAuction[5] && (typeof contractAuction[5] === 'bigint' || !isNaN(Number(contractAuction[5]))) 
+                              ? formatEther(typeof contractAuction[5] === 'bigint' ? contractAuction[5] : BigInt(contractAuction[5])) + ' ROSE'
+                              : '0 ROSE'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -1397,6 +1441,27 @@ export default function AuctionDetailPage() {
                       Total bids: {publicBids.length}
                     </div>
                     
+                    {/* Winner Explanation */}
+                    {contractAuction && getReservePrice() > BigInt(0) && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="w-4 h-4 text-amber-600" />
+                          <span className="font-medium text-amber-800 text-sm">Winner Determination Rules</span>
+                        </div>
+                        <div className="text-xs text-amber-700 space-y-1">
+                          <div>• <strong>Highest bid wins:</strong> Bidder with the highest amount</div>
+                          <div>• <strong>Tie-breaker:</strong> Earlier timestamp wins if bids are equal</div>
+                          <div>• <strong>Reserve price:</strong> Highest bid must be ≥ {formatEther(getReservePrice())} ROSE</div>
+                          <div>• <strong>If below reserve:</strong> No winner, auction gets cancelled, deposits refunded</div>
+                        </div>
+                        <div className="mt-2 p-2 bg-amber-100 rounded text-xs text-amber-800">
+                          <strong>Example:</strong> Starting Price: {auction.starting_price} ROSE, Reserve: {formatEther(getReservePrice())} ROSE
+                          <br />• Anyone can bid starting from {auction.starting_price} ROSE
+                          <br />• But seller only sells if highest bid ≥ {formatEther(getReservePrice())} ROSE
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="max-h-64 overflow-y-auto space-y-2">
                       {publicBids
                         .sort((a, b) => Number(b.amount) - Number(a.amount))
@@ -1428,8 +1493,26 @@ export default function AuctionDetailPage() {
                                 {formatEther(bid.amount)} ROSE
                               </div>
                               {index === 0 && (
-                                <div className="text-xs text-yellow-600 font-medium">
-                                  Highest Bid
+                                <div className="flex flex-col items-end gap-1">
+                                  <div className="text-xs text-yellow-600 font-medium">
+                                    Highest Bid
+                                  </div>
+                                  {/* Winner condition check */}
+                                  {contractAuction && getReservePrice() > BigInt(0) && (
+                                    <div className="text-xs">
+                                      {bid.amount >= getReservePrice() ? (
+                                        <Badge className="bg-green-100 text-green-800 px-1 py-0.5 text-xs">
+                                          <CheckCircle className="w-2 h-2 mr-1" />
+                                          Wins Auction
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="destructive" className="px-1 py-0.5 text-xs">
+                                          <AlertCircle className="w-2 h-2 mr-1" />
+                                          Below Reserve
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
