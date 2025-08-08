@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
-
 import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
@@ -63,7 +62,6 @@ export default function CollectionMint() {
   const [collectionAttributes, setCollectionAttributes] = useState<Array<{ trait_type: string; value: string }>>([])
   
   // Upload state
-  const [isUploading, setIsUploading] = useState(false)
   const [isMinting, setIsMinting] = useState(false)
   
   // Status
@@ -220,23 +218,36 @@ export default function CollectionMint() {
     ))
   }
 
-  // Upload to IPFS
-  const handleUploadToIPFS = async () => {
-    if (files.length === 0) return
-
-    setIsUploading(true)
-    setError("")
+  // Mint collection
+  const handleMintCollection = async () => {
+    console.log("🎯 Starting mint collection...")
+    console.log("canMint:", canMint)
+    console.log("isConnected:", isConnected)
+    console.log("files.length:", files.length)
+    console.log("collectionName:", collectionName.trim())
+    console.log("isMinting:", isMinting)
+    
+    if (!canMint) {
+      console.log("❌ Cannot mint - requirements not met")
+      if (!isConnected) console.log("- Wallet not connected")
+      if (files.length === 0) console.log("- No files selected")
+      if (!collectionName.trim()) console.log("- Collection name is empty")
+      if (isMinting) console.log("- Already minting")
+      return
+    }
 
     try {
+      setError("")
+      setIsMinting(true)
+      console.log("🚀 Mint process started")
+      
+      // Upload all files and create metadata URIs (like single NFT mint)
+      const metadataURIs: string[] = []
+      
       for (let index = 0; index < files.length; index++) {
         const fileData = files[index]
-        if (fileData.uploaded) continue
-
-        // Update file status
-        setFiles(prev => 
-          prev.map(f => f.id === fileData.id ? { ...f, uploading: true } : f)
-        )
-
+        console.log(`📤 Processing file ${index + 1}/${files.length}: ${fileData.file.name}`)
+        
         // Step 1: Upload image file
         const imageFormData = new FormData()
         imageFormData.append('file', fileData.file)
@@ -252,6 +263,7 @@ export default function CollectionMint() {
 
         const imageResult = await imageResponse.json()
         const imageUrl = imageResult.ipfsUrl
+        console.log(`✅ Image uploaded: ${imageUrl}`)
 
         // Step 2: Create metadata JSON
         const nftName = fileData.customName || `${collectionName} #${index + 1}`
@@ -271,7 +283,7 @@ export default function CollectionMint() {
           name: nftName,
           description: nftDescription,
           image: imageUrl,
-          external_url: `${externalUrl}/${index + 1}`,
+          external_url: externalUrl ? `${externalUrl}/${index + 1}` : undefined,
           attributes: allAttributes,
           properties: {
             edition: index + 1,
@@ -281,11 +293,11 @@ export default function CollectionMint() {
           }
         }
 
-        // Step 3: Upload metadata JSON
+        // Step 3: Upload metadata JSON (like single NFT mint)
         const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
           type: 'application/json'
         })
-        const metadataFile = new File([metadataBlob], `${nftName}.json`, {
+        const metadataFile = new File([metadataBlob], `${nftName.replace(/[^a-zA-Z0-9]/g, '_')}.json`, {
           type: 'application/json'
         })
 
@@ -302,56 +314,22 @@ export default function CollectionMint() {
         }
 
         const metadataResult = await metadataResponse.json()
-
-        // Update file with both URLs
-        setFiles(prev => 
-          prev.map(f => f.id === fileData.id ? { 
-            ...f, 
-            uploading: false, 
-            uploaded: true, 
-            ipfsUrl: metadataResult.ipfsUrl // This is the metadata JSON URL
-          } : f)
-        )
+        const metadataUrl = metadataResult.ipfsUrl
+        console.log(`✅ Metadata uploaded: ${metadataUrl}`)
+        
+        metadataURIs.push(metadataUrl)
       }
 
-      setSuccess("All files uploaded successfully!")
-    } catch (err) {
-      console.error('Upload error:', err)
-      setError(err instanceof Error ? err.message : "Failed to upload files")
-      
-      // Mark failed files
-      setFiles(prev => 
-        prev.map(f => f.uploading ? { ...f, uploading: false, error: err instanceof Error ? err.message : "Upload failed" } : f)
-      )
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  // Mint collection
-  const handleMintCollection = async () => {
-    if (!canMint) return
-
-    try {
-      setError("")
-      setIsMinting(true)
-      
-      // Upload files first if not uploaded
-      if (files.some(f => !f.uploaded)) {
-        await handleUploadToIPFS()
-      }
-
-      // Create metadata URIs array
-      const metadataURIs: string[] = files
-        .filter(f => f.uploaded && f.ipfsUrl)
-        .map(f => f.ipfsUrl!)
+      console.log("📝 All metadata URIs created:", metadataURIs)
 
       if (metadataURIs.length === 0) {
-        throw new Error("No files uploaded successfully")
+        throw new Error("Failed to create metadata URIs")
       }
 
-      // Mint collection using mintMyCollection
+      // Step 4: Mint collection using mintMyCollection
+      console.log("⛏️ Calling mintMyCollection with URIs:", metadataURIs)
       const result = await mintMyCollection(metadataURIs)
+      console.log("✅ Mint result:", result)
       
       if (result?.hash) {
         setToastTxHash(result.hash)
@@ -377,9 +355,7 @@ export default function CollectionMint() {
   }
 
   // Computed values
-  const canUpload = files.length > 0 && !isUploading
-  const canMint = isConnected && files.length > 0 && collectionName.trim() && 
-                  files.every(f => f.uploaded) && !isMinting
+  const canMint = isConnected && files.length > 0 && collectionName.trim() && !isMinting
 
   return (
     <>
@@ -484,20 +460,6 @@ export default function CollectionMint() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="custom-metadata">Custom Metadata per NFT</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow different metadata for each NFT in collection
-                      </p>
-                    </div>
-                    <Switch
-                      id="custom-metadata"
-                      checked={allowCustomMetadata}
-                      onCheckedChange={setAllowCustomMetadata}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
                       <Label htmlFor="unlockable">Unlockable Content</Label>
                       <p className="text-sm text-muted-foreground">
                         Include content for collection owners
@@ -572,14 +534,14 @@ export default function CollectionMint() {
               ) : (
                 <Button 
                   onClick={handleMintCollection}
-                  disabled={!canUpload || isMinting || isUploading}
+                  disabled={!canMint || isMinting}
                   className="w-full" 
                   size="lg"
                 >
-                  {isMinting || isUploading ? (
+                  {isMinting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isUploading ? `Uploading... (${files.filter(f => f.uploaded).length}/${files.length})` : 'Minting Collection...'}
+                      Minting Collection...
                     </>
                   ) : (
                     <>
@@ -736,8 +698,27 @@ export default function CollectionMint() {
                     ))}
                   </div>
 
-                  {/* Individual NFT Customization */}
+                  {/* Custom Metadata Toggle */}
                   {files.length > 0 && (
+                    <div className="mt-6 flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <Label htmlFor="custom-metadata" className="text-sm font-medium">
+                          Custom Metadata per NFT
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Customize name, description, and attributes for each NFT individually
+                        </p>
+                      </div>
+                      <Switch
+                        id="custom-metadata"
+                        checked={allowCustomMetadata}
+                        onCheckedChange={setAllowCustomMetadata}
+                      />
+                    </div>
+                  )}
+
+                  {/* Individual NFT Customization */}
+                  {files.length > 0 && allowCustomMetadata && (
                     <Card className="mt-6">
                       <CardHeader>
                         <CardTitle className="text-lg">Customize Individual NFTs</CardTitle>
@@ -849,21 +830,18 @@ export default function CollectionMint() {
             </CardContent>
           </Card>
 
-          {/* Upload Progress */}
-          {isUploading && (
+          {/* Mint Progress */}
+          {isMinting && (
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Uploading to IPFS...</span>
+                    <span className="text-sm font-medium">Minting Collection...</span>
                     <span className="text-sm text-muted-foreground">
-                      {files.filter(f => f.uploaded).length}/{files.length}
+                      Please wait...
                     </span>
                   </div>
-                  <Progress 
-                    value={(files.filter(f => f.uploaded).length / files.length) * 100} 
-                    className="w-full" 
-                  />
+                  <Progress value={undefined} className="w-full" />
                 </div>
               </CardContent>
             </Card>
