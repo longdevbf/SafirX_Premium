@@ -1,5 +1,8 @@
 [providers]
-node = "18"
+providers = ["node"]
+
+[node]
+version = "18"
 
 [start]
 cmd = "npm run listeners"
