@@ -21,7 +21,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Grid3X3,
-  Upload,
   Trash2
 } from "lucide-react"
 import Image from "next/image"
@@ -43,7 +42,7 @@ interface FileWithPreview {
 }
 
 export default function CollectionMint() {
-  const { isConnected } = useAccount()
+  const { isConnected, address } = useAccount()
   const { mintMyCollection } = useNFTMint()
   
   // File management
@@ -179,6 +178,48 @@ export default function CollectionMint() {
     setCollectionAttributes(prev => prev.filter((_, i) => i !== index))
   }
 
+  // Individual NFT customization functions
+  const updateFileCustomData = (fileId: string, field: 'customName' | 'customDescription', value: string) => {
+    setFiles(prev => prev.map(file => 
+      file.id === fileId ? { ...file, [field]: value } : file
+    ))
+  }
+
+  const addCustomAttribute = (fileId: string) => {
+    setFiles(prev => prev.map(file => 
+      file.id === fileId 
+        ? { 
+            ...file, 
+            customAttributes: [...(file.customAttributes || []), { trait_type: "", value: "" }]
+          }
+        : file
+    ))
+  }
+
+  const updateCustomAttribute = (fileId: string, attrIndex: number, field: 'trait_type' | 'value', value: string) => {
+    setFiles(prev => prev.map(file => 
+      file.id === fileId 
+        ? {
+            ...file,
+            customAttributes: file.customAttributes?.map((attr, i) => 
+              i === attrIndex ? { ...attr, [field]: value } : attr
+            ) || []
+          }
+        : file
+    ))
+  }
+
+  const removeCustomAttribute = (fileId: string, attrIndex: number) => {
+    setFiles(prev => prev.map(file => 
+      file.id === fileId 
+        ? {
+            ...file,
+            customAttributes: file.customAttributes?.filter((_, i) => i !== attrIndex) || []
+          }
+        : file
+    ))
+  }
+
   // Upload to IPFS
   const handleUploadToIPFS = async () => {
     if (files.length === 0) return
@@ -187,7 +228,8 @@ export default function CollectionMint() {
     setError("")
 
     try {
-      for (const fileData of files) {
+      for (let index = 0; index < files.length; index++) {
+        const fileData = files[index]
         if (fileData.uploaded) continue
 
         // Update file status
@@ -195,29 +237,79 @@ export default function CollectionMint() {
           prev.map(f => f.id === fileData.id ? { ...f, uploading: true } : f)
         )
 
-        // Create form data
-        const formData = new FormData()
-        formData.append('file', fileData.file)
+        // Step 1: Upload image file
+        const imageFormData = new FormData()
+        imageFormData.append('file', fileData.file)
 
-        // Upload with progress tracking
-        const response = await fetch('/api/upload-ipfs', {
+        const imageResponse = await fetch('/api/upload-ipfs', {
           method: 'POST',
-          body: formData,
+          body: imageFormData,
         })
 
-        if (!response.ok) {
-          throw new Error(`Failed to upload ${fileData.file.name}`)
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to upload image ${fileData.file.name}`)
         }
 
-        const result = await response.json()
+        const imageResult = await imageResponse.json()
+        const imageUrl = imageResult.ipfsUrl
 
-        // Update file with IPFS URL
+        // Step 2: Create metadata JSON
+        const nftName = fileData.customName || `${collectionName} #${index + 1}`
+        const nftDescription = fileData.customDescription || description
+
+        // Combine collection and custom attributes
+        const allAttributes = [
+          ...collectionAttributes,
+          ...(fileData.customAttributes || []),
+          { trait_type: "Collection", value: collectionName },
+          { trait_type: `Edition`, value: `${index + 1} of ${files.length}` },
+          { trait_type: "Creator", value: address || "" },
+          { trait_type: "Created Date", value: new Date().toISOString() }
+        ].filter(attr => attr.trait_type && attr.value) // Remove empty attributes
+
+        const metadata = {
+          name: nftName,
+          description: nftDescription,
+          image: imageUrl,
+          external_url: `${externalUrl}/${index + 1}`,
+          attributes: allAttributes,
+          properties: {
+            edition: index + 1,
+            collection: collectionName,
+            total_supply: files.length,
+            sensitive_content: isSensitive
+          }
+        }
+
+        // Step 3: Upload metadata JSON
+        const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
+          type: 'application/json'
+        })
+        const metadataFile = new File([metadataBlob], `${nftName}.json`, {
+          type: 'application/json'
+        })
+
+        const metadataFormData = new FormData()
+        metadataFormData.append('file', metadataFile)
+
+        const metadataResponse = await fetch('/api/upload-ipfs', {
+          method: 'POST',
+          body: metadataFormData,
+        })
+
+        if (!metadataResponse.ok) {
+          throw new Error(`Failed to upload metadata for ${nftName}`)
+        }
+
+        const metadataResult = await metadataResponse.json()
+
+        // Update file with both URLs
         setFiles(prev => 
           prev.map(f => f.id === fileData.id ? { 
             ...f, 
             uploading: false, 
             uploaded: true, 
-            ipfsUrl: result.ipfsUrl 
+            ipfsUrl: metadataResult.ipfsUrl // This is the metadata JSON URL
           } : f)
         )
       }
@@ -226,6 +318,11 @@ export default function CollectionMint() {
     } catch (err) {
       console.error('Upload error:', err)
       setError(err instanceof Error ? err.message : "Failed to upload files")
+      
+      // Mark failed files
+      setFiles(prev => 
+        prev.map(f => f.uploading ? { ...f, uploading: false, error: err instanceof Error ? err.message : "Upload failed" } : f)
+      )
     } finally {
       setIsUploading(false)
     }
@@ -473,46 +570,24 @@ export default function CollectionMint() {
                   Select Images
                 </Button>
               ) : (
-                <>
-                  <Button 
-                    onClick={handleUploadToIPFS}
-                    disabled={!canUpload || isUploading}
-                    className="w-full" 
-                    size="lg"
-                    variant="outline"
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading... ({files.filter(f => f.uploaded).length}/{files.length})
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload to IPFS
-                      </>
-                    )}
-                  </Button>
-
-                  <Button 
-                    onClick={handleMintCollection}
-                    disabled={!canMint || isMinting}
-                    className="w-full" 
-                    size="lg"
-                  >
-                    {isMinting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Minting Collection...
-                      </>
-                    ) : (
-                      <>
-                        <Grid3X3 className="w-4 h-4 mr-2" />
-                        Mint Collection ({files.filter(f => f.uploaded).length} NFTs)
-                      </>
-                    )}
-                  </Button>
-                </>
+                <Button 
+                  onClick={handleMintCollection}
+                  disabled={!canUpload || isMinting || isUploading}
+                  className="w-full" 
+                  size="lg"
+                >
+                  {isMinting || isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {isUploading ? `Uploading... (${files.filter(f => f.uploaded).length}/${files.length})` : 'Minting Collection...'}
+                    </>
+                  ) : (
+                    <>
+                      <Grid3X3 className="w-4 h-4 mr-2" />
+                      Mint Collection ({files.length} NFTs)
+                    </>
+                  )}
+                </Button>
               )}
               
               {!isConnected && (
@@ -652,7 +727,7 @@ export default function CollectionMint() {
                         </div>
 
                         <div className="mt-1 text-center">
-                          <p className="text-xs font-medium truncate">{fileData.file.name}</p>
+                          <p className="text-xs font-medium truncate">{fileData.customName || fileData.file.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {(fileData.file.size / 1024 / 1024).toFixed(1)} MB
                           </p>
@@ -660,6 +735,106 @@ export default function CollectionMint() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Individual NFT Customization */}
+                  {files.length > 0 && (
+                    <Card className="mt-6">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Customize Individual NFTs</CardTitle>
+                        <CardDescription>
+                          Customize each NFT&apos;s metadata individually
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {files.map((fileData, index) => (
+                          <div key={fileData.id} className="p-4 border rounded-lg space-y-4">
+                            <div className="flex items-center gap-4">
+                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                <Image 
+                                  src={fileData.preview} 
+                                  alt={fileData.file.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label htmlFor={`name-${fileData.id}`} className="text-sm">NFT Name</Label>
+                                    <Input
+                                      id={`name-${fileData.id}`}
+                                      value={fileData.customName || ""}
+                                      onChange={(e) => updateFileCustomData(fileData.id, 'customName', e.target.value)}
+                                      placeholder={`${collectionName} #${index + 1}`}
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`desc-${fileData.id}`} className="text-sm">Description</Label>
+                                    <Textarea
+                                      id={`desc-${fileData.id}`}
+                                      value={fileData.customDescription || ""}
+                                      onChange={(e) => updateFileCustomData(fileData.id, 'customDescription', e.target.value)}
+                                      placeholder="NFT description..."
+                                      rows={2}
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Custom Attributes */}
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <Label className="text-sm">Custom Attributes</Label>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => addCustomAttribute(fileData.id)}
+                                      className="h-7 px-2"
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add
+                                    </Button>
+                                  </div>
+                                  
+                                  {fileData.customAttributes && fileData.customAttributes.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {fileData.customAttributes.map((attr, attrIndex) => (
+                                        <div key={attrIndex} className="flex gap-2">
+                                          <Input
+                                            value={attr.trait_type}
+                                            onChange={(e) => updateCustomAttribute(fileData.id, attrIndex, 'trait_type', e.target.value)}
+                                            placeholder="Trait type"
+                                            className="flex-1"
+                                          />
+                                          <Input
+                                            value={attr.value}
+                                            onChange={(e) => updateCustomAttribute(fileData.id, attrIndex, 'value', e.target.value)}
+                                            placeholder="Value"
+                                            className="flex-1"
+                                          />
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => removeCustomAttribute(fileData.id, attrIndex)}
+                                            className="h-9 w-9 p-0"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No custom attributes</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
 
                   <input
                     ref={fileInputRef}
