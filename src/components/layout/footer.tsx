@@ -1,5 +1,6 @@
 /* eslint-disable react/no-unescaped-entities */
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Twitter, Github, DiscIcon as Discord, Instagram } from "lucide-react"
@@ -11,11 +12,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">N</span>
-              </div>
-              <span className="text-xl font-bold">Nexelra</span>
+            <Link href="/" className="flex items-center space-x-3">
+              <Image 
+                src="/assets/logo.png" 
+                alt="SafirX Logo" 
+                width={120}
+                height={120}
+                className="object-contain"
+              />
+              
             </Link>
             <p className="text-muted-foreground text-sm">
               The world's premier NFT marketplace for discovering, creating, and trading extraordinary digital assets.
@@ -77,7 +82,7 @@ export default function Footer() {
           {/* Newsletter */}
           <div className="space-y-4">
             <h3 className="font-semibold">Stay Updated</h3>
-            <p className="text-sm text-muted-foreground">Get the latest news and updates from Nexelra</p>
+            <p className="text-sm text-muted-foreground">Get the latest news and updates from SafirX</p>
             <div className="flex space-x-2">
               <Input placeholder="Enter your email" className="flex-1" />
               <Button>Subscribe</Button>
@@ -86,7 +91,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-sm text-muted-foreground">© 2024 Nexelra. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 SafirX. All rights reserved.</p>
           <div className="flex space-x-6 text-sm text-muted-foreground mt-4 md:mt-0">
             <Link href="/privacy" className="hover:text-foreground">
               Privacy Policy

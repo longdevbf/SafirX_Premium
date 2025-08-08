@@ -216,7 +216,7 @@ export default function AuctionsPage() {
   }, [])
 
   // Enhanced filter with real-time status using useMemo - separate for each tab
-  const filterAndSortAuctions = useCallback((auctionList: Auction[], searchTerm: string, sortBy: string, filterBy: string) => {
+  const filterAndSortAuctions = useCallback((auctionList: Auction[], searchTerm: string, sortBy: string, filterBy: string, tabType: 'live' | 'ended' | 'finalized') => {
     let filtered = auctionList.filter(auction => {
       // Search filter - search in auction title, collection name, and NFT names
       const matchesSearch = searchTerm === "" || 
@@ -227,12 +227,68 @@ export default function AuctionsPage() {
           nft.name?.toLowerCase().includes(searchTerm.toLowerCase())
         ))
       
-      // Type filter
-      const matchesType = filterBy === "all" || 
-        (filterBy === "single" && auction.auction_type === "single") ||
-        (filterBy === "bundle" && auction.auction_type === "bundle")
+      // Tab-specific filters
+      let matchesFilter = true
       
-      return matchesSearch && matchesType
+      if (tabType === 'live') {
+        // Live tab filters
+        if (filterBy === "ending-soon-1h") {
+          const now = Math.floor(Date.now() / 1000)
+          const oneHour = 3600
+          matchesFilter = auction.end_time - now <= oneHour && auction.end_time - now > 0
+        } else if (filterBy === "ending-soon-6h") {
+          const now = Math.floor(Date.now() / 1000)
+          const sixHours = 6 * 3600
+          matchesFilter = auction.end_time - now <= sixHours && auction.end_time - now > 0
+        } else if (filterBy === "ending-soon-24h") {
+          const now = Math.floor(Date.now() / 1000)
+          const twentyFourHours = 24 * 3600
+          matchesFilter = auction.end_time - now <= twentyFourHours && auction.end_time - now > 0
+        } else if (filterBy === "single") {
+          matchesFilter = auction.auction_type === "single"
+        } else if (filterBy === "bundle") {
+          matchesFilter = auction.auction_type === "bundle"
+        }
+      } else if (tabType === 'finalized') {
+        // Finalized tab filters
+        const now = Math.floor(Date.now() / 1000)
+        const auctionEndTime = auction.end_time
+        
+        if (filterBy === "last-1day") {
+          const oneDayAgo = now - (24 * 3600)
+          matchesFilter = auctionEndTime >= oneDayAgo
+        } else if (filterBy === "last-3days") {
+          const threeDaysAgo = now - (3 * 24 * 3600)
+          matchesFilter = auctionEndTime >= threeDaysAgo
+        } else if (filterBy === "last-7days") {
+          const sevenDaysAgo = now - (7 * 24 * 3600)
+          matchesFilter = auctionEndTime >= sevenDaysAgo
+        } else if (filterBy === "awaiting-claim") {
+          // NFT chưa được claim và còn trong thời hạn claim (3 ngày)
+          matchesFilter = !auction.nft_claimed && 
+                         auction.reclaim_nft > 0 && 
+                         auction.reclaim_nft > now
+        } else if (filterBy === "claimed") {
+          // NFT đã được claim
+          matchesFilter = auction.nft_claimed
+        } else if (filterBy === "reclaimed") {
+          // NFT đã được reclaim bởi creator
+          matchesFilter = auction.nft_reclaimed
+        } else if (filterBy === "single") {
+          matchesFilter = auction.auction_type === "single"
+        } else if (filterBy === "bundle") {
+          matchesFilter = auction.auction_type === "bundle"
+        }
+      } else {
+        // Ended tab filters (keep existing)
+        if (filterBy === "single") {
+          matchesFilter = auction.auction_type === "single"
+        } else if (filterBy === "bundle") {
+          matchesFilter = auction.auction_type === "bundle"
+        }
+      }
+      
+      return matchesSearch && matchesFilter
     })
 
     // Sort logic
@@ -260,20 +316,56 @@ export default function AuctionsPage() {
     const liveList = auctions.filter(auction => 
       auction.status === 'active' && !isAuctionEnded(auction.end_time)
     )
-    return filterAndSortAuctions(liveList, liveSearchTerm, liveSortBy, liveFilterBy)
+    return filterAndSortAuctions(liveList, liveSearchTerm, liveSortBy, liveFilterBy, 'live')
   }, [auctions, liveSearchTerm, liveSortBy, liveFilterBy, filterAndSortAuctions])
   
   const filteredEndedAuctions = useMemo(() => {
     const endedList = auctions.filter(auction => 
       auction.status === 'ended' || (auction.status === 'active' && isAuctionEnded(auction.end_time))
     )
-    return filterAndSortAuctions(endedList, endedSearchTerm, endedSortBy, endedFilterBy)
+    return filterAndSortAuctions(endedList, endedSearchTerm, endedSortBy, endedFilterBy, 'ended')
   }, [auctions, endedSearchTerm, endedSortBy, endedFilterBy, filterAndSortAuctions])
   
   const filteredFinalizedAuctions = useMemo(() => {
     const finalizedList = auctions.filter(auction => auction.status === 'finalized')
-    return filterAndSortAuctions(finalizedList, finalizedSearchTerm, finalizedSortBy, finalizedFilterBy)
+    return filterAndSortAuctions(finalizedList, finalizedSearchTerm, finalizedSortBy, finalizedFilterBy, 'finalized')
   }, [auctions, finalizedSearchTerm, finalizedSortBy, finalizedFilterBy, filterAndSortAuctions])
+
+  // Calculate filter statistics for finalized auctions
+  const finalizedStats = useMemo(() => {
+    const finalizedList = auctions.filter(auction => auction.status === 'finalized')
+    const now = Math.floor(Date.now() / 1000)
+    
+    return {
+      awaitingClaim: finalizedList.filter(auction => 
+        !auction.nft_claimed && 
+        auction.reclaim_nft > 0 && 
+        auction.reclaim_nft > now
+      ).length,
+      claimed: finalizedList.filter(auction => auction.nft_claimed).length,
+      reclaimed: finalizedList.filter(auction => auction.nft_reclaimed).length
+    }
+  }, [auctions])
+
+  // Calculate stats for live auctions
+  const liveStats = useMemo(() => {
+    const liveList = auctions.filter(auction => 
+      auction.status === 'active' && !isAuctionEnded(auction.end_time)
+    )
+    const now = Math.floor(Date.now() / 1000)
+    
+    return {
+      endingIn1H: liveList.filter(auction => 
+        auction.end_time - now <= 3600 && auction.end_time - now > 0
+      ).length,
+      endingIn6H: liveList.filter(auction => 
+        auction.end_time - now <= 6 * 3600 && auction.end_time - now > 0
+      ).length,
+      endingIn24H: liveList.filter(auction => 
+        auction.end_time - now <= 24 * 3600 && auction.end_time - now > 0
+      ).length
+    }
+  }, [auctions])
 
   // Check if current user is the auction creator
   const isAuctionCreator = useCallback((auction: Auction) => {
@@ -473,12 +565,15 @@ export default function AuctionsPage() {
                 
                 <div className="flex gap-3">
                   <Select value={liveFilterBy} onValueChange={setLiveFilterBy}>
-                    <SelectTrigger className="w-40 bg-white/90">
+                    <SelectTrigger className="w-48 bg-white/90">
                       <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="all">All Auctions</SelectItem>
+                      <SelectItem value="ending-soon-1h">⏰ Ending in 1H ({liveStats.endingIn1H})</SelectItem>
+                      <SelectItem value="ending-soon-6h">⏰ Ending in 6H ({liveStats.endingIn6H})</SelectItem>
+                      <SelectItem value="ending-soon-24h">⏰ Ending in 24H ({liveStats.endingIn24H})</SelectItem>
                       <SelectItem value="single">Single NFT</SelectItem>
                       <SelectItem value="bundle">Bundle</SelectItem>
                     </SelectContent>
@@ -514,9 +609,10 @@ export default function AuctionsPage() {
                 </div>
               </div>
               
-              {liveSearchTerm && (
+              {(liveSearchTerm || liveFilterBy !== "all") && (
                 <div className="mt-3 text-sm text-gray-600">
-                  Found {filteredLiveAuctions.length} live auction(s) matching "{liveSearchTerm}"
+                  {liveSearchTerm && `Found ${filteredLiveAuctions.length} live auction(s) matching "${liveSearchTerm}"`}
+                  {!liveSearchTerm && liveFilterBy !== "all" && `Found ${filteredLiveAuctions.length} auction(s) with selected filter`}
                 </div>
               )}
             </div>
@@ -793,12 +889,18 @@ export default function AuctionsPage() {
                 
                 <div className="flex gap-3">
                   <Select value={finalizedFilterBy} onValueChange={setFinalizedFilterBy}>
-                    <SelectTrigger className="w-40 bg-white/90">
+                    <SelectTrigger className="w-52 bg-white/90">
                       <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="all">All Finalized ({filteredFinalizedAuctions.length})</SelectItem>
+                      <SelectItem value="last-1day">📅 Last 1 Day</SelectItem>
+                      <SelectItem value="last-3days">📅 Last 3 Days</SelectItem>
+                      <SelectItem value="last-7days">📅 Last 7 Days</SelectItem>
+                      <SelectItem value="awaiting-claim">⏳ Awaiting Claim ({finalizedStats.awaitingClaim})</SelectItem>
+                      <SelectItem value="claimed">✅ Claimed ({finalizedStats.claimed})</SelectItem>
+                      <SelectItem value="reclaimed">🔄 Reclaimed ({finalizedStats.reclaimed})</SelectItem>
                       <SelectItem value="single">Single NFT</SelectItem>
                       <SelectItem value="bundle">Bundle</SelectItem>
                     </SelectContent>
@@ -834,9 +936,10 @@ export default function AuctionsPage() {
                 </div>
               </div>
               
-              {finalizedSearchTerm && (
+              {(finalizedSearchTerm || finalizedFilterBy !== "all") && (
                 <div className="mt-3 text-sm text-gray-600">
-                  Found {filteredFinalizedAuctions.length} finalized auction(s) matching "{finalizedSearchTerm}"
+                  {finalizedSearchTerm && `Found ${filteredFinalizedAuctions.length} finalized auction(s) matching "${finalizedSearchTerm}"`}
+                  {!finalizedSearchTerm && finalizedFilterBy !== "all" && `Found ${filteredFinalizedAuctions.length} auction(s) with selected filter`}
                 </div>
               )}
             </div>
@@ -852,6 +955,30 @@ export default function AuctionsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Quick Stats for Finalized */}
+            {finalizedStats.awaitingClaim > 0 || finalizedStats.claimed > 0 || finalizedStats.reclaimed > 0 ? (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-orange-600">{finalizedStats.awaitingClaim}</div>
+                    <div className="text-sm text-orange-700">Awaiting Claim</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">{finalizedStats.claimed}</div>
+                    <div className="text-sm text-green-700">Claimed</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{finalizedStats.reclaimed}</div>
+                    <div className="text-sm text-blue-700">Reclaimed</div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredFinalizedAuctions.map((auction) => (
