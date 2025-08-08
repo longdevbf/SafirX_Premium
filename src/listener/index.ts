@@ -11,9 +11,12 @@ console.log('🚀 Starting SafirX Blockchain Listeners...');
 console.log('📡 Keep-alive mechanism activated');
 console.log('🔄 Auto-restart on failures enabled');
 
-// Paths to listener files
+// Start keep-alive server FIRST trong main process
+import './keepAlive';
+
+// Paths to listener files  
 const auctionListenerPath = path.join(__dirname, 'auctionListener.ts');
-const marketListenerPath = path.join(__dirname, 'marketListener.ts.ts');
+const marketListenerPath = path.join(__dirname, 'marketListener.ts');
 
 let auctionProcess: ChildProcess | null = null;
 let marketProcess: ChildProcess | null = null;

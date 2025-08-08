@@ -2,8 +2,6 @@
 import { ethers } from 'ethers';
 import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
 import axios from 'axios';
-// Import keep-alive server to ensure it runs
-import './keepAlive';
 
 // Địa chỉ contract
 const marketAddress = '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932';
