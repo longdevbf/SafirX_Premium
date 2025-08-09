@@ -1,5 +1,5 @@
 {
-  "name": "safirx_2",
+  "name":    "start:listeners": "npx tsx src/listener/index.ts",   "start:listeners": "npx tsx src/listener/index.ts","safirx_2",
   "version": "0.1.0",
   "private": true,
   "scripts": {
