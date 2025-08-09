@@ -76,7 +76,7 @@ export async function POST(
 
       if (timeUntilEnd <= TEN_MINUTES) {
         // Extend auction by 10 minutes
-        newEndTime = currentTime + TEN_MINUTES
+        newEndTime = auction.end_time + TEN_MINUTES
         
         console.log(`🕒 Anti-sniping activated for auction ${auctionId}:`)
         console.log(`   - Original end time: ${auction.end_time}`)
