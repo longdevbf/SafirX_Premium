@@ -99,16 +99,49 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
     }
 }
 
-// Hàm cập nhật total_bid
-async function incrementTotalBid(auctionId: string, auctionType: string) {
+// Hàm cập nhật total_bid với anti-sniping logic
+async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: string) {
     const client = await pool.connect();
     try {
-        await client.query(
-            `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
+        await client.query('BEGIN');
+
+        // Get current auction details
+        const auctionResult = await client.query(
+            `SELECT end_time FROM auctions WHERE auction_id = $1 AND auction_type = $2 AND status = 'active'`,
             [auctionId, auctionType]
         );
+
+        if (auctionResult.rows.length > 0) {
+            const auction = auctionResult.rows[0];
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilEnd = auction.end_time - currentTime;
+            const TEN_MINUTES = 10 * 60; // 10 minutes in seconds
+
+            // 🕒 Anti-sniping: Gia hạn 10 phút nếu bid trong 10 phút cuối
+            if (timeUntilEnd > 0 && timeUntilEnd <= TEN_MINUTES) {
+                const newEndTime = currentTime + TEN_MINUTES;
+                
+                await client.query(
+                    `UPDATE auctions 
+                     SET total_bid = total_bid + 1, end_time = $1, updated_at = NOW()
+                     WHERE auction_id = $2 AND auction_type = $3`,
+                    [newEndTime, auctionId, auctionType]
+                );
+                
+                console.log(`🕒 Anti-sniping: Auction ${auctionId} (${auctionType}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
+            } else {
+                // Normal increment without extension
+                await client.query(
+                    `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
+                    [auctionId, auctionType]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
     } catch (error) {
-        console.error('Lỗi khi cập nhật total_bid:', error);
+        await client.query('ROLLBACK');
+        console.error('Lỗi khi cập nhật total_bid với anti-sniping:', error);
     } finally {
         client.release();
     }
@@ -207,9 +240,9 @@ async function main() {
         const timestampNum = Number(timestamp); // Convert BigInt to number
         console.log('BidPlaced:', { auctionIdStr, bidder, timestamp: timestampNum });
 
-        // Cập nhật total_bid cho cả single và bundle
-        await incrementTotalBid(auctionIdStr, 'single');
-        await incrementTotalBid(auctionIdStr, 'bundle');
+        // Cập nhật total_bid với anti-sniping logic cho cả single và bundle
+        await incrementTotalBidWithAntiSniping(auctionIdStr, 'single');
+        await incrementTotalBidWithAntiSniping(auctionIdStr, 'bundle');
     });
 
     // Sự kiện AuctionFinalized - CẬP NHẬT

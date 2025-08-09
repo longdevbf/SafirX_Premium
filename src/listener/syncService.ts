@@ -198,6 +198,94 @@ export async function syncAuctionEvents(fromBlock: number, toBlock: number): Pro
     await syncAuctionEventsChunk(fromBlock, toBlock);
 }
 
+// Anti-sniping function - extend auction if bid placed in last 10 minutes
+async function handleAntiSniping(auctionId: string, bidTime: Date): Promise<void> {
+    try {
+        await pool.query('BEGIN');
+        
+        // Get current auction end time
+        const auctionResult = await pool.query(
+            'SELECT end_time FROM auctions WHERE id = $1',
+            [auctionId]
+        );
+        
+        if (auctionResult.rows.length === 0) {
+            await pool.query('ROLLBACK');
+            return;
+        }
+        
+        const endTime = new Date(auctionResult.rows[0].end_time);
+        const timeDiff = endTime.getTime() - bidTime.getTime();
+        const tenMinutesInMs = 10 * 60 * 1000;
+        
+        // If bid is placed within last 10 minutes, extend auction by 10 minutes
+        if (timeDiff <= tenMinutesInMs && timeDiff > 0) {
+            const newEndTime = new Date(endTime.getTime() + tenMinutesInMs);
+            
+            await pool.query(
+                'UPDATE auctions SET end_time = $1 WHERE id = $2',
+                [newEndTime, auctionId]
+            );
+            
+            console.log(`🚨 Anti-sniping activated! Auction ${auctionId} extended to ${newEndTime.toISOString()}`);
+        }
+        
+        await pool.query('COMMIT');
+    } catch (error) {
+        await pool.query('ROLLBACK');
+        console.error('Error in anti-sniping logic:', error);
+    }
+}
+
+// Sync bid events from auction contracts
+async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> {
+    console.log(`🔄 Syncing bid events from block ${fromBlock} to ${toBlock}...`);
+    
+    try {
+        // Get BidPlaced events from auction contract
+        const bidPlacedFilter = auctionContract.filters.BidPlaced();
+        const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
+        
+        for (const event of bidPlacedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const auctionId = args[0].toString();
+            const bidder = args[1];
+            const bidAmount = ethers.formatEther(args[2]);
+            const auctionType = Number(args[3]) === 0 ? 'single' : 'bundle';
+            
+            // Get block timestamp for anti-sniping calculation
+            const block = await provider.getBlock(eventLog.blockNumber);
+            const bidTime = new Date(Number(block?.timestamp || 0) * 1000);
+            
+            console.log(`💰 Processing bid: Auction ${auctionId} (${auctionType}), Bidder: ${bidder}, Amount: ${bidAmount} ROSE`);
+            
+            // Apply anti-sniping logic
+            await handleAntiSniping(auctionId, bidTime);
+            
+            // Update auction with new highest bid
+            try {
+                await pool.query(
+                    'UPDATE auctions SET highest_bid = $1, highest_bidder = $2 WHERE id = $3',
+                    [bidAmount, bidder, auctionId]
+                );
+                
+                console.log(`✅ Updated auction ${auctionId} with new bid: ${bidAmount} ROSE from ${bidder}`);
+            } catch (error) {
+                console.error(`❌ Error updating auction ${auctionId}:`, error);
+            }
+        }
+        
+        console.log(`✅ Synced ${bidPlacedEvents.length} bid events`);
+        
+    } catch (error) {
+        console.error('❌ Error syncing bid events:', error);
+        throw error;
+    }
+}
+
 // Helper function to sync a chunk of auction events
 async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
     console.log(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
@@ -434,6 +522,7 @@ export async function performFullSync(): Promise<void> {
             for (let fromBlock = Number(lastAuctionBlock) + 1; fromBlock <= currentBlock; fromBlock += maxBlockRange) {
                 const toBlock = Math.min(fromBlock + maxBlockRange - 1, currentBlock);
                 await syncAuctionEvents(fromBlock, toBlock);
+                await syncBidEvents(fromBlock, toBlock); // Also sync bid events
                 await updateLastSyncedBlock('auction', toBlock);
                 
                 // Small delay to avoid rate limiting
@@ -475,6 +564,7 @@ export async function performIncrementalSync(): Promise<void> {
         
         if (currentBlock >= auctionFromBlock) {
             await syncAuctionEvents(auctionFromBlock, currentBlock);
+            await syncBidEvents(auctionFromBlock, currentBlock); // Also sync bid events
             await updateLastSyncedBlock('auction', currentBlock);
         }
         

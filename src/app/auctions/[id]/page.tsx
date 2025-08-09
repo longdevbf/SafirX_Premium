@@ -242,6 +242,13 @@ export default function AuctionDetailPage() {
   const [realTimeLeft, setRealTimeLeft] = useState('')
   const [realReclaimTimeLeft, setRealReclaimTimeLeft] = useState('')
 
+  // Anti-sniping notification state
+  const [extensionNotification, setExtensionNotification] = useState<{
+    show: boolean
+    message: string
+    timestamp: number
+  }>({ show: false, message: '', timestamp: 0 })
+
   // State để theo dõi việc đã fetch hay chưa
   const [contractDataFetched, setContractDataFetched] = useState(false)
   const [bidHistoryFetched, setBidHistoryFetched] = useState(false)
