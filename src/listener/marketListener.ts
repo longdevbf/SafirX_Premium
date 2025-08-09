@@ -226,8 +226,18 @@ async function main() {
         await deleteFromDatabase(collectionIdStr, 'bundle');
     });
 
-    // Giữ script chạy liên tục mãi mãi
-    await new Promise(() => {});
+    console.log('✅ Market listener setup completed - listening for events...');
+    
+    // Keep process alive gracefully
+    process.on('SIGTERM', () => {
+        console.log('🛑 Market listener received SIGTERM, shutting down...');
+        process.exit(0);
+    });
+    
+    process.on('SIGINT', () => {
+        console.log('🛑 Market listener received SIGINT, shutting down...');
+        process.exit(0);
+    });
 }
 
 main().catch(console.error);

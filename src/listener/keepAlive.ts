@@ -1,4 +1,15 @@
-// Keep-alive service để giữ Railway process luôn hoạt động
+// Keep-alive service để giữ Railway proce// Self-ping để giữ process hoạt động
+setInterval(async () => {
+    try {
+        // Use Railway domain if available, fallback to localhost
+        const baseUrl = process.env.RAILWAY_STATIC_URL || `http://localhost:${PORT}`;
+        const response = await fetch(`${baseUrl}/ping`);
+        const data = await response.json();
+        console.log('🔄 Self-ping successful:', data.message);
+    } catch (error) {
+        console.log('⚠️ Self-ping failed (normal for Railway):', (error as Error)?.message || 'Unknown error');
+    }
+}, 10 * 60 * 1000); // Ping every 10 minutes (increased from 5)ạt động
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 

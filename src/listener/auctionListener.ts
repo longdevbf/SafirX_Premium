@@ -290,8 +290,18 @@ async function main() {
         await updateClaimStatus(auctionIdStr, 'bundle', 'nft_reclaimed', true);
     });
 
+    console.log('✅ Auction listener setup completed - listening for events...');
     
-    await new Promise(() => {});
+    // Keep process alive gracefully
+    process.on('SIGTERM', () => {
+        console.log('🛑 Auction listener received SIGTERM, shutting down...');
+        process.exit(0);
+    });
+    
+    process.on('SIGINT', () => {
+        console.log('🛑 Auction listener received SIGINT, shutting down...');
+        process.exit(0);
+    });
 }
 
 main().catch(console.error);

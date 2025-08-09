@@ -205,8 +205,8 @@ async function handleAntiSniping(auctionId: string, bidTime: Date): Promise<void
         
         // Get current auction end time
         const auctionResult = await pool.query(
-            'SELECT end_time FROM auctions WHERE id = $1',
-            [auctionId]
+            'SELECT end_time FROM auctions WHERE auction_id = $1 AND status = $2',
+            [auctionId, 'active']
         );
         
         if (auctionResult.rows.length === 0) {
@@ -214,20 +214,20 @@ async function handleAntiSniping(auctionId: string, bidTime: Date): Promise<void
             return;
         }
         
-        const endTime = new Date(auctionResult.rows[0].end_time);
+        const endTime = new Date(auctionResult.rows[0].end_time * 1000); // Convert Unix timestamp to Date
         const timeDiff = endTime.getTime() - bidTime.getTime();
         const tenMinutesInMs = 10 * 60 * 1000;
         
         // If bid is placed within last 10 minutes, extend auction by 10 minutes
         if (timeDiff <= tenMinutesInMs && timeDiff > 0) {
-            const newEndTime = new Date(endTime.getTime() + tenMinutesInMs);
+            const newEndTime = Math.floor((endTime.getTime() + tenMinutesInMs) / 1000); // Convert back to Unix timestamp
             
             await pool.query(
-                'UPDATE auctions SET end_time = $1 WHERE id = $2',
+                'UPDATE auctions SET end_time = $1 WHERE auction_id = $2',
                 [newEndTime, auctionId]
             );
             
-            console.log(`🚨 Anti-sniping activated! Auction ${auctionId} extended to ${newEndTime.toISOString()}`);
+            console.log(`🚨 Anti-sniping activated! Auction ${auctionId} extended to ${new Date(newEndTime * 1000).toISOString()}`);
         }
         
         await pool.query('COMMIT');
@@ -253,28 +253,27 @@ async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> 
             
             const auctionId = args[0].toString();
             const bidder = args[1];
-            const bidAmount = ethers.formatEther(args[2]);
-            const auctionType = Number(args[3]) === 0 ? 'single' : 'bundle';
+            const timestamp = Number(args[2]);
             
             // Get block timestamp for anti-sniping calculation
             const block = await provider.getBlock(eventLog.blockNumber);
             const bidTime = new Date(Number(block?.timestamp || 0) * 1000);
             
-            console.log(`💰 Processing bid: Auction ${auctionId} (${auctionType}), Bidder: ${bidder}, Amount: ${bidAmount} ROSE`);
+            console.log(`💰 Processing bid: Auction ${auctionId}, Bidder: ${bidder}, Timestamp: ${timestamp}`);
             
-            // Apply anti-sniping logic
+            // Apply anti-sniping logic for both single and bundle types
             await handleAntiSniping(auctionId, bidTime);
             
-            // Update auction with new highest bid
+            // Increment total_bid for both auction types
             try {
                 await pool.query(
-                    'UPDATE auctions SET highest_bid = $1, highest_bidder = $2 WHERE id = $3',
-                    [bidAmount, bidder, auctionId]
+                    'UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1',
+                    [auctionId]
                 );
                 
-                console.log(`✅ Updated auction ${auctionId} with new bid: ${bidAmount} ROSE from ${bidder}`);
+                console.log(`✅ Incremented total_bid for auction ${auctionId}`);
             } catch (error) {
-                console.error(`❌ Error updating auction ${auctionId}:`, error);
+                console.error(`❌ Error incrementing total_bid for auction ${auctionId}:`, error);
             }
         }
         
@@ -601,9 +600,10 @@ export async function startSyncService(): Promise<void> {
     try {
         // Perform initial sync when service starts
         console.log('📊 Performing initial synchronization...');
-        await performIncrementalSync();
+        await performIncrementalSync(); // Use incremental instead of full sync for faster startup
         
-        // Set up incremental sync every 30 seconds
+        // Set up incremental sync with Railway-optimized interval
+        const syncIntervalMs = process.env.RAILWAY_ENVIRONMENT ? 5 * 60 * 1000 : 2 * 60 * 1000; // 5min on Railway, 2min locally
         syncInterval = setInterval(async () => {
             if (isServiceRunning) {
                 try {
@@ -612,9 +612,9 @@ export async function startSyncService(): Promise<void> {
                     console.error('❌ Error in scheduled sync:', error);
                 }
             }
-        }, 30000); // 30 seconds
+        }, syncIntervalMs);
         
-        console.log('✅ Sync service started with 30-second intervals');
+        console.log(`✅ Sync service started with ${syncIntervalMs/1000/60}-minute intervals`);
         
     } catch (error) {
         console.error('❌ Error starting sync service:', error);
