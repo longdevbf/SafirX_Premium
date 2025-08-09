@@ -203,7 +203,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
     console.log(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
     
     try {
-        // 1. AuctionCreated events
+        // Get AuctionCreated events
         const auctionCreatedFilter = auctionContract.filters.AuctionCreated();
         const auctionCreatedEvents = await auctionContract.queryFilter(auctionCreatedFilter, fromBlock, toBlock);
         
@@ -213,10 +213,10 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            const auctionTypeNum = Number(args[3]);
-            const auctionTypeString = auctionTypeNum === 0 ? 'single' : 'bundle';
+            const auctionTypeNum = Number(args[3]); // Keep as number for comparison
+            const auctionTypeString = auctionTypeNum === 0 ? 'single' : 'bundle'; // Convert to string for DB
             
-            // Check if already exists
+            // Kiểm tra xem auction đã tồn tại chưa
             const exists = await auctionExistsInDB(auctionId, auctionTypeString);
             if (exists) {
                 console.log(`⏭️ Auction ${auctionId} (${auctionTypeString}) already exists, skipping...`);
@@ -253,10 +253,10 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
                 auction_id: auctionId,
                 seller_address: seller,
                 nft_contract_address: nftContract,
-                auction_type: auctionTypeString,
+                auction_type: auctionTypeString, // Use already converted string
                 token_ids: activeTokenIds,
                 starting_price: startingPrice,
-                end_time: endTime,
+                end_time: endTime, // Keep as number (UNIX timestamp)
                 title: title || representativeMetadata?.name || '',
                 collection_name: representativeMetadata?.token?.name || '',
                 image_url: representativeMetadata?.image || '',
@@ -269,87 +269,12 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             
             await saveAuctionToDatabase(auctionData);
         }
-
-        // 2. BidPlaced events
-        const bidPlacedFilter = auctionContract.filters.BidPlaced();
-        const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
         
-        for (const event of bidPlacedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            // Update total_bid for both single and bundle (same as listener)
-            await incrementTotalBid(auctionId, 'single');
-            await incrementTotalBid(auctionId, 'bundle');
-        }
-
-        // 3. AuctionFinalized events
-        const auctionFinalizedFilter = auctionContract.filters.AuctionFinalized();
-        const auctionFinalizedEvents = await auctionContract.queryFilter(auctionFinalizedFilter, fromBlock, toBlock);
-        
-        for (const event of auctionFinalizedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            // Update status and reclaim_nft (same as listener)
-            await updateAuctionStatusWithReclaim(auctionId, 'single', 'finalized');
-            await updateAuctionStatusWithReclaim(auctionId, 'bundle', 'finalized');
-        }
-
-        // 4. AuctionCancelled events
-        const auctionCancelledFilter = auctionContract.filters.AuctionCancelled();
-        const auctionCancelledEvents = await auctionContract.queryFilter(auctionCancelledFilter, fromBlock, toBlock);
-        
-        for (const event of auctionCancelledEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            // Delete from database (same as listener)
-            await deleteAuctionFromDatabase(auctionId, 'single');
-            await deleteAuctionFromDatabase(auctionId, 'bundle');
-        }
-
-        // 5. NFTClaimed events
-        const nftClaimedFilter = auctionContract.filters.NFTClaimed();
-        const nftClaimedEvents = await auctionContract.queryFilter(nftClaimedFilter, fromBlock, toBlock);
-        
-        for (const event of nftClaimedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            // Update claim status (same as listener)
-            await updateClaimStatus(auctionId, 'single', 'nft_claimed', true);
-            await updateClaimStatus(auctionId, 'bundle', 'nft_claimed', true);
-        }
-
-        // 6. NFTReclaimed events
-        const nftReclaimedFilter = auctionContract.filters.NFTReclaimed();
-        const nftReclaimedEvents = await auctionContract.queryFilter(nftReclaimedFilter, fromBlock, toBlock);
-        
-        for (const event of nftReclaimedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            // Update reclaim status (same as listener)
-            await updateClaimStatus(auctionId, 'single', 'nft_reclaimed', true);
-            await updateClaimStatus(auctionId, 'bundle', 'nft_reclaimed', true);
-        }
-        
-        console.log(`  ✅ Synced ${auctionCreatedEvents.length} auction creations, ${bidPlacedEvents.length} bids, ${auctionFinalizedEvents.length} finalizations, ${auctionCancelledEvents.length} cancellations, ${nftClaimedEvents.length} claims, ${nftReclaimedEvents.length} reclaims`);
+        console.log(`  ✅ Synced ${auctionCreatedEvents.length} auction events`);
         
     } catch (error) {
         console.error('  ❌ Lỗi khi sync auction chunk:', error);
-        throw error;
+        throw error; // Re-throw để parent function có thể handle
     }
 }
 
@@ -482,86 +407,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             };
             
             await saveListingToDatabase(bundleData);
-        }
-
-        // 3. PriceUpdated events
-        const priceUpdatedFilter = marketContract.filters.PriceUpdated();
-        const priceUpdatedEvents = await marketContract.queryFilter(priceUpdatedFilter, fromBlock, toBlock);
-        
-        for (const event of priceUpdatedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const listingId = args[0].toString();
-            const newPrice = ethers.formatEther(args[2]);
-            await updateListingPrice(listingId, newPrice, 'single');
-        }
-
-        // 4. BundlePriceUpdated events
-        const bundlePriceUpdatedFilter = marketContract.filters.BundlePriceUpdated();
-        const bundlePriceUpdatedEvents = await marketContract.queryFilter(bundlePriceUpdatedFilter, fromBlock, toBlock);
-        
-        for (const event of bundlePriceUpdatedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const collectionId = args[0].toString();
-            const newPrice = ethers.formatEther(args[2]);
-            await updateListingPrice(collectionId, newPrice, 'bundle');
-        }
-
-        // 5. ListingCancelled events
-        const listingCancelledFilter = marketContract.filters.ListingCancelled();
-        const listingCancelledEvents = await marketContract.queryFilter(listingCancelledFilter, fromBlock, toBlock);
-        
-        for (const event of listingCancelledEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const listingId = args[0].toString();
-            await deleteListingFromDatabase(listingId, 'single');
-        }
-
-        // 6. CollectionCancelled events
-        const collectionCancelledFilter = marketContract.filters.CollectionCancelled();
-        const collectionCancelledEvents = await marketContract.queryFilter(collectionCancelledFilter, fromBlock, toBlock);
-        
-        for (const event of collectionCancelledEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const collectionId = args[0].toString();
-            await deleteListingFromDatabase(collectionId, 'bundle');
-        }
-
-        // 7. NFTSold events
-        const nftSoldFilter = marketContract.filters.NFTSold();
-        const nftSoldEvents = await marketContract.queryFilter(nftSoldFilter, fromBlock, toBlock);
-        
-        for (const event of nftSoldEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const listingId = args[0].toString();
-            await deleteListingFromDatabase(listingId, 'single');
-        }
-
-        // 8. CollectionBundleSold events
-        const collectionBundleSoldFilter = marketContract.filters.CollectionBundleSold();
-        const collectionBundleSoldEvents = await marketContract.queryFilter(collectionBundleSoldFilter, fromBlock, toBlock);
-        
-        for (const event of collectionBundleSoldEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const collectionId = args[0].toString();
-            await deleteListingFromDatabase(collectionId, 'bundle');
         }
         
         console.log(`  ✅ Synced ${nftListedEvents.length} single listings and ${bundleListedEvents.length} bundle listings`);
@@ -711,101 +556,6 @@ export function getSyncServiceStatus(): { isRunning: boolean; intervalMs: number
         isRunning: isServiceRunning,
         intervalMs: syncInterval ? 30000 : null
     };
-}
-
-// Additional helper functions for complete event sync
-
-// Update auction status with reclaim timestamp (from listener)
-async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string) {
-    const client = await pool.connect();
-    try {
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        const reclaimTimestamp = currentTimestamp + (3 * 24 * 60 * 60); // 3 days
-        
-        await client.query(
-            `UPDATE auctions SET status = $1, reclaim_nft = $2 WHERE auction_id = $3 AND auction_type = $4`,
-            [status, reclaimTimestamp, auctionId, auctionType]
-        );
-    } catch (error) {
-        console.error('Error updating auction status with reclaim:', error);
-    } finally {
-        client.release();
-    }
-}
-
-// Update claim status (from listener)
-async function updateClaimStatus(auctionId: string, auctionType: string, field: string, value: boolean) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `UPDATE auctions SET ${field} = $1 WHERE auction_id = $2 AND auction_type = $3`,
-            [value, auctionId, auctionType]
-        );
-    } catch (error) {
-        console.error(`Error updating ${field}:`, error);
-    } finally {
-        client.release();
-    }
-}
-
-// Increment total_bid (from listener)
-async function incrementTotalBid(auctionId: string, auctionType: string) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
-            [auctionId, auctionType]
-        );
-    } catch (error) {
-        console.error('Error incrementing total_bid:', error);
-    } finally {
-        client.release();
-    }
-}
-
-// Delete auction from database (from listener)
-async function deleteAuctionFromDatabase(auctionId: string, auctionType: string) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `DELETE FROM auctions WHERE auction_id = $1 AND auction_type = $2`,
-            [auctionId, auctionType]
-        );
-    } catch (error) {
-        console.error('Error deleting auction:', error);
-    } finally {
-        client.release();
-    }
-}
-
-// Update market listing price (from listener)
-async function updateListingPrice(listingId: string, newPrice: string, listingType: string) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `UPDATE market_listings SET price = $1 WHERE listing_id = $2 AND listing_type = $3`,
-            [newPrice, listingId, listingType]
-        );
-    } catch (error) {
-        console.error('Error updating listing price:', error);
-    } finally {
-        client.release();
-    }
-}
-
-// Delete market listing from database (from listener)
-async function deleteListingFromDatabase(listingId: string, listingType: string) {
-    const client = await pool.connect();
-    try {
-        await client.query(
-            `DELETE FROM market_listings WHERE listing_id = $1 AND listing_type = $2`,
-            [listingId, listingType]
-        );
-    } catch (error) {
-        console.error('Error deleting listing:', error);
-    } finally {
-        client.release();
-    }
 }
 
 // Graceful shutdown handlers

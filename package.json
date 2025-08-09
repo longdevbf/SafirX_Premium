@@ -9,6 +9,7 @@
     "build": "next build",
     "build:listeners": "echo 'Listeners build complete - no build step needed for TypeScript files'",
     "start": "next start",
+    "start:listeners": "concurrently \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\" \"npx tsx src/listener/syncRunner.ts\"",
     "start:full": "concurrently \"next start\" \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\" \"npx tsx src/listener/syncRunner.ts\"",
     "lint": "next lint",
     "listeners": "npx tsx src/listener/index.ts",

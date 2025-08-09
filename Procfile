@@ -1,1 +1,1 @@
-listener: npm run listeners
+worker: npm run start:listeners
