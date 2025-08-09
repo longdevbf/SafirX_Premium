@@ -33,6 +33,17 @@ interface NFT {
   edition?: string
 }
 
+// URL validation function to prevent XSS attacks
+const isValidUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url)
+    // Only allow http and https protocols
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export default function PublicProfilePage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params)
   const [activeTab, setActiveTab] = useState<"nfts">("nfts")
@@ -347,8 +358,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
                     <span className="w-2 h-2 bg-green-400 rounded-full"></span>
                     <span>Joined {user.joined}</span>
                   </div>
-                  {user.website && (
-                    <Link href={user.website} className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors">
+                  {user.website && isValidUrl(user.website) && (
+                    <Link 
+                      href={user.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+                    >
                       <ExternalLink className="w-4 h-4" />
                       Website
                     </Link>

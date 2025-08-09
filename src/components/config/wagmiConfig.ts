@@ -1,16 +1,28 @@
-import { createSapphireConfig } from '@oasisprotocol/sapphire-wagmi-v2';
+import { connectorsForWallets } from '@rainbow-me/rainbowkit';
+import { metaMaskWallet, phantomWallet } from '@rainbow-me/rainbowkit/wallets';
 import { http } from 'wagmi';
-import { sapphire, sapphireTestnet, mainnet } from 'wagmi/chains';
+import { sapphire, sapphireTestnet } from 'wagmi/chains';
+import { createSapphireConfig } from '@oasisprotocol/sapphire-wagmi-v2';
+
+// Create connectors with only MetaMask
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: 'Recommend',
+      wallets: [metaMaskWallet],
+    },
+  ],
+  {
+    appName: 'SafirX Premium',
+    projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '12345',
+  }
+);
 
 export const config = createSapphireConfig({
-    sapphireConfig: {
-        replaceProviders: false,
-        wrappedProvidersFilter: (rdns) => ['io.metamask'].includes(rdns),
-    },
-    chains: [sapphire, sapphireTestnet, mainnet],
-    transports: {
-        [sapphire.id]: http(),
-        [sapphireTestnet.id]: http(),
-        [mainnet.id]: http(),
-    },
+  sapphireConfig: {},
+  connectors,
+  chains: [sapphireTestnet],
+  transports: {
+    [sapphireTestnet.id]: http(),
+  },
 });

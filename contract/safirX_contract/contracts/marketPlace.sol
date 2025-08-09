@@ -115,7 +115,7 @@ contract NFTMarket is ReentrancyGuard, Ownable {
         ListingType listingType
     );
 
-    event (
+    event CollectionCancelled(
         uint256 indexed collectionId,
         address indexed seller,
         ListingType listingType

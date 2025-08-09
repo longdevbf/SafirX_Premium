@@ -8,7 +8,7 @@ export const ABI_CONFIG = {
     abi: NFTMarketPlace.abi,
   },
   sealedBidAuction: {
-    address: '0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9',
+    address: '0x5f3e20d0F39b02CC51EE449ce733d8C3b4FAAb1A',
     abi: SealedBidAuction.abi
   },
   mintNFT: {

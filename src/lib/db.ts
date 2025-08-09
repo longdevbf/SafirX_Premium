@@ -4,9 +4,6 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-// Debug: Log the DATABASE_URL to ensure it's loaded (remove in production)
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
-
 // Validate required environment variable
 if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not set');

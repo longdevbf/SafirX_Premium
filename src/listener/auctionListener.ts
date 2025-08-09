@@ -4,7 +4,7 @@ import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/cont
 import axios from 'axios';
 
 // Địa chỉ contract
-const auctionAddress = '0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9';
+const auctionAddress = '0x5f3e20d0F39b02CC51EE449ce733d8C3b4FAAb1A';
 
 // Kết nối với Oasis Sapphire Testnet qua WebSocket
 const provider = new ethers.WebSocketProvider('wss://testnet.sapphire.oasis.io/ws');
@@ -25,7 +25,6 @@ async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
     }
 }
 
-// Hàm lưu thông tin vào database
 async function saveToDatabase(data: any) {
     const client = await pool.connect();
     try {
@@ -51,7 +50,7 @@ async function saveToDatabase(data: any) {
                 data.status,
                 data.nft_claimed,
                 data.nft_reclaimed,
-                0 // Khởi tạo total_bid là 0
+                0 
             ]
         );
     } catch (error) {
@@ -180,11 +179,11 @@ async function main() {
     });
 
     // Sự kiện BidPlaced
-    auctionContract.on('BidPlaced', async (auctionId, bidder, amount, timestamp) => {
+    auctionContract.on('BidPlaced', async (auctionId, bidder, timestamp) => {
         const auctionIdStr = auctionId.toString();
-        const amountStr = ethers.formatEther(amount); // Convert wei to Ether
+       // const amountStr = ethers.formatEther(amount); // Convert wei to Ether
         const timestampNum = Number(timestamp); // Convert BigInt to number
-        console.log('BidPlaced:', { auctionIdStr, bidder, amountStr, timestamp: timestampNum });
+        console.log('BidPlaced:', { auctionIdStr, bidder, timestamp: timestampNum });
 
         // Cập nhật total_bid cho cả single và bundle
         await incrementTotalBid(auctionIdStr, 'single');

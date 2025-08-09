@@ -51,21 +51,20 @@ contract SealedBidAuction is ReentrancyGuard, Ownable, ERC721Holder {
     uint256 public constant MAX_BIDS_PER_AUCTION = 1000;
 
     mapping(uint256 => Auction) public auctions;
-    mapping(uint256 => Bid[]) public auctionBids;
-    mapping(uint256 => mapping(address => uint256)) public bidderToIndex;
-    mapping(address => uint256[]) public userAuctions;
-    mapping(address => uint256[]) public userBids;
-    mapping(uint256 => uint256) public auctionDeposits;
+    mapping(uint256 => Bid[]) private auctionBids;
+    mapping(uint256 => mapping(address => uint256)) private bidderToIndex;
+    mapping(address => uint256[]) private userAuctions;
+    mapping(address => uint256[]) private userBids;
+    mapping(uint256 => uint256) private auctionDeposits;
 
     event AuctionCreated(uint256 indexed auctionId, address indexed seller, address indexed nftContract, AuctionType auctionType, uint256 tokenId, uint256[] tokenIds, uint256 startingPrice, uint256 endTime, string title);
-    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, uint256 timestamp);
+    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 timestamp);
     event AuctionFinalized(uint256 indexed auctionId, address indexed winner, uint256 finalPrice, uint256 platformFeeAmount, uint256 sellerAmount);
     event AuctionCancelled(uint256 indexed auctionId, address indexed seller, string reason);
     event NFTClaimed(uint256 indexed auctionId, address indexed winner, uint256 amountPaid);
     event NFTReclaimed(uint256 indexed auctionId, address indexed seller);
 
     constructor(address initialOwner) Ownable(initialOwner) {}
-
 
     function createSingleNFTAuction(
         address nftContract,
@@ -194,13 +193,13 @@ contract SealedBidAuction is ReentrancyGuard, Ownable, ERC721Holder {
             auction.endTime += auction.bidExtensionTime;
         }
 
-        emit BidPlaced(auctionId, msg.sender, bidAmount, block.timestamp);
+        emit BidPlaced(auctionId, msg.sender, block.timestamp);
     }
 
     function finalizeAuction(uint256 auctionId) external nonReentrant {
         Auction storage auction = auctions[auctionId];
         require(auction.state == AuctionState.ACTIVE, "Auction not active");
-        require(block.timestamp >= auction.endTime , "Auction still active");
+        require(block.timestamp >= auction.endTime, "Auction still active");
 
         auction.state = AuctionState.FINALIZED;
         (address winner, uint256 highestBid) = determineWinner(auctionId);
@@ -323,6 +322,7 @@ contract SealedBidAuction is ReentrancyGuard, Ownable, ERC721Holder {
 
     function getAuctionBids(uint256 auctionId) external view returns (Bid[] memory) {
         require(auctionId > 0 && auctionId < _auctionIdCounter, "Invalid auction ID");
+        require(auctions[auctionId].state == AuctionState.FINALIZED, "Auction not finalized");
         return auctionBids[auctionId];
     }
 }

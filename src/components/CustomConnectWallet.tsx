@@ -2,6 +2,6 @@
 
 import { SapphireWalletConnect } from '@/components/SapphireWalletConnect';
 
-export function ConnectWallet() {
+export function CustomConnectWallet() {
   return <SapphireWalletConnect />;
 }
