@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from 'ethers';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
+import { performFullSync, performIncrementalSync } from './syncService';
 import axios from 'axios';
 
 // Địa chỉ contract
@@ -131,7 +132,28 @@ async function deleteFromDatabase(auctionId: string, auctionType: string) {
 async function main() {
     console.log('🚀 Đang khởi động auction listener...');
     console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
+    
+    // Perform initial full sync to catch up any missed events
+    console.log('🔄 Performing initial data synchronization...');
+    try {
+        await performFullSync();
+        console.log('✅ Initial sync completed successfully!');
+    } catch (error) {
+        console.error('❌ Initial sync failed:', error);
+        console.log('⚠️ Continuing with real-time listening...');
+    }
+    
     console.log('🎯 Đang lắng nghe các sự kiện từ auction...');
+
+    // Set up incremental sync every 5 minutes
+    setInterval(async () => {
+        try {
+            console.log('🔄 Running incremental sync...');
+            await performIncrementalSync();
+        } catch (error) {
+            console.error('❌ Incremental sync failed:', error);
+        }
+    }, 5 * 60 * 1000); // 5 minutes
 
     // Sự kiện AuctionCreated
     auctionContract.on('AuctionCreated', async (auctionId, seller, nftContract, auctionType, tokenId, tokenIds, startingPrice, endTime, title) => {

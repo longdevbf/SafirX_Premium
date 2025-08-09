@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from 'ethers';
 import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
+import { performIncrementalSync } from './syncService';
 import axios from 'axios';
 
 // Địa chỉ contract
@@ -89,6 +90,18 @@ async function main() {
     console.log('🚀 Đang khởi động market listener...');
     console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
     console.log('🎯 Đang lắng nghe các sự kiện từ marketplace...');
+
+    // Set up incremental sync every 10 minutes (offset from auction listener)
+    setTimeout(() => {
+        setInterval(async () => {
+            try {
+                console.log('🔄 Running market incremental sync...');
+                await performIncrementalSync();
+            } catch (error) {
+                console.error('❌ Market incremental sync failed:', error);
+            }
+        }, 5 * 60 * 1000); // 5 minutes
+    }, 2.5 * 60 * 1000); // Start after 2.5 minutes to offset from auction sync
 
     // Sự kiện NFTListed
     marketContract.on('NFTListed', async (listingId, nftContract, tokenId, seller, price, listingType) => {

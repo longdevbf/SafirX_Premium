@@ -331,12 +331,6 @@ export default function AuctionDetailPage() {
         startingPrice = BigInt(startingPriceValue)
       }
       
-      console.log('🔍 getRemainingAmount:', {
-        highestBid: highestBid.toString(),
-        startingPrice: startingPrice.toString(),
-        remaining: (highestBid - startingPrice).toString()
-      })
-      
       return highestBid > startingPrice ? highestBid - startingPrice : BigInt(0)
     } catch (error) {
       console.error('Error calculating remaining amount:', error)

@@ -50,8 +50,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isListCollectionOpen, setIsListCollectionOpen] = useState(false)
   const [isSingleAuctionOpen, setIsSingleAuctionOpen] = useState(false)
+  const [isCollectionAuctionOpen, setIsCollectionAuctionOpen] = useState(false)
   
-  // Thêm state để lưu NFT được chọn từ card
   const [selectedNFTForAuction, setSelectedNFTForAuction] = useState<NFT | null>(null)
   
   const [editForm, setEditForm] = useState({
@@ -119,9 +119,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
     }, 300)
   }
 
-  // Handler để mở single auction từ NFT card
   const handleOpenSingleAuction = (nft: NFT) => {
-    console.log("Opening single auction for NFT:", nft) // Debug log
     setSelectedNFTForAuction(nft)
     setIsSingleAuctionOpen(true)
   }
@@ -159,7 +157,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
 
   const copyAddress = () => {
     navigator.clipboard.writeText(user.address)
-    console.log("Address copied to clipboard")
   }
 
   const handleEditProfile = () => {
@@ -196,11 +193,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         throw new Error(result.error || 'Failed to update profile');
       }
 
-      console.log("Profile updated successfully!");
       await refreshUser();
       setIsEditModalOpen(false);
       
-      // Show success notification for profile update (no auto-reload)
       showTransactionSuccess("profile-update", "Profile updated successfully!", false);
 
     } catch (error) {
@@ -419,10 +414,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => {
-                      setSelectedNFTForAuction(null)
-                      setIsSingleAuctionOpen(true)
-                    }}
+                    onClick={() => setIsCollectionAuctionOpen(true)}
                     className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:border-purple-300 transition-all duration-300 shadow-md hover:shadow-lg"
                   >
                     <Gavel className="w-4 h-4 mr-2" />
@@ -473,6 +465,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
         }}
         nfts={selectedNFTForAuction ? [selectedNFTForAuction] : nfts}
         mode="single"
+        showTransactionSuccess={showTransactionSuccess}
+      />
+
+      {/* Collection NFT Auction Modal */}
+      <CreateAuctionModal
+        isOpen={isCollectionAuctionOpen}
+        onClose={() => setIsCollectionAuctionOpen(false)}
+        nfts={nfts}
+        mode="collection"
         showTransactionSuccess={showTransactionSuccess}
       />
       

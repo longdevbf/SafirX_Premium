@@ -55,8 +55,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (response.status === 404) {
         // User chưa tồn tại, tự động tạo mới
-        console.log('User not found, creating new user...')
-        
         const createResponse = await fetch('/api/users', {
           method: 'POST',
           headers: {
@@ -71,8 +69,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
 
         const createData = await createResponse.json()
-        console.log('New user created successfully:', createData)
-        
         // Set user data từ response của create API
         if (createData.user) {
           setUser(createData.user)
@@ -89,7 +85,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Retry logic cho network errors (tối đa 2 lần retry)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       if (retryCount < 2 && (err instanceof TypeError || errorMessage.includes('Network'))) {
-        console.log(`Retrying fetchUser... (attempt ${retryCount + 1})`)
         setTimeout(() => fetchUser(retryCount + 1), 1000) // Retry sau 1 giây
         return
       }
@@ -131,3 +126,4 @@ export function useUser() {
   }
   return context
 }
+

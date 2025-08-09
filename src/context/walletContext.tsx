@@ -27,9 +27,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         
         if (response.ok) {
           if (data.exists) {
-            console.log('User already exists:', walletAddress);
+
           } else {
-            console.log('New user created:', data.user);
+
           }
         } else {
           console.error('Error creating user:', data.error);
@@ -72,3 +72,4 @@ export function useWallet() {
   }
   return context;
 }
+

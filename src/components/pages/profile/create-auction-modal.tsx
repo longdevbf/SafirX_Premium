@@ -120,11 +120,7 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
   const { address } = useAccount()
   const { 
     createSingleNFTAuctionWithApproval, 
-    createCollectionAuctionWithApproval,
-    getMinAuctionDuration,
-    getMaxAuctionDuration,
-    getMinBidIncrement,
-    getPlatformFee
+    createCollectionAuctionWithApproval
   } = useSealedBidAuction()
   
   const [searchTerm, setSearchTerm] = useState("")
@@ -144,7 +140,6 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
   const [processingStep, setProcessingStep] = useState<"approval" | "creation" | null>(null)
   const [error, setError] = useState("")
   const [selectedCollectionForAuction, setSelectedCollectionForAuction] = useState<string | null>(null)
-
 
   // Get selected NFTs list
   const selectedNFTsList = useMemo(() => 
@@ -334,23 +329,10 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
     setError("")
 
     try {
-      // ✅ Convert form values to Wei properly
       const startingPriceWei = parseEther(form.startingPrice)
       const reservePriceWei = form.reservePrice ? parseEther(form.reservePrice) : startingPriceWei
       const minBidIncrementWei = parseEther(form.minBidIncrement)
       const durationSeconds = getDurationInSeconds()
-
-      console.log("Creating auction with params:", {
-        mode,
-        contractAddress,
-        selectedNFTs: selectedNFTs.size,
-        startingPriceWei: startingPriceWei.toString(),
-        reservePriceWei: reservePriceWei.toString(),
-        minBidIncrementWei: minBidIncrementWei.toString(),
-        durationSeconds,
-        title: form.title,
-        description: form.description
-      })
 
       if (mode === "single") {
         // Single NFT Auction
@@ -367,11 +349,7 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
           form.title,
           form.description,
           address
-        )
-
-        console.log("Single NFT Auction created successfully!", result)
-        
-        // Show transaction success notification
+        )// Show transaction success notification
         if (showTransactionSuccess && result?.hash) {
           showTransactionSuccess(result.hash, "Single NFT Auction created successfully!")
         }
@@ -382,9 +360,6 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
         // Collection Auction
         setProcessingStep("approval")
         const tokenIds = selectedNFTsList.map(nft => parseInt(nft.tokenId))
-        
-        console.log("Creating collection auction with tokenIds:", tokenIds)
-        
         const result = await createCollectionAuctionWithApproval(
           contractAddress,
           tokenIds,
@@ -395,11 +370,7 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
           form.title,
           form.description,
           address
-        )
-
-        console.log("Collection Auction created successfully!", result)
-        
-        // Show transaction success notification
+        )// Show transaction success notification
         if (showTransactionSuccess && result?.hash) {
           showTransactionSuccess(result.hash, "Collection Auction created successfully!")
         }
@@ -1125,3 +1096,4 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
     </Dialog>
   )
 }
+

@@ -158,10 +158,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
     address || ""
   )
 
-  // Debug: Log tổng số NFTs
-  console.log("Total NFTs in wallet:", nfts.length)
-
-  // Filter NFTs by search term và collection
+  // Debug: Log tổng số NFTs// Filter NFTs by search term và collection
   const filteredNFTs = useMemo(() => {
     if (!nfts || nfts.length === 0) return []
     
@@ -180,8 +177,6 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
       return matchesSearch && matchesCollection && matchesSelectedCollectionForListing
     })
     
-    console.log("Filtered NFTs:", filtered.length)
-    console.log("Selected collection for listing:", selectedCollectionForListing)
     return filtered
   }, [nfts, searchTerm, selectedCollection, selectedCollectionForListing])
 
@@ -193,7 +188,6 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
       .filter(nft => nft && nft.collection)
       .map(nft => nft.collection)
     )]
-    console.log("Unique collections:", uniqueCollections)
     return uniqueCollections
   }, [nfts])
 
@@ -343,9 +337,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
         // Step 1: Check và request approval nếu cần
         setProcessingStep("approval")
         
-        if (!isApproved) {
-          console.log("NFTs not approved, requesting approval...")
-          await setApprovalForAll(contractAddress, true)
+        if (!isApproved) {await setApprovalForAll(contractAddress, true)
           
           // Wait và refetch approval status
           await new Promise(resolve => setTimeout(resolve, 2000))
@@ -354,8 +346,6 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
 
         // Step 2: List collection as bundle
         setProcessingStep("listing")
-        console.log("Listing collection as bundle...")
-        
         const bundlePriceInWei = parseEther(form.bundlePrice)
         
         const result = await listCollectionBundle(
@@ -363,11 +353,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
           tokenIds,
           Number(bundlePriceInWei),
           form.name
-        )
-
-        console.log("Collection bundle listed successfully!", result)
-        
-        // Show transaction success notification
+        )// Show transaction success notification
         if (showTransactionSuccess && result?.hash) {
           showTransactionSuccess(result.hash, "Collection bundle listed successfully!")
         }
@@ -1081,3 +1067,4 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
     </Dialog>
   )
 }
+

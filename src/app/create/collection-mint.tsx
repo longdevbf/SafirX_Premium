@@ -52,10 +52,6 @@ export default function CollectionMint() {
   // Form state
   const [collectionName, setCollectionName] = useState("")
   const [description, setDescription] = useState("")
-  const [externalUrl, setExternalUrl] = useState("")
-  const [isUnlockable, setIsUnlockable] = useState(false)
-  const [unlockableContent, setUnlockableContent] = useState("")
-  const [isSensitive, setIsSensitive] = useState(false)
   const [allowCustomMetadata, setAllowCustomMetadata] = useState(false)
   
   // Collection attributes
@@ -220,33 +216,22 @@ export default function CollectionMint() {
 
   // Mint collection
   const handleMintCollection = async () => {
-    console.log("🎯 Starting mint collection...")
-    console.log("canMint:", canMint)
-    console.log("isConnected:", isConnected)
-    console.log("files.length:", files.length)
-    console.log("collectionName:", collectionName.trim())
-    console.log("isMinting:", isMinting)
-    
     if (!canMint) {
-      console.log("❌ Cannot mint - requirements not met")
-      if (!isConnected) console.log("- Wallet not connected")
-      if (files.length === 0) console.log("- No files selected")
-      if (!collectionName.trim()) console.log("- Collection name is empty")
-      if (isMinting) console.log("- Already minting")
-      return
+      if (!isConnected) return
+      if (files.length === 0) return
+      if (!collectionName.trim()) return
+      if (isMinting) return
     }
 
     try {
       setError("")
       setIsMinting(true)
-      console.log("🚀 Mint process started")
       
       // Upload all files and create metadata URIs (like single NFT mint)
       const metadataURIs: string[] = []
       
       for (let index = 0; index < files.length; index++) {
         const fileData = files[index]
-        console.log(`📤 Processing file ${index + 1}/${files.length}: ${fileData.file.name}`)
         
         // Step 1: Upload image file
         const imageFormData = new FormData()
@@ -262,10 +247,7 @@ export default function CollectionMint() {
         }
 
         const imageResult = await imageResponse.json()
-        const imageUrl = imageResult.ipfsUrl
-        console.log(`✅ Image uploaded: ${imageUrl}`)
-
-        // Step 2: Create metadata JSON
+        const imageUrl = imageResult.ipfsUrl// Step 2: Create metadata JSON
         const nftName = fileData.customName || `${collectionName} #${index + 1}`
         const nftDescription = fileData.customDescription || description
 
@@ -283,13 +265,11 @@ export default function CollectionMint() {
           name: nftName,
           description: nftDescription,
           image: imageUrl,
-          external_url: externalUrl ? `${externalUrl}/${index + 1}` : undefined,
           attributes: allAttributes,
           properties: {
             edition: index + 1,
             collection: collectionName,
-            total_supply: files.length,
-            sensitive_content: isSensitive
+            total_supply: files.length
           }
         }
 
@@ -315,21 +295,15 @@ export default function CollectionMint() {
 
         const metadataResult = await metadataResponse.json()
         const metadataUrl = metadataResult.ipfsUrl
-        console.log(`✅ Metadata uploaded: ${metadataUrl}`)
-        
         metadataURIs.push(metadataUrl)
       }
-
-      console.log("📝 All metadata URIs created:", metadataURIs)
-
+      
       if (metadataURIs.length === 0) {
         throw new Error("Failed to create metadata URIs")
       }
 
       // Step 4: Mint collection using mintMyCollection
-      console.log("⛏️ Calling mintMyCollection with URIs:", metadataURIs)
       const result = await mintMyCollection(metadataURIs)
-      console.log("✅ Mint result:", result)
       
       if (result?.hash) {
         setToastTxHash(result.hash)
@@ -341,7 +315,6 @@ export default function CollectionMint() {
           setFiles([])
           setCollectionName("")
           setDescription("")
-          setExternalUrl("")
           setCollectionAttributes([])
         }, 3000)
       }
@@ -396,16 +369,6 @@ export default function CollectionMint() {
                     rows={3}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="external-url">External URL</Label>
-                  <Input
-                    id="external-url"
-                    placeholder="https://yourwebsite.com"
-                    value={externalUrl}
-                    onChange={(e) => setExternalUrl(e.target.value)}
-                  />
-                </div>
               </div>
 
               <Separator />
@@ -449,52 +412,6 @@ export default function CollectionMint() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              <Separator />
-
-              {/* Advanced Options */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Minting Options</Label>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="unlockable">Unlockable Content</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Include content for collection owners
-                      </p>
-                    </div>
-                    <Switch
-                      id="unlockable"
-                      checked={isUnlockable}
-                      onCheckedChange={setIsUnlockable}
-                    />
-                  </div>
-
-                  {isUnlockable && (
-                    <Textarea
-                      placeholder="Enter unlockable content..."
-                      value={unlockableContent}
-                      onChange={(e) => setUnlockableContent(e.target.value)}
-                      rows={2}
-                    />
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="sensitive">Sensitive Content</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Mark if collection contains sensitive content
-                      </p>
-                    </div>
-                    <Switch
-                      id="sensitive"
-                      checked={isSensitive}
-                      onCheckedChange={setIsSensitive}
-                    />
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -873,3 +790,4 @@ export default function CollectionMint() {
     </>
   )
 }
+

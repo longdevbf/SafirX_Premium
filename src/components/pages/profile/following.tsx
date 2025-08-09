@@ -89,3 +89,4 @@ export default function Following({ followingUsers, totalCount }: FollowingProps
     </div>
   )
 }
+

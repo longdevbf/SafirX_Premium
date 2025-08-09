@@ -79,7 +79,6 @@ export default function EditProfileModal({
       const reader = new FileReader()
       reader.onload = () => {
         const base64 = reader.result as string
-        console.log('File loaded, opening crop modal for:', type)
         setCropImage(base64)
         setCropType(type)
         setShowCrop(true)
@@ -101,20 +100,17 @@ export default function EditProfileModal({
     e.target.value = ''
   }
 
-  // Sửa onImageLoad function:
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.log('Image loaded, setting up crop for:', cropType)
     const { width, height } = e.currentTarget
     
     let aspectRatio = 1
     let cropWidth = 80
     
     if (cropType === 'background') {
-      // Banner 5:1 ratio thay vì 3:1
-      aspectRatio = 5  // Đổi từ 3 thành 5
+      aspectRatio = 5
       cropWidth = 95
     } else {
-      aspectRatio = 1  // 1:1 ratio for avatar
+      aspectRatio = 1
       cropWidth = 80
     }
 
@@ -132,7 +128,6 @@ export default function EditProfileModal({
       height,
     )
     
-    console.log('Setting crop:', newCrop)
     setCrop(newCrop)
   }, [cropType])
 
@@ -154,15 +149,6 @@ export default function EditProfileModal({
         canvas.width = crop.width
         canvas.height = crop.height
 
-        console.log('Cropping with dimensions:', {
-          canvasWidth: canvas.width,
-          canvasHeight: canvas.height,
-          cropX: crop.x,
-          cropY: crop.y,
-          scaleX,
-          scaleY
-        })
-
         ctx.drawImage(
           image,
           crop.x * scaleX,
@@ -175,7 +161,6 @@ export default function EditProfileModal({
           crop.height,
         )
 
-        // FIX: Remove nested Promise
         canvas.toBlob((blob) => {
           if (!blob) {
             reject(new Error('Canvas is empty'))
@@ -183,7 +168,6 @@ export default function EditProfileModal({
           }
           const reader = new FileReader()
           reader.onload = () => {
-            console.log('Crop completed successfully')
             resolve(reader.result as string)
           }
           reader.onerror = () => reject(new Error('Failed to read blob'))
@@ -195,34 +179,25 @@ export default function EditProfileModal({
   )
 
   const handleCropComplete = useCallback(async () => {
-    console.log('Apply crop clicked, completedCrop:', completedCrop)
-    
     if (!completedCrop || !imgRef.current) {
-      console.log('No crop or image ref')
       alert('Please select a crop area first')
       return
     }
 
     if (completedCrop.width === 0 || completedCrop.height === 0) {
-      console.log('Invalid crop dimensions')
       alert('Please select a valid crop area')
       return
     }
 
     try {
-      console.log('Starting crop process...')
       const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop)
-      console.log('Crop successful, updating form for:', cropType)
       
       if (cropType === 'avatar') {
         setEditForm({ ...editForm, avatar: croppedImageUrl })
-        console.log('Avatar updated')
       } else {
         setEditForm({ ...editForm, background: croppedImageUrl })
-        console.log('Background updated')
       }
       
-      // Close crop modal
       handleCropCancel()
       
     } catch (error) {
@@ -231,7 +206,6 @@ export default function EditProfileModal({
   }, [completedCrop, cropType, editForm, setEditForm, getCroppedImg])
 
   const handleCropCancel = () => {
-    console.log('Canceling crop')
     setShowCrop(false)
     setCropImage('')
     setCrop(undefined)
@@ -497,17 +471,11 @@ export default function EditProfileModal({
                 <div className="max-w-full max-h-[70vh] overflow-auto border rounded-lg">
                   <ReactCrop
                     crop={crop}
-                    onChange={(c) => {
-                      console.log('Crop changing:', c)
-                      setCrop(c)
-                    }}
-                    onComplete={(c) => {
-                      console.log('Crop completed:', c)
-                      setCompletedCrop(c)
-                    }}
-                    aspect={cropType === 'avatar' ? 1 : 5} // Đổi từ 3 thành 5
-                    minWidth={cropType === 'avatar' ? 100 : 500}  // Tăng minWidth cho banner
-                    minHeight={cropType === 'avatar' ? 100 : 100} // 500/5 = 100
+                    onChange={(c) => setCrop(c)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={cropType === 'avatar' ? 1 : 5}
+                    minWidth={cropType === 'avatar' ? 100 : 500}
+                    minHeight={cropType === 'avatar' ? 100 : 100}
                     circularCrop={cropType === 'avatar'}
                     keepSelection
                     ruleOfThirds
@@ -563,3 +531,4 @@ export default function EditProfileModal({
     </>
   )
 }
+

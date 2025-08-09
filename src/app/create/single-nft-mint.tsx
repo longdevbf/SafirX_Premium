@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Switch } from "@/components/ui/switch"
 import { 
   ImageIcon, Upload, X, Plus, Trash2, 
   Loader2, CheckCircle, AlertCircle 
@@ -47,11 +46,7 @@ export default function SingleNFTMint() {
   // NFT metadata
   const [nftName, setNftName] = useState("")
   const [description, setDescription] = useState("")
-  const [externalUrl, setExternalUrl] = useState("")
   const [attributes, setAttributes] = useState<CustomAttribute[]>([])
-  const [isUnlockable, setIsUnlockable] = useState(false)
-  const [unlockableContent, setUnlockableContent] = useState("")
-  const [isSensitive, setIsSensitive] = useState(false)
 
   // Processing states
   const [isUploading, setIsUploading] = useState(false)
@@ -162,12 +157,7 @@ export default function SingleNFTMint() {
       name: nftName || selectedFile?.name.replace(/\.[^/.]+$/, "") || "Untitled NFT",
       description: description || "A unique NFT created on SafirX",
       image: imageUrl,
-      external_url: externalUrl || undefined,
-      attributes: attributes.filter(attr => attr.trait_type && attr.value),
-      properties: {
-        unlockable_content: isUnlockable ? unlockableContent : undefined,
-        sensitive_content: isSensitive
-      }
+      attributes: attributes.filter(attr => attr.trait_type && attr.value)
     }
   }
 
@@ -217,22 +207,16 @@ export default function SingleNFTMint() {
 
     try {
       // Step 1: Upload image to IPFS
-      console.log("📤 Uploading image to IPFS...")
       const imageUrl = await uploadToIPFS(selectedFile)
 
       // Step 2: Create metadata
-      console.log("📝 Creating metadata...")
       const metadata = createMetadata(imageUrl)
 
       // Step 3: Upload metadata to IPFS
-      console.log("📤 Uploading metadata to IPFS...")
       const metadataUrl = await uploadMetadataToIPFS(metadata)
 
       // Step 4: Mint NFT
-      console.log("⛏️ Minting NFT...")
       const result = await mintNFT(metadataUrl)
-
-      console.log("✅ NFT minted successfully!", result)
       setSuccess(`Successfully minted NFT!`)
       
       // Show toast
@@ -243,11 +227,7 @@ export default function SingleNFTMint() {
       removeFile()
       setNftName("")
       setDescription("")
-      setExternalUrl("")
       setAttributes([])
-      setUnlockableContent("")
-      setIsUnlockable(false)
-      setIsSensitive(false)
 
     } catch (error: any) {
       console.error("Minting error:", error)
@@ -310,16 +290,6 @@ export default function SingleNFTMint() {
                     rows={3}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="external-url">External URL</Label>
-                  <Input
-                    id="external-url"
-                    placeholder="https://yourwebsite.com"
-                    value={externalUrl}
-                    onChange={(e) => setExternalUrl(e.target.value)}
-                  />
-                </div>
               </div>
 
               <Separator />
@@ -363,52 +333,6 @@ export default function SingleNFTMint() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              <Separator />
-
-              {/* Advanced Options */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Advanced Options</Label>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="unlockable">Unlockable Content</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Include content that only the owner can access
-                      </p>
-                    </div>
-                    <Switch
-                      id="unlockable"
-                      checked={isUnlockable}
-                      onCheckedChange={setIsUnlockable}
-                    />
-                  </div>
-
-                  {isUnlockable && (
-                    <Textarea
-                      placeholder="Enter unlockable content..."
-                      value={unlockableContent}
-                      onChange={(e) => setUnlockableContent(e.target.value)}
-                      rows={2}
-                    />
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="sensitive">Sensitive Content</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Mark if this NFT contains sensitive content
-                      </p>
-                    </div>
-                    <Switch
-                      id="sensitive"
-                      checked={isSensitive}
-                      onCheckedChange={setIsSensitive}
-                    />
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -567,3 +491,4 @@ export default function SingleNFTMint() {
     </>
   )
 }
+

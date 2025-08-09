@@ -169,17 +169,10 @@ export default function MarketplacePage() {
         limit: 20
       }
       
-      console.log('🔄 Fetching data with filters:', filtersWithLimit)
-      
       const response = await fetchMarketplaceListings(filtersWithLimit)
       setNfts(response.data)
       setPagination(response.pagination)
       setRosePrice(response.rose_price_usd)
-      
-      console.log('✅ Fetched data:', {
-        nfts: response.data.length,
-        pagination: response.pagination
-      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch marketplace data')
       console.error('❌ Error:', err)
@@ -217,7 +210,6 @@ export default function MarketplacePage() {
       listingType: selectedListingTypes.length === 1 ? selectedListingTypes[0] as 'single' | 'bundle' : undefined
     }
     
-    console.log('🔍 Applying filters:', newFilters)
     setFilters(newFilters)
     fetchData(newFilters)
   }
@@ -248,7 +240,6 @@ export default function MarketplacePage() {
       limit: 20 
     }
     
-    console.log('📄 Changing to page:', page)
     setFilters(newFilters)
     fetchData(newFilters)
     
@@ -827,3 +818,4 @@ export default function MarketplacePage() {
     </div>
   )
 }
+

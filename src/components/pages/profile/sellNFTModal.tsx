@@ -74,21 +74,16 @@ export default function SellNFTModal({ isOpen, onClose, nft, showTransactionSucc
     setError("")
 
     try {
-      // Step 1: Check approval
       setStep("approval")
       
       if (!isApproved) {
-        console.log("NFT not approved, requesting approval...")
         await setApprovalForAll(nft.contractAddress, true)
         
-        // Wait a bit and refetch approval status
         await new Promise(resolve => setTimeout(resolve, 2000))
         await refetchApproval()
       }
 
-      // Step 2: List NFT
       setStep("listing")
-      console.log("Listing NFT...")
       
       const priceInWei = parseEther(price)
       const result = await listSingleNFT(
@@ -96,10 +91,7 @@ export default function SellNFTModal({ isOpen, onClose, nft, showTransactionSucc
         parseInt(nft.tokenId),
         Number(priceInWei)
       )
-
-      console.log("NFT listed successfully!")
       
-      // Show transaction success notification
       if (showTransactionSuccess && result?.hash) {
         showTransactionSuccess(result.hash, "NFT listed successfully!")
       }
@@ -322,3 +314,4 @@ export default function SellNFTModal({ isOpen, onClose, nft, showTransactionSucc
     </Dialog>
   )
 }
+

@@ -100,8 +100,6 @@ export default function CreatePage() {
       const maxSize = 100 * 1024 * 1024 // 100MB
       
       // Debug file type
-      console.log('File:', file.name, 'Type:', file.type, 'Size:', file.size)
-      
       if (!allowedTypes.includes(file.type)) {
         setError(`${file.name}: Invalid file type "${file.type}". Only images are allowed: ${allowedTypes.join(', ')}`)
         return false
@@ -174,10 +172,7 @@ export default function CreatePage() {
 
     try {
       const uploadPromises = selectedFiles.map(async (fileItem, index) => {
-        // Debug before upload - SỬ DỤNG fileItem.file
-        console.log('Uploading file:', fileItem.file.name, 'Type:', fileItem.file.type)
-        
-        // Update file status
+        // Debug before upload - SỬ DỤNG fileItem.file// Update file status
         setSelectedFiles(prev => 
           prev.map(f => f.id === fileItem.id ? { ...f, uploading: true } : f)
         )
@@ -196,10 +191,7 @@ export default function CreatePage() {
           throw new Error(errorData.error || 'Upload failed')
         }
 
-        const result = await response.json()
-        console.log('Upload success for:', fileItem.file.name, result.ipfsUrl)
-
-        // Update file status
+        const result = await response.json()// Update file status
         setSelectedFiles(prev => 
           prev.map(f => f.id === fileItem.id ? { 
             ...f, 
@@ -323,24 +315,13 @@ export default function CreatePage() {
     setSuccess("")
 
     try {
-      // Step 1: Upload images to IPFS
-      console.log("📤 Uploading images to IPFS...")
-      const imageUrls = await uploadFilesToIPFS()
+      // Step 1: Upload images to IPFSconst imageUrls = await uploadFilesToIPFS()
 
-      // Step 2: Create metadata
-      console.log("📝 Creating metadata...")
-      const metadataList = createMetadata(imageUrls)
+      // Step 2: Create metadataconst metadataList = createMetadata(imageUrls)
 
-      // Step 3: Upload metadata to IPFS
-      console.log("📤 Uploading metadata to IPFS...")
-      const metadataUrls = await uploadMetadataToIPFS(metadataList)
+      // Step 3: Upload metadata to IPFSconst metadataUrls = await uploadMetadataToIPFS(metadataList)
 
-      // Step 4: Mint NFT collection
-      console.log("⛏️ Minting NFT collection...")
-      const result = await mintMyCollection(metadataUrls)
-
-      console.log("✅ Collection minted successfully!", result)
-      setSuccess(`Successfully minted ${selectedFiles.length} NFTs! Transaction: ${result.hash}`)
+      // Step 4: Mint NFT collectionconst result = await mintMyCollection(metadataUrls)setSuccess(`Successfully minted ${selectedFiles.length} NFTs! Transaction: ${result.hash}`)
       
       // ✅ THAY ĐỔI RESET FORM - SỬ DỤNG fileItem.preview
       selectedFiles.forEach(fileItem => URL.revokeObjectURL(fileItem.preview))
@@ -884,3 +865,4 @@ export default function CreatePage() {
     </div>
   )
 }
+

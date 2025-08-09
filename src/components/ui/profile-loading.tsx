@@ -207,3 +207,4 @@ export default function ProfileLoading({ isCreatingUser = false, loadingNFTs = f
     </div>
   )
 }
+

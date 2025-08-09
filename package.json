@@ -3,17 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\"",
+    "dev": "concurrently \"next dev\" \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\" \"npx tsx src/listener/syncRunner.ts\"",
+    "dev:basic": "next dev",
+    "dev:with-listeners": "concurrently \"next dev\" \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\"",
     "build": "next build",
     "build:listeners": "echo 'Listeners build complete - no build step needed for TypeScript files'",
     "start": "next start",
+    "start:full": "concurrently \"next start\" \"npx tsx src/listener/marketListener.ts\" \"npx tsx src/listener/auctionListener.ts\" \"npx tsx src/listener/syncRunner.ts\"",
     "lint": "next lint",
     "listeners": "npx tsx src/listener/index.ts",
     "listeners:auction": "npx tsx src/listener/auctionListener.ts",
     "listeners:market": "npx tsx src/listener/marketListener.ts.ts",
     "listeners:dev": "concurrently \"npx tsx src/listener/auctionListener.ts\" \"npx tsx src/listener/marketListener.ts.ts\"",
+    "sync": "npx tsx src/listener/syncRunner.ts",
+    "sync:service": "npx tsx src/listener/syncRunner.ts",
     "test:endpoints": "node test-endpoints.js",
-    "health:check": "node test-endpoints.js"
+    "health:check": "node test-endpoints.js",
+    "db:migrate": "npx tsx src/scripts/migrate.ts",
+    "sync:test": "npx tsx src/scripts/testSync.ts",
+    "sync:full": "npx tsx -e \"import('./src/listener/syncService.js').then(m => m.performFullSync())\"",
+    "sync:incremental": "npx tsx -e \"import('./src/listener/syncService.js').then(m => m.performIncrementalSync())\""
   },
   "dependencies": {
     "@oasisprotocol/sapphire-wagmi-v2": "^2.1.0",

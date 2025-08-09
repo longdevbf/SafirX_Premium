@@ -115,3 +115,4 @@ export const TransactionToast = ({ isVisible, txHash, message, onClose }: Transa
 }
 
 export default TransactionToast
+

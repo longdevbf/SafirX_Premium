@@ -133,14 +133,13 @@ export default function OwnedNFTs({
     if (onOpenSingleAuction) {
       onOpenSingleAuction(nft)
     } else {
-      console.log("Auction NFT:", nft.id)
+      // Handle auction NFT
     }
   }
 
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      console.log("Copied to clipboard:", text)
     } catch (err) {
       console.error("Failed to copy:", err)
       const textArea = document.createElement("textarea")
@@ -150,7 +149,6 @@ export default function OwnedNFTs({
       textArea.select()
       try {
         document.execCommand('copy')
-        console.log("Copied to clipboard (fallback):", text)
       } catch (fallbackErr) {
         console.error("Fallback copy failed:", fallbackErr)
       }
@@ -463,3 +461,4 @@ export default function OwnedNFTs({
     </div>
   )
 }
+
