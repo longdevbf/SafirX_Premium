@@ -16,7 +16,7 @@ async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
+        //(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
         return null;
     }
 }
@@ -46,7 +46,7 @@ async function getLastSyncedBlock(service: 'auction' | 'market'): Promise<number
         
         return startBlock;
     } catch (error) {
-        console.error(`Lỗi khi lấy last synced block cho ${service}:`, error);
+        //(`Lỗi khi lấy last synced block cho ${service}:`, error);
         return 0;
     } finally {
         client.release();
@@ -63,7 +63,7 @@ async function updateLastSyncedBlock(service: 'auction' | 'market', blockNumber:
             [service, blockNumber]
         );
     } catch (error) {
-        console.error(`Lỗi khi cập nhật last synced block cho ${service}:`, error);
+        //(`Lỗi khi cập nhật last synced block cho ${service}:`, error);
     } finally {
         client.release();
     }
@@ -79,7 +79,7 @@ async function auctionExistsInDB(auctionId: string, auctionType: string): Promis
         );
         return result.rows.length > 0;
     } catch (error) {
-        console.error('Lỗi khi kiểm tra auction tồn tại:', error);
+        //('Lỗi khi kiểm tra auction tồn tại:', error);
         return false;
     } finally {
         client.release();
@@ -96,7 +96,7 @@ async function listingExistsInDB(listingId: string, listingType: string): Promis
         );
         return result.rows.length > 0;
     } catch (error) {
-        console.error('Lỗi khi kiểm tra listing tồn tại:', error);
+        //('Lỗi khi kiểm tra listing tồn tại:', error);
         return false;
     } finally {
         client.release();
@@ -133,9 +133,9 @@ async function saveAuctionToDatabase(data: any) {
                 0 
             ]
         );
-        console.log(`✅ Synced auction ${data.auction_id} (${data.auction_type})`);
+        //(`✅ Synced auction ${data.auction_id} (${data.auction_type})`);
     } catch (error) {
-        console.error('Lỗi khi sync auction vào database:', error);
+        //('Lỗi khi sync auction vào database:', error);
     } finally {
         client.release();
     }
@@ -165,9 +165,9 @@ async function saveListingToDatabase(data: any) {
                 JSON.stringify(data.nft_individual)
             ]
         );
-        console.log(`✅ Synced listing ${data.listing_id} (${data.listing_type})`);
+        //(`✅ Synced listing ${data.listing_id} (${data.listing_type})`);
     } catch (error) {
-        console.error('Lỗi khi sync listing vào database:', error);
+        //('Lỗi khi sync listing vào database:', error);
     } finally {
         client.release();
     }
@@ -175,7 +175,7 @@ async function saveListingToDatabase(data: any) {
 
 // Sync auction events from a specific block range
 export async function syncAuctionEvents(fromBlock: number, toBlock: number): Promise<void> {
-    console.log(`🔄 Syncing auction events from block ${fromBlock} to ${toBlock}...`);
+    //(`🔄 Syncing auction events from block ${fromBlock} to ${toBlock}...`);
     
     // Split large block ranges to avoid RPC limits (max 50 blocks per query for safety)
     const MAX_BLOCKS_PER_QUERY = 50; // Reduced from 90 to 50 for RPC stability
@@ -222,7 +222,7 @@ async function handleAntiSniping(auctionId: string): Promise<void> {
                     [newEndTime, auctionId, auction.auction_type]
                 );
                 
-                console.log(`� Anti-sniping: Auction ${auctionId} (${auction.auction_type}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
+                //(`� Anti-sniping: Auction ${auctionId} (${auction.auction_type}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
             } else {
                 // Normal increment without extension
                 await client.query(
@@ -235,7 +235,7 @@ async function handleAntiSniping(auctionId: string): Promise<void> {
         await client.query('COMMIT');
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error in anti-sniping logic:', error);
+        //('Error in anti-sniping logic:', error);
     } finally {
         client.release();
     }
@@ -243,7 +243,7 @@ async function handleAntiSniping(auctionId: string): Promise<void> {
 
 // Sync bid events from auction contracts
 async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> {
-    console.log(`🔄 Syncing bid events from block ${fromBlock} to ${toBlock}...`);
+    //(`🔄 Syncing bid events from block ${fromBlock} to ${toBlock}...`);
     
     try {
         // Get BidPlaced events from auction contract
@@ -259,7 +259,7 @@ async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> 
             const bidder = args[1];
             const timestamp = Number(args[2]);
             
-            console.log(`💰 Processing bid: Auction ${auctionId}, Bidder: ${bidder}, Timestamp: ${timestamp}`);
+            //(`💰 Processing bid: Auction ${auctionId}, Bidder: ${bidder}, Timestamp: ${timestamp}`);
             
             // Apply anti-sniping logic
             await handleAntiSniping(auctionId);
@@ -271,16 +271,16 @@ async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> 
                     [auctionId]
                 );
                 
-                console.log(`✅ Incremented total_bid for auction ${auctionId}`);
+                //(`✅ Incremented total_bid for auction ${auctionId}`);
             } catch (error) {
-                console.error(`❌ Error incrementing total_bid for auction ${auctionId}:`, error);
+                //(`❌ Error incrementing total_bid for auction ${auctionId}:`, error);
             }
         }
         
-        console.log(`✅ Synced ${bidPlacedEvents.length} bid events`);
+        //(`✅ Synced ${bidPlacedEvents.length} bid events`);
         
     } catch (error) {
-        console.error('❌ Error syncing bid events:', error);
+        //('❌ Error syncing bid events:', error);
         throw error;
     }
 }
@@ -297,9 +297,9 @@ async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: st
             [status, reclaimTimestamp, auctionId, auctionType]
         );
         
-        console.log(`✅ Updated auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp}`);
+        //(`✅ Updated auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp}`);
     } catch (error) {
-        console.error('Error updating auction status with reclaim:', error);
+        //('Error updating auction status with reclaim:', error);
     } finally {
         client.release();
     }
@@ -313,9 +313,9 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
             `UPDATE auctions SET ${field} = $1 WHERE auction_id = $2 AND auction_type = $3`,
             [value, auctionId, auctionType]
         );
-        console.log(`✅ Updated ${field} = ${value} for auction ${auctionId} (${auctionType})`);
+        //(`✅ Updated ${field} = ${value} for auction ${auctionId} (${auctionType})`);
     } catch (error) {
-        console.error(`Error updating ${field}:`, error);
+        //(`Error updating ${field}:`, error);
     } finally {
         client.release();
     }
@@ -329,9 +329,9 @@ async function deleteAuctionFromDB(auctionId: string, auctionType: string): Prom
             `DELETE FROM auctions WHERE auction_id = $1 AND auction_type = $2`,
             [auctionId, auctionType]
         );
-        console.log(`✅ Deleted auction ${auctionId} (${auctionType})`);
+        //(`✅ Deleted auction ${auctionId} (${auctionType})`);
     } catch (error) {
-        console.error('Error deleting auction:', error);
+        //('Error deleting auction:', error);
     } finally {
         client.release();
     }
@@ -339,7 +339,7 @@ async function deleteAuctionFromDB(auctionId: string, auctionType: string): Prom
 
 // Helper function to sync a chunk of auction events
 async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
-    console.log(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
+    //(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
     
     try {
         // 1. Sync AuctionCreated events
@@ -357,7 +357,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             
             const exists = await auctionExistsInDB(auctionId, auctionTypeString);
             if (exists) {
-                console.log(`⏭️ Auction ${auctionId} (${auctionTypeString}) already exists, skipping...`);
+                //(`⏭️ Auction ${auctionId} (${auctionTypeString}) already exists, skipping...`);
                 continue;
             }
             
@@ -376,7 +376,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             const metadataResults = await Promise.all(metadataPromises);
             
             if (metadataResults.some((result: any) => result === null)) {
-                console.log(`❌ Failed to fetch metadata for auction ${auctionId}, skipping...`);
+                //(`❌ Failed to fetch metadata for auction ${auctionId}, skipping...`);
                 continue;
             }
             
@@ -418,7 +418,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            console.log(`📋 Processing AuctionFinalized: ${auctionId}`);
+            //(`📋 Processing AuctionFinalized: ${auctionId}`);
             
             await updateAuctionStatusWithReclaim(auctionId, 'single', 'finalized');
             await updateAuctionStatusWithReclaim(auctionId, 'bundle', 'finalized');
@@ -434,7 +434,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            console.log(`🚫 Processing AuctionCancelled: ${auctionId}`);
+            //(`🚫 Processing AuctionCancelled: ${auctionId}`);
             
             await deleteAuctionFromDB(auctionId, 'single');
             await deleteAuctionFromDB(auctionId, 'bundle');
@@ -450,7 +450,7 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            console.log(`🎁 Processing NFTClaimed: ${auctionId}`);
+            //(`🎁 Processing NFTClaimed: ${auctionId}`);
             
             await updateClaimStatus(auctionId, 'single', 'nft_claimed', true);
             await updateClaimStatus(auctionId, 'bundle', 'nft_claimed', true);
@@ -466,23 +466,23 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            console.log(`🔄 Processing NFTReclaimed: ${auctionId}`);
+            //(`🔄 Processing NFTReclaimed: ${auctionId}`);
             
             await updateClaimStatus(auctionId, 'single', 'nft_reclaimed', true);
             await updateClaimStatus(auctionId, 'bundle', 'nft_reclaimed', true);
         }
         
-        console.log(`  ✅ Synced ${auctionCreatedEvents.length} created, ${auctionFinalizedEvents.length} finalized, ${auctionCancelledEvents.length} cancelled, ${nftClaimedEvents.length} claimed, ${nftReclaimedEvents.length} reclaimed`);
+        //(`  ✅ Synced ${auctionCreatedEvents.length} created, ${auctionFinalizedEvents.length} finalized, ${auctionCancelledEvents.length} cancelled, ${nftClaimedEvents.length} claimed, ${nftReclaimedEvents.length} reclaimed`);
         
     } catch (error) {
-        console.error('  ❌ Error syncing auction chunk:', error);
+        //('  ❌ Error syncing auction chunk:', error);
         throw error;
     }
 }
 
 // Sync market events from a specific block range
 export async function syncMarketEvents(fromBlock: number, toBlock: number): Promise<void> {
-    console.log(`🔄 Syncing market events from block ${fromBlock} to ${toBlock}...`);
+    //(`🔄 Syncing market events from block ${fromBlock} to ${toBlock}...`);
     
     // Split large block ranges to avoid RPC limits (max 50 blocks per query for safety)
     const MAX_BLOCKS_PER_QUERY = 50; // Reduced from 90 to 50 for RPC stability
@@ -509,9 +509,9 @@ async function updateListingPrice(listingId: string, newPrice: string, listingTy
             `UPDATE market_listings SET price = $1 WHERE listing_id = $2 AND listing_type = $3`,
             [newPrice, listingId, listingType]
         );
-        console.log(`✅ Updated price for listing ${listingId} (${listingType}): ${newPrice}`);
+        //(`✅ Updated price for listing ${listingId} (${listingType}): ${newPrice}`);
     } catch (error) {
-        console.error('Error updating listing price:', error);
+        //('Error updating listing price:', error);
     } finally {
         client.release();
     }
@@ -525,9 +525,9 @@ async function deleteListingFromDB(listingId: string, listingType: string): Prom
             `DELETE FROM market_listings WHERE listing_id = $1 AND listing_type = $2`,
             [listingId, listingType]
         );
-        console.log(`✅ Deleted listing ${listingId} (${listingType})`);
+        //(`✅ Deleted listing ${listingId} (${listingType})`);
     } catch (error) {
-        console.error('Error deleting listing:', error);
+        //('Error deleting listing:', error);
     } finally {
         client.release();
     }
@@ -535,7 +535,7 @@ async function deleteListingFromDB(listingId: string, listingType: string): Prom
 
 // Helper function to sync a chunk of market events
 async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
-    console.log(`  📦 Processing market chunk: blocks ${fromBlock} to ${toBlock}`);
+    //(`  📦 Processing market chunk: blocks ${fromBlock} to ${toBlock}`);
     
     try {
         // 1. Sync NFTListed events
@@ -552,7 +552,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const exists = await listingExistsInDB(listingId, listingType);
             if (exists) {
-                console.log(`⏭️ Listing ${listingId} (${listingType}) already exists, skipping...`);
+                //(`⏭️ Listing ${listingId} (${listingType}) already exists, skipping...`);
                 continue;
             }
             
@@ -563,7 +563,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const metadata = await fetchNFTMetadata(nftContract, tokenId);
             if (!metadata) {
-                console.log(`❌ Failed to fetch metadata for listing ${listingId}, skipping...`);
+                //(`❌ Failed to fetch metadata for listing ${listingId}, skipping...`);
                 continue;
             }
             
@@ -598,7 +598,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const exists = await listingExistsInDB(collectionId, listingType);
             if (exists) {
-                console.log(`⏭️ Bundle ${collectionId} (${listingType}) already exists, skipping...`);
+                //(`⏭️ Bundle ${collectionId} (${listingType}) already exists, skipping...`);
                 continue;
             }
             
@@ -612,7 +612,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const metadataResults = await Promise.all(metadataPromises);
             
             if (metadataResults.some((result: any) => result === null)) {
-                console.log(`❌ Failed to fetch metadata for bundle ${collectionId}, skipping...`);
+                //(`❌ Failed to fetch metadata for bundle ${collectionId}, skipping...`);
                 continue;
             }
             
@@ -650,7 +650,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const listingId = args[0].toString();
             const newPrice = ethers.formatEther(args[2]);
-            console.log(`💰 Processing PriceUpdated: ${listingId}`);
+            //(`💰 Processing PriceUpdated: ${listingId}`);
             
             await updateListingPrice(listingId, newPrice, 'single');
         }
@@ -666,7 +666,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const collectionId = args[0].toString();
             const newPrice = ethers.formatEther(args[2]);
-            console.log(`💰 Processing BundlePriceUpdated: ${collectionId}`);
+            //(`💰 Processing BundlePriceUpdated: ${collectionId}`);
             
             await updateListingPrice(collectionId, newPrice, 'bundle');
         }
@@ -681,7 +681,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const listingId = args[0].toString();
-            console.log(`🚫 Processing ListingCancelled: ${listingId}`);
+            //(`🚫 Processing ListingCancelled: ${listingId}`);
             
             await deleteListingFromDB(listingId, 'single');
         }
@@ -696,7 +696,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const collectionId = args[0].toString();
-            console.log(`🚫 Processing CollectionCancelled: ${collectionId}`);
+            //(`🚫 Processing CollectionCancelled: ${collectionId}`);
             
             await deleteListingFromDB(collectionId, 'bundle');
         }
@@ -711,7 +711,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const listingId = args[0].toString();
-            console.log(`💸 Processing NFTSold: ${listingId}`);
+            //(`💸 Processing NFTSold: ${listingId}`);
             
             await deleteListingFromDB(listingId, 'single');
         }
@@ -726,30 +726,30 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const collectionId = args[0].toString();
-            console.log(`💸 Processing CollectionBundleSold: ${collectionId}`);
+            //(`💸 Processing CollectionBundleSold: ${collectionId}`);
             
             await deleteListingFromDB(collectionId, 'bundle');
         }
         
-        console.log(`  ✅ Synced ${nftListedEvents.length} single + ${bundleListedEvents.length} bundle listings, ${priceUpdatedEvents.length + bundlePriceUpdatedEvents.length} price updates, ${listingCancelledEvents.length + collectionCancelledEvents.length} cancellations, ${nftSoldEvents.length + collectionBundleSoldEvents.length} sales`);
+        //(`  ✅ Synced ${nftListedEvents.length} single + ${bundleListedEvents.length} bundle listings, ${priceUpdatedEvents.length + bundlePriceUpdatedEvents.length} price updates, ${listingCancelledEvents.length + collectionCancelledEvents.length} cancellations, ${nftSoldEvents.length + collectionBundleSoldEvents.length} sales`);
         
     } catch (error) {
-        console.error('  ❌ Error syncing market chunk:', error);
+        //('  ❌ Error syncing market chunk:', error);
         throw error;
     }
 }
 
 // Main sync function
 export async function performFullSync(): Promise<void> {
-    console.log('🚀 Starting full data synchronization...');
+    //('🚀 Starting full data synchronization...');
     
     try {
         const currentBlock = await provider.getBlockNumber();
-        console.log(`Current block number: ${currentBlock}`);
+        //(`Current block number: ${currentBlock}`);
         
         // Sync auction events
         const lastAuctionBlock = await getLastSyncedBlock('auction');
-        console.log(`Last synced auction block: ${lastAuctionBlock}`);
+        //(`Last synced auction block: ${lastAuctionBlock}`);
         
         if (currentBlock > lastAuctionBlock) {
             const maxBlockRange = 1000; // Reduced from 10000 to 1000 for RPC stability
@@ -766,7 +766,7 @@ export async function performFullSync(): Promise<void> {
         
         // Sync market events
         const lastMarketBlock = await getLastSyncedBlock('market');
-        console.log(`Last synced market block: ${lastMarketBlock}`);
+        //(`Last synced market block: ${lastMarketBlock}`);
         
         if (currentBlock > lastMarketBlock) {
             const maxBlockRange = 1000; // Reduced from 10000 to 1000 for RPC stability
@@ -780,10 +780,10 @@ export async function performFullSync(): Promise<void> {
             }
         }
         
-        console.log('✅ Full synchronization completed successfully!');
+        //('✅ Full synchronization completed successfully!');
         
     } catch (error) {
-        console.error('❌ Error during synchronization:', error);
+        //('❌ Error during synchronization:', error);
     }
 }
 
@@ -811,10 +811,10 @@ export async function performIncrementalSync(): Promise<void> {
             await updateLastSyncedBlock('market', currentBlock);
         }
         
-        console.log('Incremental synchronization completed!');
+        //('Incremental synchronization completed!');
         
     } catch (error) {
-        console.error('❌ Error during incremental sync:', error);
+        //('❌ Error during incremental sync:', error);
     }
 }
 
@@ -825,16 +825,16 @@ let isServiceRunning = false;
 // Start automatic sync service
 export async function startSyncService(): Promise<void> {
     if (isServiceRunning) {
-        console.log('⚠️ Sync service is already running');
+        //('⚠️ Sync service is already running');
         return;
     }
     
-    console.log('🚀 Starting automatic sync service...');
+    //('🚀 Starting automatic sync service...');
     isServiceRunning = true;
     
     try {
         // Perform initial sync when service starts
-        console.log('📊 Performing initial synchronization...');
+        //('📊 Performing initial synchronization...');
         await performIncrementalSync(); // Use incremental instead of full sync for faster startup
         
         // Set up incremental sync with Railway-optimized interval
@@ -844,15 +844,15 @@ export async function startSyncService(): Promise<void> {
                 try {
                     await performIncrementalSync();
                 } catch (error) {
-                    console.error('❌ Error in scheduled sync:', error);
+                    //('❌ Error in scheduled sync:', error);
                 }
             }
         }, syncIntervalMs);
         
-        console.log(`✅ Sync service started with ${syncIntervalMs/1000/60}-minute intervals`);
+        //(`✅ Sync service started with ${syncIntervalMs/1000/60}-minute intervals`);
         
     } catch (error) {
-        console.error('❌ Error starting sync service:', error);
+        //('❌ Error starting sync service:', error);
         isServiceRunning = false;
         throw error;
     }
@@ -861,7 +861,7 @@ export async function startSyncService(): Promise<void> {
 // Stop sync service
 export async function stopSyncService(): Promise<void> {
     if (!isServiceRunning) {
-        console.log('⚠️ Sync service is not running');
+        //('⚠️ Sync service is not running');
         return;
     }
     
@@ -872,7 +872,7 @@ export async function stopSyncService(): Promise<void> {
         syncInterval = null;
     }
     
-    console.log('🛑 Sync service stopped');
+    //('🛑 Sync service stopped');
 }
 
 // Get sync service status
@@ -885,13 +885,13 @@ export function getSyncServiceStatus(): { isRunning: boolean; intervalMs: number
 
 // Graceful shutdown handlers
 process.on('SIGINT', async () => {
-    console.log('🛑 Received SIGINT, shutting down sync service...');
+    //('🛑 Received SIGINT, shutting down sync service...');
     await stopSyncService();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('🛑 Received SIGTERM, shutting down sync service...');
+    //('🛑 Received SIGTERM, shutting down sync service...');
     await stopSyncService();
     process.exit(0);
 });

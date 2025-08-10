@@ -16,7 +16,7 @@ async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
+        //(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
         return null;
     }
 }
@@ -50,7 +50,7 @@ async function saveToDatabase(data: any) {
             ]
         );
     } catch (error) {
-        console.error('Lỗi khi lưu vào database:', error);
+        //('Lỗi khi lưu vào database:', error);
     } finally {
         client.release();
     }
@@ -68,9 +68,9 @@ async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: st
             [status, reclaimTimestamp, auctionId, auctionType]
         );
         
-        console.log(`✅ Cập nhật auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp} (${new Date(reclaimTimestamp * 1000).toISOString()})`);
+        //(`✅ Cập nhật auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp} (${new Date(reclaimTimestamp * 1000).toISOString()})`);
     } catch (error) {
-        console.error('Lỗi khi cập nhật trạng thái và reclaim_nft:', error);
+        //('Lỗi khi cập nhật trạng thái và reclaim_nft:', error);
     } finally {
         client.release();
     }
@@ -83,7 +83,7 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
             [value, auctionId, auctionType]
         );
     } catch (error) {
-        console.error(`Lỗi khi cập nhật ${field}:`, error);
+        //(`Lỗi khi cập nhật ${field}:`, error);
     } finally {
         client.release();
     }
@@ -114,7 +114,7 @@ async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: 
                     [newEndTime, auctionId, auctionType]
                 );
                 
-                console.log(`🕒 Anti-sniping: Auction ${auctionId} (${auctionType}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
+                //(`🕒 Anti-sniping: Auction ${auctionId} (${auctionType}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
             } else {
                 await client.query(
                     `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
@@ -126,7 +126,7 @@ async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: 
         await client.query('COMMIT');
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Lỗi khi cập nhật total_bid với anti-sniping:', error);
+        //('Lỗi khi cập nhật total_bid với anti-sniping:', error);
     } finally {
         client.release();
     }
@@ -141,32 +141,32 @@ async function deleteFromDatabase(auctionId: string, auctionType: string) {
             [auctionId, auctionType]
         );
     } catch (error) {
-        console.error('Lỗi khi xóa khỏi database:', error);
+        //('Lỗi khi xóa khỏi database:', error);
     } finally {
         client.release();
     }
 }
 
 async function main() {
-    console.log('🚀 Đang khởi động auction listener...');
-    console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
+    //('🚀 Đang khởi động auction listener...');
+    //('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
     
-    console.log('🔄 Performing initial data synchronization...');
+    //('🔄 Performing initial data synchronization...');
     try {
         await performFullSync();
-        console.log('✅ Initial sync completed successfully!');
+        //('✅ Initial sync completed successfully!');
     } catch (error) {
-        console.error('❌ Initial sync failed:', error);
-        console.log('⚠️ Continuing with real-time listening...');
+        //('❌ Initial sync failed:', error);
+        //('⚠️ Continuing with real-time listening...');
     }
     
-    console.log('🎯 Đang lắng nghe các sự kiện từ auction...');
+    //('🎯 Đang lắng nghe các sự kiện từ auction...');
     setInterval(async () => {
         try {
-            console.log('🔄 Running incremental sync...');
+            //('🔄 Running incremental sync...');
             await performIncrementalSync();
         } catch (error) {
-            console.error('❌ Incremental sync failed:', error);
+            //('❌ Incremental sync failed:', error);
         }
     }, 5 * 60 * 1000); 
 
@@ -177,12 +177,12 @@ async function main() {
         const tokenIdsStr = tokenIds.map((id: { toString: () => any; }) => id.toString());
         const startingPriceStr = ethers.formatEther(startingPrice); 
         const endTimeNum = Number(endTime); 
-        console.log('AuctionCreated:', { auctionIdStr, seller, nftContract, auctionType, tokenIdStr, tokenIdsStr, startingPriceStr, endTime: endTimeNum, title });
+        //('AuctionCreated:', { auctionIdStr, seller, nftContract, auctionType, tokenIdStr, tokenIdsStr, startingPriceStr, endTime: endTimeNum, title });
         const metadataPromises = tokenIdsStr.length > 0 ? tokenIdsStr.map((tokenId: string) => fetchNFTMetadata(nftContract, tokenId)) : [fetchNFTMetadata(nftContract, tokenIdStr)];
         const metadataResults = await Promise.all(metadataPromises);
 
         if (metadataResults.some(result => result === null)) {
-            console.error('Lỗi khi fetch metadata cho một số NFT');
+            //('Lỗi khi fetch metadata cho một số NFT');
             return;
         }
 
@@ -217,7 +217,7 @@ async function main() {
     auctionContract.on('BidPlaced', async (auctionId, bidder, timestamp) => {
         const auctionIdStr = auctionId.toString();
         const timestampNum = Number(timestamp); 
-        console.log('BidPlaced:', { auctionIdStr, bidder, timestamp: timestampNum });
+        //('BidPlaced:', { auctionIdStr, bidder, timestamp: timestampNum });
         await incrementTotalBidWithAntiSniping(auctionIdStr, 'single');
         await incrementTotalBidWithAntiSniping(auctionIdStr, 'bundle');
     });
@@ -225,13 +225,7 @@ async function main() {
     auctionContract.on('AuctionFinalized', async (auctionId, winner, finalPrice, platformFeeAmount, sellerAmount) => {
         const auctionIdStr = auctionId.toString();
         const finalPriceStr = ethers.formatEther(finalPrice); 
-        console.log('AuctionFinalized:', { 
-            auctionIdStr, 
-            winner, 
-            finalPriceStr, 
-            platformFeeAmount: ethers.formatEther(platformFeeAmount), 
-            sellerAmount: ethers.formatEther(sellerAmount) 
-        });
+        
         await updateAuctionStatusWithReclaim(auctionIdStr, 'single', 'finalized');
         await updateAuctionStatusWithReclaim(auctionIdStr, 'bundle', 'finalized');
     });
@@ -239,7 +233,7 @@ async function main() {
     // Sự kiện AuctionCancelled
     auctionContract.on('AuctionCancelled', async (auctionId, seller, reason) => {
         const auctionIdStr = auctionId.toString();
-        console.log('AuctionCancelled:', { auctionIdStr, seller, reason });
+        //('AuctionCancelled:', { auctionIdStr, seller, reason });
 
         await deleteFromDatabase(auctionIdStr, 'single');
         await deleteFromDatabase(auctionIdStr, 'bundle');
@@ -249,7 +243,7 @@ async function main() {
     auctionContract.on('NFTClaimed', async (auctionId, winner, amountPaid) => {
         const auctionIdStr = auctionId.toString();
         const amountPaidStr = ethers.formatEther(amountPaid); 
-        console.log('NFTClaimed:', { auctionIdStr, winner, amountPaidStr });
+        //('NFTClaimed:', { auctionIdStr, winner, amountPaidStr });
 
         await updateClaimStatus(auctionIdStr, 'single', 'nft_claimed', true);
         await updateClaimStatus(auctionIdStr, 'bundle', 'nft_claimed', true);
@@ -258,24 +252,24 @@ async function main() {
     // Sự kiện NFTReclaimed
     auctionContract.on('NFTReclaimed', async (auctionId, seller) => {
         const auctionIdStr = auctionId.toString();
-        console.log('NFTReclaimed:', { auctionIdStr, seller });
+        //('NFTReclaimed:', { auctionIdStr, seller });
 
         await updateClaimStatus(auctionIdStr, 'single', 'nft_reclaimed', true);
         await updateClaimStatus(auctionIdStr, 'bundle', 'nft_reclaimed', true);
     });
 
-    console.log('Auction listener setup completed - listening for events...');
+    //('Auction listener setup completed - listening for events...');
     
     // Keep process alive gracefully
     process.on('SIGTERM', () => {
-        console.log(' Auction listener received SIGTERM, shutting down...');
+        //(' Auction listener received SIGTERM, shutting down...');
         process.exit(0);
     });
     
     process.on('SIGINT', () => {
-        console.log('Auction listener received SIGINT, shutting down...');
+        //('Auction listener received SIGINT, shutting down...');
         process.exit(0);
     });
 }
 
-main().catch(console.error);
+main().catch();

@@ -37,7 +37,7 @@ export function useNFTAuctionApproval() {
 
       return approved as string
     } catch (error) {
-      console.error("Error getting approved address:", error)
+      ////("Error getting approved address:", error)
       throw error
     }
   }
@@ -69,7 +69,7 @@ export function useNFTAuctionApproval() {
 
       return isApproved as boolean
     } catch (error) {
-      console.error("Error checking approval for all:", error)
+    //  //("Error checking approval for all:", error)
       throw error
     }
   }
@@ -98,7 +98,7 @@ export function useNFTAuctionApproval() {
 
       return owner as string
     } catch (error) {
-      console.error("Error getting owner:", error)
+  //    //("Error getting owner:", error)
       throw error
     }
   }
@@ -110,7 +110,7 @@ export function useNFTAuctionApproval() {
     userAddress: string
   ) => {
     try {
-      console.log("Checking approval for NFT:", { nftContract, tokenId, userAddress })
+      //("Checking approval for NFT:", { nftContract, tokenId, userAddress })
 
       // Check if user owns the NFT
       const owner = await getOwnerOf(nftContract, tokenId)
@@ -131,7 +131,7 @@ export function useNFTAuctionApproval() {
         approvalType: isOperatorApproved ? 'operator' : isTokenApproved ? 'token' : 'none'
       }
     } catch (error) {
-      console.error("Error checking single NFT approval:", error)
+//      //("Error checking single NFT approval:", error)
       throw error
     }
   }
@@ -143,7 +143,7 @@ export function useNFTAuctionApproval() {
     userAddress: string
   ) => {
     try {
-      console.log("Checking collection approval:", { nftContract, tokenIds, userAddress })
+      //("Checking collection approval:", { nftContract, tokenIds, userAddress })
 
       // Check if operator is approved for all (more efficient for multiple NFTs)
       const isOperatorApproved = await isApprovedForAll(nftContract, userAddress)
@@ -170,7 +170,7 @@ export function useNFTAuctionApproval() {
         approvalType: allApproved ? 'individual' : 'none'
       }
     } catch (error) {
-      console.error("Error checking collection approval:", error)
+    //  //("Error checking collection approval:", error)
       throw error
     }
   }
@@ -178,7 +178,7 @@ export function useNFTAuctionApproval() {
   // ✅ Approve specific NFT for auction - với receipt confirmation
   const approveNFT = async (nftContract: string, tokenId: number) => {
     try {
-      console.log("Approving NFT for auction:", { nftContract, tokenId })
+      //("Approving NFT for auction:", { nftContract, tokenId })
 
       const hash = await writeContractAsync({
         address: nftContract as `0x${string}`,
@@ -198,11 +198,11 @@ export function useNFTAuctionApproval() {
         args: [AUCTION_CONTRACT_ADDRESS as `0x${string}`, BigInt(tokenId)],
       })
 
-      console.log("NFT approval hash:", hash)
+      //("NFT approval hash:", hash)
       
       // ✅ Wait for transaction receipt
       const receipt = await client?.waitForTransactionReceipt({ hash })
-      console.log("NFT approval status:", receipt?.status === "success" ? "Success" : "Failed")
+      //("NFT approval status:", receipt?.status === "success" ? "Success" : "Failed")
       
       if (receipt?.status !== "success") {
         throw new Error("NFT approval transaction failed")
@@ -210,7 +210,7 @@ export function useNFTAuctionApproval() {
 
       return { hash, receipt }
     } catch (error: any) {
-      console.error("Error approving NFT:", error)
+  //    //("Error approving NFT:", error)
       throw error
     }
   }
@@ -218,7 +218,7 @@ export function useNFTAuctionApproval() {
   // ✅ Set approval for all NFTs in collection - với receipt confirmation
   const setApprovalForAll = async (nftContract: string, approved: boolean = true) => {
     try {
-      console.log("Setting approval for all NFTs:", { nftContract, approved })
+      //("Setting approval for all NFTs:", { nftContract, approved })
 
       const hash = await writeContractAsync({
         address: nftContract as `0x${string}`,
@@ -238,11 +238,11 @@ export function useNFTAuctionApproval() {
         args: [AUCTION_CONTRACT_ADDRESS as `0x${string}`, approved],
       })
 
-      console.log("Approval for all hash:", hash)
+      //("Approval for all hash:", hash)
       
       // ✅ Wait for transaction receipt
       const receipt = await client?.waitForTransactionReceipt({ hash })
-      console.log("Approval for all status:", receipt?.status === "success" ? "Success" : "Failed")
+      //("Approval for all status:", receipt?.status === "success" ? "Success" : "Failed")
       
       if (receipt?.status !== "success") {
         throw new Error("Set approval for all transaction failed")
@@ -250,7 +250,7 @@ export function useNFTAuctionApproval() {
 
       return { hash, receipt }
     } catch (error: any) {
-      console.error("Error setting approval for all:", error)
+   //   //("Error setting approval for all:", error)
       throw error
     }
   }
@@ -258,12 +258,12 @@ export function useNFTAuctionApproval() {
   // ✅ Approve collection for auction (uses setApprovalForAll) - với receipt confirmation
   const approveCollection = async (nftContract: string) => {
     try {
-      console.log("Approving collection for auction:", nftContract)
+      //("Approving collection for auction:", nftContract)
       const result = await setApprovalForAll(nftContract, true)
-      console.log("Collection approval completed:", result)
+      //("Collection approval completed:", result)
       return result
     } catch (error: any) {
-      console.error("Error approving collection:", error)
+    // //("Error approving collection:", error)
       throw error
     }
   }

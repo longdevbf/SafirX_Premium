@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pool } from '@/lib/db'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const client = await pool.connect()
     
@@ -72,7 +72,6 @@ export async function GET(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error fetching auctions:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch auctions' },
       { status: 500 }

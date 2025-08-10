@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     ]
     
     if (!allowedTypes.includes(file.type)) {
-      console.error('Invalid file type:', file.type)
+   //   //('Invalid file type:', file.type)
       return NextResponse.json({ 
         error: `Invalid file type: ${file.type}. Allowed types: ${allowedTypes.join(', ')}` 
       }, { status: 400 })
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     })
     pinataData.append('pinataOptions', pinataOptions)
 
-    console.log('📤 Uploading to Pinata...', file.name, file.type)
+    //('📤 Uploading to Pinata...', file.name, file.type)
     const pinataResponse = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
       headers: {
@@ -70,12 +70,12 @@ export async function POST(request: NextRequest) {
 
     if (!pinataResponse.ok) {
       const errorData = await pinataResponse.json()
-      console.error('Pinata upload failed:', errorData)
+  //    //('Pinata upload failed:', errorData)
       return NextResponse.json({ error: 'Failed to upload to IPFS' }, { status: 500 })
     }
 
     const pinataResult = await pinataResponse.json()
-    console.log('✅ Pinata upload successful:', pinataResult.IpfsHash)
+    //('✅ Pinata upload successful:', pinataResult.IpfsHash)
 
     // Construct IPFS URL
     const ipfsHash = pinataResult.IpfsHash
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('IPFS upload error:', error)
+//    //('IPFS upload error:', error)
     return NextResponse.json(
       { error: 'IPFS upload failed' },
       { status: 500 }

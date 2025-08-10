@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating user:', error);
+//    //('Error creating user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
     if (client) {
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user: formattedUser });
 
   } catch (error) {
-    console.error('Error fetching user:', error);
+  //  //('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
     if (client) {
@@ -193,7 +193,7 @@ export async function PUT(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating user:', error);
+  //  //('Error updating user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   } finally {
     if (client) {

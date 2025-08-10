@@ -8,9 +8,9 @@
 //     const rs = await experiment.test(5);
 //     try{
 //         const receipt = await rs.wait();
-//         console.log("Transaction successful with hash:", receipt?.hash);
+//         //("Transaction successful with hash:", receipt?.hash);
 //     } catch (error) {
-//         console.error("Transaction failed:", error);
+//         //("Transaction failed:", error);
 //     }
     
 // }

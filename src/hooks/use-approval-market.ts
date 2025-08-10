@@ -53,13 +53,13 @@ export function useNFTApproval() {
         args: [ABI_CONFIG.marketPlace.address as `0x${string}`, approved],
       })
 
-      console.log("Approval hash:", hash)
+      //("Approval hash:", hash)
       const receipt = await publicClient?.waitForTransactionReceipt({ hash })
-      console.log("Approval status:", receipt?.status === "success" ? "Success" : "Failed")
+      //("Approval status:", receipt?.status === "success" ? "Success" : "Failed")
       
       return { hash, receipt }
     } catch (error: any) {
-      console.error("Approval error:", error.message)
+      //("Approval error:", error.message)
       throw error
     }
   }

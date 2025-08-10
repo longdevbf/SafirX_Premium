@@ -3,24 +3,24 @@ import { ethers } from "hardhat";
 async function main() {
   try {
     const [deployer] = await ethers.getSigners();
-    console.log("Deploying contracts with the account:", deployer.address);
+    //("Deploying contracts with the account:", deployer.address);
 
     const SealedBidAuction = await ethers.getContractFactory("SealedBidAuction");
     const utils = await SealedBidAuction.deploy(deployer.address);
     await utils.waitForDeployment();
-    console.log("SealedBidAuction deployed to:", await utils.getAddress());
+    //("SealedBidAuction deployed to:", await utils.getAddress());
 
     const Marketplace = await ethers.getContractFactory("NFTMarket");
     const marketplace = await Marketplace.deploy(deployer.address);
     await marketplace.waitForDeployment();
-    console.log("NFTMarket deployed to:", await marketplace.getAddress());
+    //("NFTMarket deployed to:", await marketplace.getAddress());
 
     const Mint = await ethers.getContractFactory("NFT");
     const mint = await Mint.deploy(deployer.address);
     await mint.waitForDeployment();
-    console.log("Mint deployed to:", await mint.getAddress());
+    //("Mint deployed to:", await mint.getAddress());
   } catch (error) {
-    console.error("Error during deployment:", error);
+    //("Error during deployment:", error);
     throw error;
   }
 }
@@ -28,7 +28,7 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("Deployment failed:", error);
+    //("Deployment failed:", error);
     process.exit(1);
   });
 

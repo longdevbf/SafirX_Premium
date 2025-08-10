@@ -43,7 +43,7 @@ export default function SyncMonitor() {
             }
         } catch (err) {
             setError('Network error');
-            console.error('Error fetching sync status:', err);
+      //      //('Error fetching sync status:', err);
         } finally {
             setLoading(false);
         }
@@ -62,7 +62,7 @@ export default function SyncMonitor() {
             }
         } catch (err) {
             setError('Network error');
-            console.error('Error starting sync service:', err);
+     //       //('Error starting sync service:', err);
         } finally {
             setLoading(false);
         }
@@ -81,7 +81,7 @@ export default function SyncMonitor() {
             }
         } catch (err) {
             setError('Network error');
-            console.error('Error stopping sync service:', err);
+     //       //('Error stopping sync service:', err);
         } finally {
             setLoading(false);
         }

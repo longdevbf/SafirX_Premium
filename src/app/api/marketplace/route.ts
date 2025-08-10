@@ -92,8 +92,8 @@ export async function GET(request: NextRequest) {
     query += ` OFFSET $${paramCount}`;
     queryParams.push(offset);
 
-    console.log('🔍 Executing query:', query);
-    console.log('📋 Query params:', queryParams);
+    //('🔍 Executing query:', query);
+    //('📋 Query params:', queryParams);
 
     const result = await client.query(query, queryParams);
     
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error fetching marketplace data:', error);
+//   //('❌ Error fetching marketplace data:', error);
     return NextResponse.json(
       { 
         success: false, 

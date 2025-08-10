@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-//console.log('🔧 Environment loaded, DATABASE_URL exists:', !!process.env.DATABASE_URL);
+////('🔧 Environment loaded, DATABASE_URL exists:', !!process.env.DATABASE_URL);
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -37,14 +37,14 @@ async function runMigration() {
         if (result.rows.length > 0) {        
             const syncRecords = await client.query('SELECT service, last_synced_block FROM sync_status ORDER BY service');
           syncRecords.rows.forEach((row: any) => {
-                console.log(`   - ${row.service}: block ${row.last_synced_block}`);
+                //(`   - ${row.service}: block ${row.last_synced_block}`);
             });
         } else {
-            console.error('❌ sync_status table was not created properly');
+            //('❌ sync_status table was not created properly');
         }
         
     } catch (error) {
-        console.error('❌ Migration failed:', error);
+        //('❌ Migration failed:', error);
         process.exit(1);
     } finally {
         client.release();
@@ -52,7 +52,7 @@ async function runMigration() {
     }
 }
 if (require.main === module) {
-    runMigration().catch(console.error);
+    runMigration().catch();
 }
 
 export { runMigration };

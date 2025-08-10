@@ -99,7 +99,7 @@ export default function SellNFTModal({ isOpen, onClose, nft, showTransactionSucc
       handleClose()
 
     } catch (error: any) {
-      console.error("Error selling NFT:", error)
+//      //("Error selling NFT:", error)
       setError(error.message || "Failed to list NFT")
       setStep("form")
     } finally {

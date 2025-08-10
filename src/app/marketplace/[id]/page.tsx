@@ -214,12 +214,10 @@ export default function NFTDetailPage() {
             },
           })
         } catch (viewError) {
-          console.log('Failed to increment view count:', viewError)
-          // Don't show error to user for view increment failure
         }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to fetch NFT details')
-        console.error('❌ Error:', error)
+     //   //('❌ Error:', error)
       } finally {
         setLoading(false)
       }
@@ -248,19 +246,15 @@ export default function NFTDetailPage() {
       toast.loading('Processing purchase...', { id: 'buy-nft' })
       
       let result
-      
-      // Determine which function to use based on listing type
+   
       if (nft.listing_type === 'bundle') {
-        // For bundle collections, use buyCollectionBundle
-        console.log('🔄 Buying collection bundle with ID:', nft.listing_id)
+       
         result = await buyCollectionBundle(nft.listing_id, Number(priceInWei))
       } else if (nft.listing_type === 'single') {
-        // For single NFTs, use buyNFT
-        console.log('🔄 Buying single NFT with ID:', nft.listing_id)
+   
         result = await buyNFT(nft.listing_id, Number(priceInWei))
       } else {
-        // Fallback to unified function
-        console.log('🔄 Using unified buy function for ID:', nft.listing_id)
+
         result = await buyNFTUnified(nft.listing_id, Number(priceInWei))
       }
       
@@ -280,7 +274,7 @@ export default function NFTDetailPage() {
         toast.error('Transaction failed', { id: 'buy-nft' })
       }
     } catch (error: any) {
-      console.error('❌ Buy error:', error)
+    //  //('❌ Buy error:', error)
       toast.error(error.message || 'Failed to purchase NFT', { id: 'buy-nft' })
     } finally {
       setIsBuying(false)
@@ -303,15 +297,15 @@ export default function NFTDetailPage() {
       // Determine which function to use based on listing type
       if (nft.listing_type === 'bundle') {
         // For bundle collections, use cancelCollection
-        console.log('🔄 Canceling collection with ID:', nft.listing_id)
+        //('🔄 Canceling collection with ID:', nft.listing_id)
         result = await cancelCollection(nft.listing_id)
       } else if (nft.listing_type === 'single') {
         // For single NFTs, use cancelListing
-        console.log('🔄 Canceling listing with ID:', nft.listing_id)
+        //('🔄 Canceling listing with ID:', nft.listing_id)
         result = await cancelListing(nft.listing_id)
       } else {
         // Fallback to unified function
-        console.log('🔄 Using unified cancel function for ID:', nft.listing_id)
+        //('🔄 Using unified cancel function for ID:', nft.listing_id)
         result = await cancelListingUnified(nft.listing_id)
       }
       
@@ -331,7 +325,7 @@ export default function NFTDetailPage() {
         toast.error('Transaction failed', { id: 'cancel-listing' })
       }
     } catch (error: any) {
-      console.error('❌ Cancel error:', error)
+  //    //('❌ Cancel error:', error)
       toast.error(error.message || 'Failed to cancel listing', { id: 'cancel-listing' })
     } finally {
       setIsCanceling(false)
@@ -362,11 +356,11 @@ export default function NFTDetailPage() {
       // Determine which function to use based on listing type
       if (nft.listing_type === 'bundle') {
         // For bundle collections, use updateBundlePrice
-        console.log('🔄 Updating bundle price for ID:', nft.listing_id)
+        //('🔄 Updating bundle price for ID:', nft.listing_id)
         result = await updateBundlePrice(nft.listing_id, Number(priceInWei))
       } else {
         // For single NFTs, use updatePrice
-        console.log('🔄 Updating single NFT price for ID:', nft.listing_id)
+        //('🔄 Updating single NFT price for ID:', nft.listing_id)
         result = await updatePrice(nft.listing_id, Number(priceInWei))
       }
       
@@ -387,7 +381,7 @@ export default function NFTDetailPage() {
         toast.error('Transaction failed', { id: 'update-price' })
       }
     } catch (error: any) {
-      console.error('❌ Update price error:', error)
+//      //('❌ Update price error:', error)
       toast.error(error.message || 'Failed to update price', { id: 'update-price' })
     } finally {
       setIsUpdatingPrice(false)
@@ -432,7 +426,7 @@ export default function NFTDetailPage() {
         toast.error('Failed to love this NFT')
       }
     } catch (error) {
-      console.error('Failed to increment love count:', error)
+//      //('Failed to increment love count:', error)
       toast.error('Failed to love this NFT')
     }
   }

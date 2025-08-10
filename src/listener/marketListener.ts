@@ -21,7 +21,7 @@ async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
+        //(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
         return null;
     }
 }
@@ -50,7 +50,7 @@ async function saveToDatabase(data: any) {
             ]
         );
     } catch (error) {
-        console.error('Lỗi khi lưu vào database:', error);
+        //('Lỗi khi lưu vào database:', error);
     } finally {
         client.release();
     }
@@ -65,7 +65,7 @@ async function updatePrice(listingId: string, newPrice: string, listingType: str
             [newPrice, listingId, listingType]
         );
     } catch (error) {
-        console.error('Lỗi khi cập nhật giá:', error);
+        //('Lỗi khi cập nhật giá:', error);
     } finally {
         client.release();
     }
@@ -80,25 +80,25 @@ async function deleteFromDatabase(listingId: string, listingType: string) {
             [listingId, listingType]
         );
     } catch (error) {
-        console.error('Lỗi khi xóa khỏi database:', error);
+        //('Lỗi khi xóa khỏi database:', error);
     } finally {
         client.release();
     }
 }
 
 async function main() {
-    console.log('🚀 Đang khởi động market listener...');
-    console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
-    console.log('🎯 Đang lắng nghe các sự kiện từ marketplace...');
+    //('🚀 Đang khởi động market listener...');
+    //('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
+    //('🎯 Đang lắng nghe các sự kiện từ marketplace...');
 
     // Set up incremental sync every 10 minutes (offset from auction listener)
     setTimeout(() => {
         setInterval(async () => {
             try {
-                console.log('🔄 Running market incremental sync...');
+                //('🔄 Running market incremental sync...');
                 await performIncrementalSync();
             } catch (error) {
-                console.error('❌ Market incremental sync failed:', error);
+                //('❌ Market incremental sync failed:', error);
             }
         }, 5 * 60 * 1000); // 5 minutes
     }, 2.5 * 60 * 1000); // Start after 2.5 minutes to offset from auction sync
@@ -108,7 +108,7 @@ async function main() {
         const listingIdStr = listingId.toString();
         const tokenIdStr = tokenId.toString();
         const priceStr = ethers.formatEther(price); // Convert wei to Ether
-        console.log('NFTListed:', { listingIdStr, nftContract, tokenIdStr, seller, priceStr, listingType });
+        //('NFTListed:', { listingIdStr, nftContract, tokenIdStr, seller, priceStr, listingType });
 
         const metadata = await fetchNFTMetadata(nftContract, tokenIdStr);
         if (!metadata) return;
@@ -135,7 +135,7 @@ async function main() {
         const collectionIdStr = collectionId.toString();
         const tokenIdsStr = tokenIds.map((id: { toString: () => any; }) => id.toString());
         const bundlePriceStr = ethers.formatEther(bundlePrice); // Convert wei to Ether
-        console.log('CollectionBundleListed:', { collectionIdStr, nftContract, seller, tokenIdsStr, bundlePriceStr, collectionName });
+        //('CollectionBundleListed:', { collectionIdStr, nftContract, seller, tokenIdsStr, bundlePriceStr, collectionName });
 
         // Fetch metadata cho tất cả NFT trong bundle
         const metadataPromises = tokenIdsStr.map((tokenId: string) => fetchNFTMetadata(nftContract, tokenId));
@@ -143,7 +143,7 @@ async function main() {
 
         // Kiểm tra nếu có metadata lỗi
         if (metadataResults.some(result => result === null)) {
-            console.error('Lỗi khi fetch metadata cho một số NFT trong bundle');
+            //('Lỗi khi fetch metadata cho một số NFT trong bundle');
             return;
         }
 
@@ -178,7 +178,7 @@ async function main() {
     marketContract.on('PriceUpdated', async (listingId, oldPrice, newPrice) => {
         const listingIdStr = listingId.toString();
         const newPriceStr = ethers.formatEther(newPrice); // Convert wei to Ether
-        console.log('PriceUpdated:', { listingIdStr, oldPrice: oldPrice.toString(), newPriceStr });
+        //('PriceUpdated:', { listingIdStr, oldPrice: oldPrice.toString(), newPriceStr });
 
         await updatePrice(listingIdStr, newPriceStr, 'single');
     });
@@ -187,7 +187,7 @@ async function main() {
     marketContract.on('BundlePriceUpdated', async (collectionId, oldPrice, newPrice) => {
         const collectionIdStr = collectionId.toString();
         const newPriceStr = ethers.formatEther(newPrice); // Convert wei to Ether
-        console.log('BundlePriceUpdated:', { collectionIdStr, oldPrice: oldPrice.toString(), newPriceStr });
+        //('BundlePriceUpdated:', { collectionIdStr, oldPrice: oldPrice.toString(), newPriceStr });
 
         await updatePrice(collectionIdStr, newPriceStr, 'bundle');
     });
@@ -195,7 +195,7 @@ async function main() {
     // Sự kiện ListingCancelled
     marketContract.on('ListingCancelled', async (listingId, seller, listingType) => {
         const listingIdStr = listingId.toString();
-        console.log('ListingCancelled:', { listingIdStr, seller, listingType });
+        //('ListingCancelled:', { listingIdStr, seller, listingType });
 
         await deleteFromDatabase(listingIdStr, 'single');
     });
@@ -203,7 +203,7 @@ async function main() {
     // Sự kiện CollectionCancelled
     marketContract.on('CollectionCancelled', async (collectionId, seller, listingType) => {
         const collectionIdStr = collectionId.toString();
-        console.log('CollectionCancelled:', { collectionIdStr, seller, listingType });
+        //('CollectionCancelled:', { collectionIdStr, seller, listingType });
 
         await deleteFromDatabase(collectionIdStr, 'bundle');
     });
@@ -212,7 +212,7 @@ async function main() {
     marketContract.on('NFTSold', async (listingId, seller, buyer, price, listingType) => {
         const listingIdStr = listingId.toString();
         const priceStr = ethers.formatEther(price); // Convert wei to Ether
-        console.log('NFTSold:', { listingIdStr, seller, buyer, price: priceStr, listingType });
+        //('NFTSold:', { listingIdStr, seller, buyer, price: priceStr, listingType });
 
         await deleteFromDatabase(listingIdStr, 'single');
     });
@@ -221,23 +221,23 @@ async function main() {
     marketContract.on('CollectionBundleSold', async (collectionId, seller, buyer, tokenIds, bundlePrice) => {
         const collectionIdStr = collectionId.toString();
         const bundlePriceStr = ethers.formatEther(bundlePrice); // Convert wei to Ether
-        console.log('CollectionBundleSold:', { collectionIdStr, seller, buyer, tokenIds: tokenIds.map((id: { toString: () => any; }) => id.toString()), bundlePrice: bundlePriceStr });
+        //('CollectionBundleSold:', { collectionIdStr, seller, buyer, tokenIds: tokenIds.map((id: { toString: () => any; }) => id.toString()), bundlePrice: bundlePriceStr });
 
         await deleteFromDatabase(collectionIdStr, 'bundle');
     });
 
-    console.log('✅ Market listener setup completed - listening for events...');
+    //('✅ Market listener setup completed - listening for events...');
     
     // Keep process alive gracefully
     process.on('SIGTERM', () => {
-        console.log('🛑 Market listener received SIGTERM, shutting down...');
+        //('🛑 Market listener received SIGTERM, shutting down...');
         process.exit(0);
     });
     
     process.on('SIGINT', () => {
-        console.log('🛑 Market listener received SIGINT, shutting down...');
+        //('🛑 Market listener received SIGINT, shutting down...');
         process.exit(0);
     });
 }
 
-main().catch(console.error);
+main().catch();

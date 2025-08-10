@@ -175,7 +175,7 @@ export default function MarketplacePage() {
       setRosePrice(response.rose_price_usd)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch marketplace data')
-      console.error('❌ Error:', err)
+  //    //('❌ Error:', err)
     } finally {
       setLoading(false)
     }
@@ -187,7 +187,7 @@ export default function MarketplacePage() {
       const cols = await getCollections()
       setCollections(cols)
     } catch (err) {
-      console.error('❌ Error fetching collections:', err)
+   //   //('❌ Error fetching collections:', err)
     }
   }
 

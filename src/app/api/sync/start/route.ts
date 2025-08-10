@@ -21,7 +21,7 @@ export async function POST() {
             status: getSyncServiceStatus()
         });
     } catch (error) {
-        console.error('Error starting sync service:', error);
+    //    //('Error starting sync service:', error);
         return NextResponse.json({ 
             success: false, 
             error: 'Failed to start sync service',
@@ -38,7 +38,7 @@ export async function GET() {
             status
         });
     } catch (error) {
-        console.error('Error getting sync service status:', error);
+      //  //('Error getting sync service status:', error);
         return NextResponse.json({ 
             success: false, 
             error: 'Failed to get sync service status' 

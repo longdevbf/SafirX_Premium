@@ -39,7 +39,7 @@ export function useUserData(address: string | undefined) {
       const data = await response.json();
       setUser(data.user);
     } catch (err) {
-      console.error('Error fetching user:', err);
+      //('Error fetching user:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);

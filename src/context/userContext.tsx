@@ -80,7 +80,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       throw new Error(`HTTP ${response.status}: Failed to fetch user data`)
 
     } catch (err) {
-      console.error('Error in fetchUser:', err)
+   //   //('Error in fetchUser:', err)
       
       // Retry logic cho network errors (tối đa 2 lần retry)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'

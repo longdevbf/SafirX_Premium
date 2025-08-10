@@ -62,7 +62,7 @@ export function useNFTData(address: string | undefined) {
         }
 
         const data: NFTApiResponse = await response.json();
-        console.log('API Response:', data);
+        //('API Response:', data);
         
         // Chuyển đổi dữ liệu API thành format phù hợp
         const processedNFTs: ProcessedNFT[] = data.evm_nfts.map((nft) => {
@@ -84,11 +84,11 @@ export function useNFTData(address: string | undefined) {
           };
         });
 
-        console.log('Processed NFTs:', processedNFTs);
+        //('Processed NFTs:', processedNFTs);
         setNFTs(processedNFTs);
         setTotalCount(data.total_count);
       } catch (err) {
-        console.error('Fetch NFTs error:', err);
+        //('Fetch NFTs error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
         setNFTs([]);
         setTotalCount(0);

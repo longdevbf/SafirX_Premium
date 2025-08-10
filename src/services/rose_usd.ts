@@ -15,7 +15,7 @@ export async function getRosePrice(): Promise<number | null> {
     return price;
     
   } catch (error) {
-    console.error(`Lỗi khi lấy dữ liệu: ${error}`);
+    //(`Lỗi khi lấy dữ liệu: ${error}`);
     return null;
   }
 }

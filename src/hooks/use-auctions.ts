@@ -50,13 +50,13 @@ export function useSealedBidAuction() {
         args: [nftContract, tokenId, startingPrice, reservePrice, minBidIncrement, duration, title, description],
       });
       
-      console.log("Create Single NFT Auction Txhash:", hash);
+      //("Create Single NFT Auction Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Create Single NFT Auction Error:", error.message);
+   //   //("Create Single NFT Auction Error:", error.message);
       throw error;
     }
   };
@@ -88,13 +88,15 @@ export function useSealedBidAuction() {
         args: [nftContract, tokenIds, startingPrice, reservePrice, minBidIncrement, duration, title, description],
       });
       
-      console.log("Create Collection Auction Txhash:", hash);
+      //("Create Collection Auction Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Create Collection Auction Error:", error.message);
+     
+     
+     // //("Create Collection Auction Error:", error.message);
       throw error;
     }
   };
@@ -112,26 +114,15 @@ export function useSealedBidAuction() {
     userAddress: string
   ) => {
     try {
-      console.log("Create Single NFT Auction with Approval:", {
-        nftContract,
-        tokenId,
-        startingPrice,
-        reservePrice,
-        minBidIncrement,
-        duration,
-        title,
-        description,
-        userAddress
-      });
-
+     
       // Step 1: Check current approval status
       const approvalCheck = await checkSingleNFTApproval(nftContract, tokenId, userAddress);
       
       // Step 2: Request approval if needed
       if (approvalCheck.needsApproval) {
-        console.log("NFT not approved, requesting approval...");
+        //("NFT not approved, requesting approval...");
         await approveNFT(nftContract, tokenId);
-        console.log("NFT approved successfully");
+        //("NFT approved successfully");
       }
 
       // Step 3: Create auction
@@ -151,14 +142,14 @@ export function useSealedBidAuction() {
         ],
       });
       
-      console.log("Single NFT auction created:", hash);
+      //("Single NFT auction created:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
 
     } catch (error: any) {
-      console.error("Create Single NFT Auction with Approval Error:", error);
+    //  //("Create Single NFT Auction with Approval Error:", error);
       throw error;
     }
   };
@@ -175,26 +166,16 @@ export function useSealedBidAuction() {
     userAddress: string
   ) => {
     try {
-      console.log("Create Collection Auction with Approval:", {
-        nftContract,
-        tokenIds,
-        startingPrice,
-        reservePrice,
-        minBidIncrement,
-        duration,
-        title,
-        description,
-        userAddress
-      });
+    
 
       // Step 1: Check current approval status
       const approvalCheck = await checkCollectionApproval(nftContract, tokenIds, userAddress);
       
       // Step 2: Request approval if needed
       if (approvalCheck.needsApproval) {
-        console.log("Collection not approved, requesting approval...");
+        //("Collection not approved, requesting approval...");
         await approveCollection(nftContract);
-        console.log("Collection approved successfully");
+        //("Collection approved successfully");
       }
 
       // Step 3: Create collection auction
@@ -214,14 +195,14 @@ export function useSealedBidAuction() {
         ],
       });
       
-      console.log("Collection auction created:", hash);
+      //("Collection auction created:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
 
     } catch (error: any) {
-      console.error("Create Collection Auction with Approval Error:", error);
+    //  //("Create Collection Auction with Approval Error:", error);
       throw error;
     }
   };
@@ -237,13 +218,13 @@ export function useSealedBidAuction() {
         value: BigInt(deposit),
       });
       
-      console.log("Place Bid Txhash:", hash);
+      //("Place Bid Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Place Bid Error:", error.message);
+   //   //("Place Bid Error:", error.message);
       throw error;
     }
   };
@@ -258,13 +239,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Finalize Auction Txhash:", hash);
+      //("Finalize Auction Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Finalize Auction Error:", error.message);
+  //    //("Finalize Auction Error:", error.message);
       throw error;
     }
   };
@@ -278,13 +259,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Cancel Auction Txhash:", hash);
+      //("Cancel Auction Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Cancel Auction Error:", error.message);
+     // //("Cancel Auction Error:", error.message);
       throw error;
     }
   };
@@ -294,12 +275,7 @@ export function useSealedBidAuction() {
       // Tính remainingAmount = highestBid - startingPrice
       const remainingAmount = highestBid - startingPrice;
       
-      console.log('Claiming NFT:', {
-        auctionId,
-        highestBid: highestBid.toString(),
-        startingPrice: startingPrice.toString(),
-        remainingAmount: remainingAmount.toString()
-      });
+    
       
       const hash = await writeContractAsync({
         address: ABI_CONFIG.sealedBidAuction.address as `0x${string}`,
@@ -309,13 +285,13 @@ export function useSealedBidAuction() {
         value: remainingAmount, // Truyền remainingAmount thay vì 0
       });
       
-      console.log("Claim NFT Txhash:", hash);
+      //("Claim NFT Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Claim NFT Error:", error.message);
+   //   //("Claim NFT Error:", error.message);
       throw error;
     }
   };
@@ -329,13 +305,13 @@ export function useSealedBidAuction() {
         args: [auctionId],
       });
       
-      console.log("Reclaim NFT Txhash:", hash);
+      //("Reclaim NFT Txhash:", hash);
       const receipt = await client?.waitForTransactionReceipt({ hash });
-      console.log("Status:", receipt?.status === "success" ? "Success" : "Failed");
+      //("Status:", receipt?.status === "success" ? "Success" : "Failed");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Reclaim NFT Error:", error.message);
+  //    //("Reclaim NFT Error:", error.message);
       throw error;
     }
   };
@@ -516,7 +492,7 @@ export function useSealedBidAuction() {
 
       return auction
     } catch (error) {
-      console.error("Error getting auction details:", error)
+   //   //("Error getting auction details:", error)
       throw error
     }
   };
@@ -537,7 +513,7 @@ export function useSealedBidAuction() {
 
       return bids
     } catch (error) {
-      console.error("Error getting auction bids:", error)
+    //  //("Error getting auction bids:", error)
       throw error
     }
   };
@@ -558,7 +534,7 @@ export function useSealedBidAuction() {
 
       return auction
     } catch (error) {
-      console.error("Error getting auction:", error)
+   //   //("Error getting auction:", error)
       throw error
     }
   };

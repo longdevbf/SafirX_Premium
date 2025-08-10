@@ -199,7 +199,7 @@ export default function AuctionsPage() {
           setAuctions(updatedAuctions)
         }
       } catch (error) {
-        console.error('Error fetching auctions:', error)
+      //  //('Error fetching auctions:', error)
       } finally {
         setLoading(false)
       }
@@ -398,7 +398,7 @@ export default function AuctionsPage() {
         toast.error('Transaction failed', { id: 'cancel-auction' })
       }
     } catch (error: any) {
-      console.error('❌ Cancel auction error:', error)
+      ////('❌ Cancel auction error:', error)
       toast.error(error.message || 'Failed to cancel auction', { id: 'cancel-auction' })
     } finally {
       setCancelingAuctions(prev => {
@@ -434,7 +434,7 @@ export default function AuctionsPage() {
         toast.error('Transaction failed', { id: 'finalize-auction' })
       }
     } catch (error: any) {
-      console.error('❌ Finalize auction error:', error)
+   //   //('❌ Finalize auction error:', error)
       toast.error(error.message || 'Failed to finalize auction', { id: 'finalize-auction' })
     } finally {
       setFinalizingAuctions(prev => {

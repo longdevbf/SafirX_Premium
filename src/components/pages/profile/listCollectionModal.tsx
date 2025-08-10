@@ -368,7 +368,7 @@ export default function ListCollectionModal({ isOpen, onClose, nfts, mode, showT
       }
 
     } catch (error: any) {
-      console.error("Error listing collection:", error)
+  //    //("Error listing collection:", error)
       setError(error.message || `Failed to ${mode === "list" ? "list collection" : "create auction"}`)
     } finally {
       setIsLoading(false)

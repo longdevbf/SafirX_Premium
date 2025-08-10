@@ -88,7 +88,7 @@ export async function GET(
         await client.query(updateStatusQuery, [auctionId])
         auction.status = 'ended'
       } catch (updateError) {
-        console.log('Status update error (non-critical):', updateError)
+        //('Status update error (non-critical):', updateError)
       }
     }
 
@@ -188,7 +188,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Error fetching auction details:', error)
+   // //('❌ Error fetching auction details:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch auction details',
@@ -281,7 +281,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('❌ Error updating auction:', error)
+    ////('❌ Error updating auction:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Failed to update auction',
@@ -354,7 +354,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('❌ Error canceling auction:', error)
+//    //('❌ Error canceling auction:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Failed to cancel auction',

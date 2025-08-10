@@ -141,7 +141,7 @@ export default function OwnedNFTs({
     try {
       await navigator.clipboard.writeText(text)
     } catch (err) {
-      console.error("Failed to copy:", err)
+    //  //("Failed to copy:", err)
       const textArea = document.createElement("textarea")
       textArea.value = text
       document.body.appendChild(textArea)
@@ -150,7 +150,7 @@ export default function OwnedNFTs({
       try {
         document.execCommand('copy')
       } catch (fallbackErr) {
-        console.error("Fallback copy failed:", fallbackErr)
+    //    //("Fallback copy failed:", fallbackErr)
       }
       document.body.removeChild(textArea)
     }

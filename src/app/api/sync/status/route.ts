@@ -30,7 +30,7 @@ export async function GET() {
             lastUpdated: new Date().toISOString()
         });
     } catch (error) {
-        console.error('Error getting sync status:', error);
+   //     //('Error getting sync status:', error);
         return NextResponse.json({ 
             success: false, 
             error: 'Failed to get sync status',

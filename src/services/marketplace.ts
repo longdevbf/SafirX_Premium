@@ -67,7 +67,7 @@ export async function fetchMarketplaceListings(filters: MarketplaceFilters = {})
   const url = `/api/marketplace?${searchParams.toString()}`;
   
   try {
-    console.log('🔍 Fetching marketplace data from:', url);
+    //('🔍 Fetching marketplace data from:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -87,11 +87,11 @@ export async function fetchMarketplaceListings(filters: MarketplaceFilters = {})
       throw new Error(data.error || 'Failed to fetch marketplace data');
     }
 
-    console.log(`✅ Fetched ${data.data.length} marketplace listings`);
+    //(`✅ Fetched ${data.data.length} marketplace listings`);
     return data;
 
   } catch (error) {
-    console.error('❌ Error fetching marketplace listings:', error);
+    //('❌ Error fetching marketplace listings:', error);
     throw error;
   }
 }
@@ -99,7 +99,7 @@ export async function fetchMarketplaceListings(filters: MarketplaceFilters = {})
 // New function to fetch detailed NFT/Collection
 export async function fetchNFTDetails(id: string): Promise<DetailedNFTResponse> {
   try {
-    console.log('🔍 Fetching NFT details for ID:', id);
+    //('🔍 Fetching NFT details for ID:', id);
     
     const response = await fetch(`/api/marketplace/${id}`, {
       method: 'GET',
@@ -122,11 +122,11 @@ export async function fetchNFTDetails(id: string): Promise<DetailedNFTResponse> 
       throw new Error(data.error || 'Failed to fetch NFT details');
     }
 
-    console.log(`✅ Fetched NFT details for ${id}`);
+    //(`✅ Fetched NFT details for ${id}`);
     return data;
 
   } catch (error) {
-    console.error('❌ Error fetching NFT details:', error);
+    //('❌ Error fetching NFT details:', error);
     throw error;
   }
 }
@@ -142,7 +142,7 @@ export async function getCollections(): Promise<string[]> {
     
     return [];
   } catch (error) {
-    console.error('❌ Error fetching collections:', error);
+    //('❌ Error fetching collections:', error);
     return [];
   }
 }

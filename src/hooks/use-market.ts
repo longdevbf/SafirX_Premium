@@ -21,13 +21,13 @@ export function useNFTMarketplace() {
         args: [nftContract, tokenId, price],
       });
     
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -41,13 +41,13 @@ export function useNFTMarketplace() {
         args: [nftContract, tokenIds, bundlePrice, collectionName],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -61,13 +61,13 @@ export function useNFTMarketplace() {
         args: [nftContract, tokenIds, prices, collectionName],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -81,13 +81,13 @@ export function useNFTMarketplace() {
         args: [nftContract, tokenIds, pricePerItem, collectionName],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -103,13 +103,13 @@ export function useNFTMarketplace() {
         value: BigInt(value),
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -124,13 +124,13 @@ export function useNFTMarketplace() {
         value: BigInt(value),
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -145,13 +145,13 @@ export function useNFTMarketplace() {
         value: BigInt(value),
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -166,13 +166,13 @@ export function useNFTMarketplace() {
         args: [listingId],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -186,13 +186,13 @@ export function useNFTMarketplace() {
         args: [collectionId],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -206,13 +206,13 @@ export function useNFTMarketplace() {
         args: [id],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -227,13 +227,13 @@ export function useNFTMarketplace() {
         args: [listingId, newPrice],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -247,13 +247,13 @@ export function useNFTMarketplace() {
         args: [collectionId, newBundlePrice],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };

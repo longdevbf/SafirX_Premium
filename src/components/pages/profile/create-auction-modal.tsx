@@ -379,7 +379,7 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
       }
 
     } catch (error: any) {
-      console.error("Error creating auction:", error)
+    //  //("Error creating auction:", error)
       setError(error.message || "Failed to create auction")
     } finally {
       setIsLoading(false)

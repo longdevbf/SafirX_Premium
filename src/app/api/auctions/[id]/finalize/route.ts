@@ -77,7 +77,7 @@ export async function POST(
     }
 
   } catch (error) {
-    console.error('❌ Error finalizing auction:', error)
+   // //('❌ Error finalizing auction:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to finalize auction' },
       { status: 500 }

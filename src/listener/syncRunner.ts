@@ -6,19 +6,19 @@ async function runSyncServiceInBackground() {
         await runMigration();    
         await startSyncService();
         process.on('SIGINT', () => {
-            console.log('\n🛑 Gracefully shutting down...');
+            //('\n🛑 Gracefully shutting down...');
             process.exit(0);
         });
         setInterval(() => {
         }, 60000); 
     } catch (error) {
-        console.error('❌ Failed to start sync service runner:', error);
+        //('❌ Failed to start sync service runner:', error);
         process.exit(1);
     }
 }
 
 if (require.main === module) {
-    runSyncServiceInBackground().catch(console.error);
+    runSyncServiceInBackground().catch();
 }
 
 export { runSyncServiceInBackground };

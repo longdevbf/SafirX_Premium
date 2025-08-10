@@ -199,7 +199,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ addres
       showTransactionSuccess("profile-update", "Profile updated successfully!", false);
 
     } catch (error) {
-      console.error("Error updating profile:", error);
+   //   //("Error updating profile:", error);
       alert("Failed to update profile")
     }
   }

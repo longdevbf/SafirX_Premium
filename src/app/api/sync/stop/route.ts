@@ -11,7 +11,7 @@ export async function POST() {
             status: getSyncServiceStatus()
         });
     } catch (error) {
-        console.error('Error stopping sync service:', error);
+     //   //('Error stopping sync service:', error);
         return NextResponse.json({ 
             success: false, 
             error: 'Failed to stop sync service',

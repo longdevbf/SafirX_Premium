@@ -320,7 +320,7 @@ export default function CollectionMint() {
       }
 
     } catch (err) {
-      console.error('Minting error:', err)
+   //   //('Minting error:', err)
       setError(err instanceof Error ? err.message : "Failed to mint collection")
     } finally {
       setIsMinting(false)

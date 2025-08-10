@@ -187,8 +187,8 @@ export default function CreatePage() {
 
         if (!response.ok) {
           const errorData = await response.json()
-          console.error('Upload failed for:', fileItem.file.name, errorData)
-          throw new Error(errorData.error || 'Upload failed')
+     //     //('Upload failed for:', fileItem.file.name, errorData)
+    //      throw new Error(errorData.error || 'Upload failed')
         }
 
         const result = await response.json()// Update file status
@@ -211,7 +211,7 @@ export default function CreatePage() {
       return ipfsUrls
 
     } catch (error: any) {
-      console.error('Upload error:', error)
+   //   //('Upload error:', error)
       setError(error.message || 'Failed to upload files to IPFS')
       
       // Reset uploading status for failed files
@@ -335,7 +335,7 @@ export default function CreatePage() {
       setIsSensitive(false)
 
     } catch (error: any) {
-      console.error("Minting error:", error)
+ //    //("Minting error:", error)
       setError(error.message || "Failed to mint NFT collection")
     } finally {
       setIsMinting(false)

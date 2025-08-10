@@ -80,7 +80,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('❌ Error fetching NFT details:', error);
+   // //('❌ Error fetching NFT details:', error);
     return NextResponse.json(
       { 
         success: false, 

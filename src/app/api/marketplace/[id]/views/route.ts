@@ -38,7 +38,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error incrementing views:', error);
+  //  //('Error incrementing views:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

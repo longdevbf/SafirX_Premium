@@ -307,7 +307,7 @@ export default function AuctionDetailPage() {
       
       return BigInt(0)
     } catch (error) {
-      console.error('Error getting reserve price:', error)
+   //   //('Error getting reserve price:', error)
       return BigInt(0)
     }
   }
@@ -340,7 +340,7 @@ export default function AuctionDetailPage() {
       
       return highestBid > startingPrice ? highestBid - startingPrice : BigInt(0)
     } catch (error) {
-      console.error('Error calculating remaining amount:', error)
+   //   //('Error calculating remaining amount:', error)
       return BigInt(0)
     }
   }
@@ -357,7 +357,7 @@ export default function AuctionDetailPage() {
              winnerAddress !== '0x0000000000000000000000000000000000000000' &&
              winnerAddress.toLowerCase() === address.toLowerCase()
     } catch (error) {
-      console.error('Error checking highest bidder:', error)
+   //   //('Error checking highest bidder:', error)
       return false
     }
   }
@@ -379,7 +379,7 @@ export default function AuctionDetailPage() {
       setContractAuction(data)
       setContractDataFetched(true)
     } catch (error) {
-      console.error('❌ Error fetching contract auction data:', error)
+    //  //('❌ Error fetching contract auction data:', error)
     } finally {
       setLoadingContractData(false)
     }
@@ -397,7 +397,7 @@ export default function AuctionDetailPage() {
       setBidHistoryFetched(true)
     } catch (error) {
       setBidError(error instanceof Error ? error.message : 'Failed to fetch bid history')
-      console.error('❌ Fetch bid history error:', error)
+   //   //('❌ Fetch bid history error:', error)
     } finally {
       setLoadingBids(false)
     }
@@ -428,7 +428,7 @@ export default function AuctionDetailPage() {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch auction details')
-        console.error('❌ Error:', err)
+   //     //('❌ Error:', err)
       } finally {
         setLoading(false)
       }
@@ -526,7 +526,7 @@ export default function AuctionDetailPage() {
         setRelatedAuctions(related)
       }
     } catch (error) {
-      console.error('Error fetching related auctions:', error)
+//      //('Error fetching related auctions:', error)
     } finally {
       setLoadingRelated(false)
     }
@@ -581,7 +581,7 @@ export default function AuctionDetailPage() {
         toast.error('Transaction failed', { id: 'place-bid' })
       }
     } catch (error: any) {
-      console.error('❌ Place bid error:', error)
+//      //('❌ Place bid error:', error)
       toast.error(error.message || 'Failed to place bid', { id: 'place-bid' })
     } finally {
       setIsPlacingBid(false)
@@ -611,7 +611,7 @@ export default function AuctionDetailPage() {
         toast.error('Transaction failed', { id: 'cancel-auction' })
       }
     } catch (error: any) {
-      console.error('❌ Cancel auction error:', error)
+    //  //('❌ Cancel auction error:', error)
       toast.error(error.message || 'Failed to cancel auction', { id: 'cancel-auction' })
     } finally {
       setIsCanceling(false)
@@ -641,7 +641,7 @@ export default function AuctionDetailPage() {
         toast.error('Transaction failed', { id: 'finalize-auction' })
       }
     } catch (error: any) {
-      console.error('❌ Finalize auction error:', error)
+      ////('❌ Finalize auction error:', error)
       toast.error(error.message || 'Failed to finalize auction', { id: 'finalize-auction' })
     } finally {
       setIsFinalizing(false)
@@ -685,7 +685,7 @@ export default function AuctionDetailPage() {
           const value = contractAuction[i]
           if (typeof value === 'bigint' && value > 0 && value < highestBidValue) {
             startingPriceValue = value
-            console.log(`🔍 Using startingPrice at index ${i}:`, value.toString())
+            //(`🔍 Using startingPrice at index ${i}:`, value.toString())
             break
           }
         }
@@ -704,7 +704,7 @@ export default function AuctionDetailPage() {
           startingPrice = BigInt(startingPriceValue)
         }
       } catch (parseError) {
-        console.error('Error parsing bid amounts:', parseError)
+    //    //('Error parsing bid amounts:', parseError)
         toast.error('Error reading auction data', { id: 'claim-nft' })
         return
       }
@@ -728,7 +728,7 @@ export default function AuctionDetailPage() {
         toast.error('Transaction failed', { id: 'claim-nft' })
       }
     } catch (error: any) {
-      console.error('❌ Claim NFT error:', error)
+   //   //('❌ Claim NFT error:', error)
       toast.error(error.message || 'Failed to claim NFT', { id: 'claim-nft' })
     } finally {
       setIsClaimingNFT(false)
@@ -769,7 +769,7 @@ export default function AuctionDetailPage() {
         toast.error('Transaction failed', { id: 'reclaim-nft' })
       }
     } catch (error: any) {
-      console.error('❌ Reclaim NFT error:', error)
+    //  //('❌ Reclaim NFT error:', error)
       toast.error(error.message || 'Failed to reclaim NFT', { id: 'reclaim-nft' })
     } finally {
       setIsReclaimingNFT(false)

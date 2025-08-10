@@ -91,7 +91,7 @@ export default function EditProfileModal({
       reader.readAsDataURL(file)
 
     } catch (err) {
-      console.error('Error reading file:', err)
+   //   //('Error reading file:', err)
       alert('Failed to upload image')
       setIsUploading(prev => ({ ...prev, [type]: false }))
     }
@@ -201,7 +201,7 @@ export default function EditProfileModal({
       handleCropCancel()
       
     } catch (error) {
-      console.error('Error cropping image:', error)
+    //  //('Error cropping image:', error)
     }
   }, [completedCrop, cropType, editForm, setEditForm, getCroppedImg])
 

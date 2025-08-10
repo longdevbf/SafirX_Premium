@@ -21,13 +21,13 @@ export function useNFTMint() {
         args: [to, metadataURI],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -42,13 +42,13 @@ export function useNFTMint() {
         args: [metadataURI],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -63,13 +63,13 @@ export function useNFTMint() {
         args: [to, metadataURIs],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -84,13 +84,13 @@ export function useNFTMint() {
         args: [metadataURIs],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };
@@ -105,13 +105,13 @@ export function useNFTMint() {
         args: [to, quantity, baseURI],
       });
       
-      console.log("Txhash:", hash);
+      //("Txhash:", hash);
       const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-      console.log("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
+      //("Trạng thái:", receipt?.status === "success" ? "Thành công" : "Thất bại");
       
       return { hash, receipt };
     } catch (error: any) {
-      console.error("Lỗi:", error.message);
+      //("Lỗi:", error.message);
       throw error;
     }
   };

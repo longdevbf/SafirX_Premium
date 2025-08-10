@@ -144,7 +144,7 @@ export default function SingleNFTMint() {
       return result.ipfsUrl
 
     } catch (error: any) {
-      console.error('Upload error:', error)
+   //   //('Upload error:', error)
       throw error
     } finally {
       setIsUploading(false)
@@ -230,7 +230,7 @@ export default function SingleNFTMint() {
       setAttributes([])
 
     } catch (error: any) {
-      console.error("Minting error:", error)
+     // //("Minting error:", error)
       setError(error.message || "Failed to mint NFT")
     } finally {
       setIsMinting(false)

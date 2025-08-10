@@ -78,11 +78,11 @@ export async function POST(
         // Extend auction by 10 minutes
         newEndTime = auction.end_time + TEN_MINUTES
         
-        console.log(`🕒 Anti-sniping activated for auction ${auctionId}:`)
-        console.log(`   - Original end time: ${auction.end_time}`)
-        console.log(`   - Time left: ${timeUntilEnd} seconds`)
-        console.log(`   - New end time: ${newEndTime}`)
-        console.log(`   - Extended by: ${newEndTime - auction.end_time} seconds`)
+        //(`🕒 Anti-sniping activated for auction ${auctionId}:`)
+        //(`   - Original end time: ${auction.end_time}`)
+        //(`   - Time left: ${timeUntilEnd} seconds`)
+        //(`   - New end time: ${newEndTime}`)
+        //(`   - Extended by: ${newEndTime - auction.end_time} seconds`)
       }
 
       // Update auction with incremented total_bid and potentially new end_time
@@ -133,7 +133,7 @@ export async function POST(
     }
 
   } catch (error) {
-    console.error('❌ Error processing bid:', error)
+//    //('❌ Error processing bid:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to process bid',

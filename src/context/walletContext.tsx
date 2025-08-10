@@ -32,10 +32,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
           }
         } else {
-          console.error('Error creating user:', data.error);
+       //   //('Error creating user:', data.error);
         }
       } catch (error) {
-        console.error('Failed to create user:', error);
+//        //('Failed to create user:', error);
       }
     };
 
