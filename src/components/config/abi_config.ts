@@ -4,7 +4,7 @@ import * as mintNFT from '../../../contract/safirX_contract/artifacts/contracts/
 
 export const ABI_CONFIG = {
   marketPlace: {
-    address: '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932',
+    address: '0xa26fCFf300f2Dc808FAc706EF09Ef2c4aA58A206',
     abi: NFTMarketPlace.abi,
   },
   sealedBidAuction: {

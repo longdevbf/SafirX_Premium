@@ -3,9 +3,9 @@ import { ethers } from 'ethers';
 import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
 import { performIncrementalSync } from './syncService';
 import axios from 'axios';
-
+import {ABI_CONFIG} from '@/components/config/abi_config'
 // Địa chỉ contract
-const marketAddress = '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932';
+const marketAddress = ABI_CONFIG.marketPlace.address;
 
 // Kết nối với Oasis Sapphire Testnet qua WebSocket
 const provider = new ethers.WebSocketProvider('wss://testnet.sapphire.oasis.io/ws');

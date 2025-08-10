@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
+const app = express();
+const server = createServer(app);
+
 setInterval(async () => {
     try {
-        // Use Railway domain if available, fallback to localhost
         const baseUrl = process.env.RAILWAY_STATIC_URL || `http://localhost:${PORT}`;
         const response = await fetch(`${baseUrl}/ping`);
         const data = await response.json();
@@ -11,11 +13,6 @@ setInterval(async () => {
         console.log('⚠️ Self-ping failed (normal for Railway):', (error as Error)?.message || 'Unknown error');
     }
 }, 10 * 60 * 1000); 
-
-const app = express();
-const server = createServer(app);
-
-// Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
     res.json({ 
         status: 'alive', 
@@ -59,6 +56,4 @@ setInterval(async () => {
         console.error('❌ Self-ping failed:', error);
     }
 }, 5 * 60 * 1000); // Ping mỗi 5 phút
-
-// Export server cho listener sử dụng
 export { server, app };

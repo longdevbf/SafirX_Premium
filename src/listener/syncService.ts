@@ -4,17 +4,12 @@ import { pool } from '../lib/db';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
 import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
 import axios from 'axios';
-
-// Contract addresses
-const AUCTION_ADDRESS = '0x5f3e20d0F39b02CC51EE449ce733d8C3b4FAAb1A';
-const MARKET_ADDRESS = '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932';
-
-// RPC provider for data fetching
+import {ABI_CONFIG} from '@/components/config/abi_config'
+const AUCTION_ADDRESS = ABI_CONFIG.sealedBidAuction.address;
+const MARKET_ADDRESS = ABI_CONFIG.marketPlace.address;
 const provider = new ethers.JsonRpcProvider('https://testnet.sapphire.oasis.io');
 const auctionContract = new ethers.Contract(AUCTION_ADDRESS, SealedBidAuction.abi, provider);
 const marketContract = new ethers.Contract(MARKET_ADDRESS, NFTMarketPlace.abi, provider);
-
-// Fetch NFT metadata
 async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
     const url = `https://testnet.nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
     try {

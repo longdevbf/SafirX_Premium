@@ -944,8 +944,8 @@
       ]
     },
     "E:\\SafirX_Premium\\contract\\safirX_contract\\contracts\\marketPlace.sol": {
-      "lastModificationDate": 1754726914187,
-      "contentHash": "99483334c1bd06048744db38c7aede84",
+      "lastModificationDate": 1754819036884,
+      "contentHash": "e49317c7f350a83d56199817849cc118",
       "sourceName": "contracts/marketPlace.sol",
       "solcConfig": {
         "version": "0.8.28",

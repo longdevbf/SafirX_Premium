@@ -3,18 +3,13 @@ import { ethers } from 'ethers';
 import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
 import { performFullSync, performIncrementalSync } from './syncService';
 import axios from 'axios';
+import {ABI_CONFIG} from '@/components/config/abi_config'
+import { pool } from '../lib/db';
 
-// Địa chỉ contract
-const auctionAddress = '0x5f3e20d0F39b02CC51EE449ce733d8C3b4FAAb1A';
-
-// Kết nối với Oasis Sapphire Testnet qua WebSocket
+const auctionAddress = ABI_CONFIG.sealedBidAuction.address;
 const provider = new ethers.WebSocketProvider('wss://testnet.sapphire.oasis.io/ws');
 const auctionContract = new ethers.Contract(auctionAddress, SealedBidAuction.abi, provider);
 
-// Kết nối database từ file db.ts
-import { pool } from '../lib/db';
-
-// Hàm fetch metadata NFT
 async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
     const url = `https://testnet.nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
     try {
@@ -62,14 +57,11 @@ async function saveToDatabase(data: any) {
 }
 
 
-
-// Hàm cập nhật trạng thái đấu giá và reclaim_nft - THÊM MỚI
 async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string) {
     const client = await pool.connect();
     try {
-        // Tính timestamp hiện tại + 3 ngày (3 * 24 * 60 * 60 = 259200 giây)
-        const currentTimestamp = Math.floor(Date.now() / 1000); // Timestamp hiện tại
-        const reclaimTimestamp = currentTimestamp + (3 * 24 * 60 * 60); // Cộng thêm 3 ngày
+        const currentTimestamp = Math.floor(Date.now() / 1000); 
+        const reclaimTimestamp = currentTimestamp + (3 * 24 * 60 * 60); 
         
         await client.query(
             `UPDATE auctions SET status = $1, reclaim_nft = $2 WHERE auction_id = $3 AND auction_type = $4`,
@@ -83,8 +75,6 @@ async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: st
         client.release();
     }
 }
-
-// Hàm cập nhật trạng thái claim/reclaim
 async function updateClaimStatus(auctionId: string, auctionType: string, field: string, value: boolean) {
     const client = await pool.connect();
     try {
@@ -98,8 +88,6 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
         client.release();
     }
 }
-
-// Hàm cập nhật total_bid với anti-sniping logic
 async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: string) {
     const client = await pool.connect();
     try {
@@ -115,9 +103,7 @@ async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: 
             const auction = auctionResult.rows[0];
             const currentTime = Math.floor(Date.now() / 1000);
             const timeUntilEnd = auction.end_time - currentTime;
-            const TEN_MINUTES = 10 * 60; // 10 minutes in seconds
-
-            // 🕒 Anti-sniping: Gia hạn 10 phút nếu bid trong 10 phút cuối
+            const TEN_MINUTES = 10 * 60; 
             if (timeUntilEnd > 0 && timeUntilEnd <= TEN_MINUTES) {
                 const newEndTime = currentTime + TEN_MINUTES;
                 
@@ -130,7 +116,6 @@ async function incrementTotalBidWithAntiSniping(auctionId: string, auctionType: 
                 
                 console.log(`🕒 Anti-sniping: Auction ${auctionId} (${auctionType}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
             } else {
-                // Normal increment without extension
                 await client.query(
                     `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
                     [auctionId, auctionType]
@@ -166,7 +151,6 @@ async function main() {
     console.log('🚀 Đang khởi động auction listener...');
     console.log('📡 Keep-alive server đã được khởi động để giữ process hoạt động');
     
-    // Perform initial full sync to catch up any missed events
     console.log('🔄 Performing initial data synchronization...');
     try {
         await performFullSync();
@@ -177,8 +161,6 @@ async function main() {
     }
     
     console.log('🎯 Đang lắng nghe các sự kiện từ auction...');
-
-    // Set up incremental sync every 5 minutes
     setInterval(async () => {
         try {
             console.log('🔄 Running incremental sync...');
@@ -186,18 +168,16 @@ async function main() {
         } catch (error) {
             console.error('❌ Incremental sync failed:', error);
         }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000); 
 
-    // Sự kiện AuctionCreated
+
     auctionContract.on('AuctionCreated', async (auctionId, seller, nftContract, auctionType, tokenId, tokenIds, startingPrice, endTime, title) => {
         const auctionIdStr = auctionId.toString();
         const tokenIdStr = tokenId.toString();
         const tokenIdsStr = tokenIds.map((id: { toString: () => any; }) => id.toString());
-        const startingPriceStr = ethers.formatEther(startingPrice); // Convert wei to Ether
-        const endTimeNum = Number(endTime); // Convert BigInt to number
+        const startingPriceStr = ethers.formatEther(startingPrice); 
+        const endTimeNum = Number(endTime); 
         console.log('AuctionCreated:', { auctionIdStr, seller, nftContract, auctionType, tokenIdStr, tokenIdsStr, startingPriceStr, endTime: endTimeNum, title });
-
-        // Fetch metadata
         const metadataPromises = tokenIdsStr.length > 0 ? tokenIdsStr.map((tokenId: string) => fetchNFTMetadata(nftContract, tokenId)) : [fetchNFTMetadata(nftContract, tokenIdStr)];
         const metadataResults = await Promise.all(metadataPromises);
 
@@ -216,10 +196,10 @@ async function main() {
             auction_id: auctionIdStr,
             seller_address: seller,
             nft_contract_address: nftContract,
-            auction_type: Number(auctionType) === 0 ? 'single' : 'bundle', // Convert BigInt to number
+            auction_type: Number(auctionType) === 0 ? 'single' : 'bundle',
             token_ids: tokenIdsStr.length > 0 ? tokenIdsStr : [tokenIdStr],
             starting_price: startingPriceStr,
-            end_time: endTimeNum, // Store as Unix timestamp
+            end_time: endTimeNum, 
             title: title || '',
             collection_name: representativeMetadata.token?.name || '',
             image_url: representativeMetadata.image || '',
@@ -233,22 +213,18 @@ async function main() {
         await saveToDatabase(data);
     });
 
-    // Sự kiện BidPlaced
+
     auctionContract.on('BidPlaced', async (auctionId, bidder, timestamp) => {
         const auctionIdStr = auctionId.toString();
-       // const amountStr = ethers.formatEther(amount); // Convert wei to Ether
-        const timestampNum = Number(timestamp); // Convert BigInt to number
+        const timestampNum = Number(timestamp); 
         console.log('BidPlaced:', { auctionIdStr, bidder, timestamp: timestampNum });
-
-        // Cập nhật total_bid với anti-sniping logic cho cả single và bundle
         await incrementTotalBidWithAntiSniping(auctionIdStr, 'single');
         await incrementTotalBidWithAntiSniping(auctionIdStr, 'bundle');
     });
 
-    // Sự kiện AuctionFinalized - CẬP NHẬT
     auctionContract.on('AuctionFinalized', async (auctionId, winner, finalPrice, platformFeeAmount, sellerAmount) => {
         const auctionIdStr = auctionId.toString();
-        const finalPriceStr = ethers.formatEther(finalPrice); // Convert wei to Ether
+        const finalPriceStr = ethers.formatEther(finalPrice); 
         console.log('AuctionFinalized:', { 
             auctionIdStr, 
             winner, 
@@ -256,8 +232,6 @@ async function main() {
             platformFeeAmount: ethers.formatEther(platformFeeAmount), 
             sellerAmount: ethers.formatEther(sellerAmount) 
         });
-
-        // Sử dụng hàm mới để cập nhật cả status và reclaim_nft
         await updateAuctionStatusWithReclaim(auctionIdStr, 'single', 'finalized');
         await updateAuctionStatusWithReclaim(auctionIdStr, 'bundle', 'finalized');
     });
@@ -274,7 +248,7 @@ async function main() {
     // Sự kiện NFTClaimed
     auctionContract.on('NFTClaimed', async (auctionId, winner, amountPaid) => {
         const auctionIdStr = auctionId.toString();
-        const amountPaidStr = ethers.formatEther(amountPaid); // Convert wei to Ether
+        const amountPaidStr = ethers.formatEther(amountPaid); 
         console.log('NFTClaimed:', { auctionIdStr, winner, amountPaidStr });
 
         await updateClaimStatus(auctionIdStr, 'single', 'nft_claimed', true);
@@ -290,16 +264,16 @@ async function main() {
         await updateClaimStatus(auctionIdStr, 'bundle', 'nft_reclaimed', true);
     });
 
-    console.log('✅ Auction listener setup completed - listening for events...');
+    console.log('Auction listener setup completed - listening for events...');
     
     // Keep process alive gracefully
     process.on('SIGTERM', () => {
-        console.log('🛑 Auction listener received SIGTERM, shutting down...');
+        console.log(' Auction listener received SIGTERM, shutting down...');
         process.exit(0);
     });
     
     process.on('SIGINT', () => {
-        console.log('🛑 Auction listener received SIGINT, shutting down...');
+        console.log('Auction listener received SIGINT, shutting down...');
         process.exit(0);
     });
 }

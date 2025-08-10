@@ -32,10 +32,5 @@ main()
     process.exit(1);
   });
 
-/*
-The address contract deployed below:
-- SealedBidAuction:0xC6b5b863FaaEf7fb0e41889D237a910EA81D15E9
-- NFTMarket:0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932
-- NFT:0x1fE3d65eBDB75272bD1dfaA4bD21e523Dd84ccF3
-*/
-//0x5f3e20d0F39b02CC51EE449ce733d8C3b4FAAb1A
+
+//npx hardhat verify --network sapphireTestnet 0xa26fCFf300f2Dc808FAc706EF09Ef2c4aA58A206 0x73100Ae36Bd127C71139403F4C965Eab981EA329  

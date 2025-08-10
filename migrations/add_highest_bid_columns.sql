@@ -1,6 +1,4 @@
--- Migration to add highest_bid and highest_bidder columns to auctions table
 
--- Add columns if they don't exist
 DO $$ 
 BEGIN
     -- Add highest_bid column

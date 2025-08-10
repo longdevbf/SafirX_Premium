@@ -23,131 +23,23 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace NFTMarket {
-  export type CollectionListingStruct = {
-    collectionId: BigNumberish;
-    nftContract: AddressLike;
-    seller: AddressLike;
-    tokenIds: BigNumberish[];
-    prices: BigNumberish[];
-    bundlePrice: BigNumberish;
-    totalItems: BigNumberish;
-    soldItems: BigNumberish;
-    isActive: boolean;
-    isBundleType: boolean;
-    createdAt: BigNumberish;
-    collectionName: string;
-    listingType: BigNumberish;
-  };
-
-  export type CollectionListingStructOutput = [
-    collectionId: bigint,
-    nftContract: string,
-    seller: string,
-    tokenIds: bigint[],
-    prices: bigint[],
-    bundlePrice: bigint,
-    totalItems: bigint,
-    soldItems: bigint,
-    isActive: boolean,
-    isBundleType: boolean,
-    createdAt: bigint,
-    collectionName: string,
-    listingType: bigint
-  ] & {
-    collectionId: bigint;
-    nftContract: string;
-    seller: string;
-    tokenIds: bigint[];
-    prices: bigint[];
-    bundlePrice: bigint;
-    totalItems: bigint;
-    soldItems: bigint;
-    isActive: boolean;
-    isBundleType: boolean;
-    createdAt: bigint;
-    collectionName: string;
-    listingType: bigint;
-  };
-
-  export type ListingStruct = {
-    tokenId: BigNumberish;
-    nftContract: AddressLike;
-    seller: AddressLike;
-    price: BigNumberish;
-    isActive: boolean;
-    createdAt: BigNumberish;
-    collectionId: BigNumberish;
-  };
-
-  export type ListingStructOutput = [
-    tokenId: bigint,
-    nftContract: string,
-    seller: string,
-    price: bigint,
-    isActive: boolean,
-    createdAt: bigint,
-    collectionId: bigint
-  ] & {
-    tokenId: bigint;
-    nftContract: string;
-    seller: string;
-    price: bigint;
-    isActive: boolean;
-    createdAt: bigint;
-    collectionId: bigint;
-  };
-}
-
 export interface NFTMarketInterface extends Interface {
   getFunction(
     nameOrSignature:
-      | "MAX_COLLECTION_SIZE"
-      | "MAX_FEE"
       | "buyCollectionBundle"
       | "buyNFT"
-      | "buyNFTUnified"
       | "cancelCollection"
       | "cancelListing"
-      | "cancelListingUnified"
       | "collectionListings"
-      | "getActiveCollections"
-      | "getActiveListings"
-      | "getActiveListingsPaginated"
-      | "getAllAvailableNFTs"
-      | "getBundleCollections"
-      | "getCollection"
-      | "getCollectionItems"
-      | "getFeesBalance"
-      | "getIndividualCollections"
-      | "getListing"
-      | "getListingInfo"
-      | "getMarketplaceStats"
-      | "getRealCollectionId"
-      | "getSellerCollections"
-      | "getSellerListings"
-      | "getTotalCollections"
-      | "getTotalListings"
-      | "isBundleCollectionId"
-      | "isTokenListed"
       | "listCollectionBundle"
-      | "listCollectionIndividual"
-      | "listCollectionSamePrice"
       | "listSingleNFT"
       | "listings"
-      | "marketplaceFee"
       | "owner"
-      | "paused"
       | "renounceOwnership"
-      | "sellerCollections"
-      | "sellerListings"
-      | "setMarketplaceFee"
-      | "setPaused"
       | "tokenToListingId"
       | "transferOwnership"
       | "updateBundlePrice"
       | "updatePrice"
-      | "withdrawFees"
   ): FunctionFragment;
 
   getEvent(
@@ -156,8 +48,6 @@ export interface NFTMarketInterface extends Interface {
       | "CollectionBundleListed"
       | "CollectionBundleSold"
       | "CollectionCancelled"
-      | "CollectionIndividualListed"
-      | "CollectionItemSold"
       | "ListingCancelled"
       | "NFTListed"
       | "NFTSold"
@@ -166,20 +56,11 @@ export interface NFTMarketInterface extends Interface {
   ): EventFragment;
 
   encodeFunctionData(
-    functionFragment: "MAX_COLLECTION_SIZE",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "MAX_FEE", values?: undefined): string;
-  encodeFunctionData(
     functionFragment: "buyCollectionBundle",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "buyNFT",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "buyNFTUnified",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -191,99 +72,11 @@ export interface NFTMarketInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "cancelListingUnified",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "collectionListings",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getActiveCollections",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getActiveListings",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getActiveListingsPaginated",
-    values: [BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getAllAvailableNFTs",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getBundleCollections",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getCollection",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getCollectionItems",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getFeesBalance",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getIndividualCollections",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getListing",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getListingInfo",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getMarketplaceStats",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getRealCollectionId",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getSellerCollections",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getSellerListings",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getTotalCollections",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getTotalListings",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isBundleCollectionId",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isTokenListed",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "listCollectionBundle",
-    values: [AddressLike, BigNumberish[], BigNumberish, string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "listCollectionIndividual",
-    values: [AddressLike, BigNumberish[], BigNumberish[], string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "listCollectionSamePrice",
     values: [AddressLike, BigNumberish[], BigNumberish, string]
   ): string;
   encodeFunctionData(
@@ -294,29 +87,11 @@ export interface NFTMarketInterface extends Interface {
     functionFragment: "listings",
     values: [BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "marketplaceFee",
-    values?: undefined
-  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
-  encodeFunctionData(
-    functionFragment: "sellerCollections",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "sellerListings",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setMarketplaceFee",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(functionFragment: "setPaused", values: [boolean]): string;
   encodeFunctionData(
     functionFragment: "tokenToListingId",
     values: [AddressLike, BigNumberish]
@@ -333,25 +108,12 @@ export interface NFTMarketInterface extends Interface {
     functionFragment: "updatePrice",
     values: [BigNumberish, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "withdrawFees",
-    values?: undefined
-  ): string;
 
-  decodeFunctionResult(
-    functionFragment: "MAX_COLLECTION_SIZE",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "MAX_FEE", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "buyCollectionBundle",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "buyNFT", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "buyNFTUnified",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "cancelCollection",
     data: BytesLike
@@ -361,84 +123,7 @@ export interface NFTMarketInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "cancelListingUnified",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "collectionListings",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getActiveCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getActiveListings",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getActiveListingsPaginated",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getAllAvailableNFTs",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getBundleCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getCollection",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getCollectionItems",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getFeesBalance",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getIndividualCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "getListing", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "getListingInfo",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getMarketplaceStats",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getRealCollectionId",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getSellerCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getSellerListings",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getTotalCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getTotalListings",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "isBundleCollectionId",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "isTokenListed",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -446,41 +131,15 @@ export interface NFTMarketInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "listCollectionIndividual",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "listCollectionSamePrice",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "listSingleNFT",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "listings", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "marketplaceFee",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "sellerCollections",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "sellerListings",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setMarketplaceFee",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "setPaused", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "tokenToListingId",
     data: BytesLike
@@ -495,10 +154,6 @@ export interface NFTMarketInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "updatePrice",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "withdrawFees",
     data: BytesLike
   ): Result;
 }
@@ -599,68 +254,6 @@ export namespace CollectionCancelledEvent {
     collectionId: bigint;
     seller: string;
     listingType: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace CollectionIndividualListedEvent {
-  export type InputTuple = [
-    collectionId: BigNumberish,
-    nftContract: AddressLike,
-    seller: AddressLike,
-    tokenIds: BigNumberish[],
-    prices: BigNumberish[],
-    collectionName: string
-  ];
-  export type OutputTuple = [
-    collectionId: bigint,
-    nftContract: string,
-    seller: string,
-    tokenIds: bigint[],
-    prices: bigint[],
-    collectionName: string
-  ];
-  export interface OutputObject {
-    collectionId: bigint;
-    nftContract: string;
-    seller: string;
-    tokenIds: bigint[];
-    prices: bigint[];
-    collectionName: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace CollectionItemSoldEvent {
-  export type InputTuple = [
-    collectionId: BigNumberish,
-    listingId: BigNumberish,
-    seller: AddressLike,
-    buyer: AddressLike,
-    tokenId: BigNumberish,
-    price: BigNumberish
-  ];
-  export type OutputTuple = [
-    collectionId: bigint,
-    listingId: bigint,
-    seller: string,
-    buyer: string,
-    tokenId: bigint,
-    price: bigint
-  ];
-  export interface OutputObject {
-    collectionId: bigint;
-    listingId: bigint;
-    seller: string;
-    buyer: string;
-    tokenId: bigint;
-    price: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -827,10 +420,6 @@ export interface NFTMarket extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  MAX_COLLECTION_SIZE: TypedContractMethod<[], [bigint], "view">;
-
-  MAX_FEE: TypedContractMethod<[], [bigint], "view">;
-
   buyCollectionBundle: TypedContractMethod<
     [collectionId: BigNumberish],
     [void],
@@ -838,8 +427,6 @@ export interface NFTMarket extends BaseContract {
   >;
 
   buyNFT: TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
-
-  buyNFTUnified: TypedContractMethod<[id: BigNumberish], [void], "payable">;
 
   cancelCollection: TypedContractMethod<
     [collectionId: BigNumberish],
@@ -853,142 +440,19 @@ export interface NFTMarket extends BaseContract {
     "nonpayable"
   >;
 
-  cancelListingUnified: TypedContractMethod<
-    [id: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
   collectionListings: TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [
-        bigint,
-        string,
-        string,
-        bigint,
-        bigint,
-        bigint,
-        boolean,
-        boolean,
-        bigint,
-        string,
-        bigint
-      ] & {
+      [bigint, string, string, bigint, boolean, string, bigint] & {
         collectionId: bigint;
         nftContract: string;
         seller: string;
         bundlePrice: bigint;
-        totalItems: bigint;
-        soldItems: bigint;
         isActive: boolean;
-        isBundleType: boolean;
-        createdAt: bigint;
         collectionName: string;
         listingType: bigint;
       }
     ],
-    "view"
-  >;
-
-  getActiveCollections: TypedContractMethod<[], [bigint[]], "view">;
-
-  getActiveListings: TypedContractMethod<[], [bigint[]], "view">;
-
-  getActiveListingsPaginated: TypedContractMethod<
-    [offset: BigNumberish, limit: BigNumberish],
-    [[bigint[], bigint] & { totalCount: bigint }],
-    "view"
-  >;
-
-  getAllAvailableNFTs: TypedContractMethod<[], [bigint[]], "view">;
-
-  getBundleCollections: TypedContractMethod<[], [bigint[]], "view">;
-
-  getCollection: TypedContractMethod<
-    [collectionId: BigNumberish],
-    [NFTMarket.CollectionListingStructOutput],
-    "view"
-  >;
-
-  getCollectionItems: TypedContractMethod<
-    [collectionId: BigNumberish],
-    [bigint[]],
-    "view"
-  >;
-
-  getFeesBalance: TypedContractMethod<[], [bigint], "view">;
-
-  getIndividualCollections: TypedContractMethod<[], [bigint[]], "view">;
-
-  getListing: TypedContractMethod<
-    [listingId: BigNumberish],
-    [NFTMarket.ListingStructOutput],
-    "view"
-  >;
-
-  getListingInfo: TypedContractMethod<
-    [id: BigNumberish],
-    [
-      [boolean, bigint, string, string, bigint, boolean, string, bigint[]] & {
-        isBundle: boolean;
-        tokenId: bigint;
-        nftContract: string;
-        seller: string;
-        price: bigint;
-        isActive: boolean;
-        collectionName: string;
-        tokenIds: bigint[];
-      }
-    ],
-    "view"
-  >;
-
-  getMarketplaceStats: TypedContractMethod<
-    [],
-    [
-      [bigint, bigint, bigint, bigint, bigint] & {
-        totalListings: bigint;
-        totalCollections: bigint;
-        activeListings: bigint;
-        activeBundles: bigint;
-        activeIndividualCollections: bigint;
-      }
-    ],
-    "view"
-  >;
-
-  getRealCollectionId: TypedContractMethod<
-    [specialId: BigNumberish],
-    [bigint],
-    "view"
-  >;
-
-  getSellerCollections: TypedContractMethod<
-    [seller: AddressLike],
-    [bigint[]],
-    "view"
-  >;
-
-  getSellerListings: TypedContractMethod<
-    [seller: AddressLike],
-    [bigint[]],
-    "view"
-  >;
-
-  getTotalCollections: TypedContractMethod<[], [bigint], "view">;
-
-  getTotalListings: TypedContractMethod<[], [bigint], "view">;
-
-  isBundleCollectionId: TypedContractMethod<
-    [id: BigNumberish],
-    [boolean],
-    "view"
-  >;
-
-  isTokenListed: TypedContractMethod<
-    [nftContract: AddressLike, tokenId: BigNumberish],
-    [[boolean, bigint]],
     "view"
   >;
 
@@ -997,28 +461,6 @@ export interface NFTMarket extends BaseContract {
       nftContract: AddressLike,
       tokenIds: BigNumberish[],
       bundlePrice: BigNumberish,
-      collectionName: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-
-  listCollectionIndividual: TypedContractMethod<
-    [
-      nftContract: AddressLike,
-      tokenIds: BigNumberish[],
-      prices: BigNumberish[],
-      collectionName: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-
-  listCollectionSamePrice: TypedContractMethod<
-    [
-      nftContract: AddressLike,
-      tokenIds: BigNumberish[],
-      pricePerItem: BigNumberish,
       collectionName: string
     ],
     [void],
@@ -1034,46 +476,20 @@ export interface NFTMarket extends BaseContract {
   listings: TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, string, string, bigint, boolean, bigint, bigint] & {
+      [bigint, string, string, bigint, boolean] & {
         tokenId: bigint;
         nftContract: string;
         seller: string;
         price: bigint;
         isActive: boolean;
-        createdAt: bigint;
-        collectionId: bigint;
       }
     ],
     "view"
   >;
 
-  marketplaceFee: TypedContractMethod<[], [bigint], "view">;
-
   owner: TypedContractMethod<[], [string], "view">;
 
-  paused: TypedContractMethod<[], [boolean], "view">;
-
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
-
-  sellerCollections: TypedContractMethod<
-    [arg0: AddressLike, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-
-  sellerListings: TypedContractMethod<
-    [arg0: AddressLike, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-
-  setMarketplaceFee: TypedContractMethod<
-    [newFee: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  setPaused: TypedContractMethod<[_paused: boolean], [void], "nonpayable">;
 
   tokenToListingId: TypedContractMethod<
     [arg0: AddressLike, arg1: BigNumberish],
@@ -1099,18 +515,10 @@ export interface NFTMarket extends BaseContract {
     "nonpayable"
   >;
 
-  withdrawFees: TypedContractMethod<[], [void], "nonpayable">;
-
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
-  getFunction(
-    nameOrSignature: "MAX_COLLECTION_SIZE"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "MAX_FEE"
-  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "buyCollectionBundle"
   ): TypedContractMethod<[collectionId: BigNumberish], [void], "payable">;
@@ -1118,148 +526,26 @@ export interface NFTMarket extends BaseContract {
     nameOrSignature: "buyNFT"
   ): TypedContractMethod<[listingId: BigNumberish], [void], "payable">;
   getFunction(
-    nameOrSignature: "buyNFTUnified"
-  ): TypedContractMethod<[id: BigNumberish], [void], "payable">;
-  getFunction(
     nameOrSignature: "cancelCollection"
   ): TypedContractMethod<[collectionId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "cancelListing"
   ): TypedContractMethod<[listingId: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "cancelListingUnified"
-  ): TypedContractMethod<[id: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "collectionListings"
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [
-        bigint,
-        string,
-        string,
-        bigint,
-        bigint,
-        bigint,
-        boolean,
-        boolean,
-        bigint,
-        string,
-        bigint
-      ] & {
+      [bigint, string, string, bigint, boolean, string, bigint] & {
         collectionId: bigint;
         nftContract: string;
         seller: string;
         bundlePrice: bigint;
-        totalItems: bigint;
-        soldItems: bigint;
         isActive: boolean;
-        isBundleType: boolean;
-        createdAt: bigint;
         collectionName: string;
         listingType: bigint;
       }
     ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getActiveCollections"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getActiveListings"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getActiveListingsPaginated"
-  ): TypedContractMethod<
-    [offset: BigNumberish, limit: BigNumberish],
-    [[bigint[], bigint] & { totalCount: bigint }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getAllAvailableNFTs"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getBundleCollections"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getCollection"
-  ): TypedContractMethod<
-    [collectionId: BigNumberish],
-    [NFTMarket.CollectionListingStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getCollectionItems"
-  ): TypedContractMethod<[collectionId: BigNumberish], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getFeesBalance"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getIndividualCollections"
-  ): TypedContractMethod<[], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getListing"
-  ): TypedContractMethod<
-    [listingId: BigNumberish],
-    [NFTMarket.ListingStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getListingInfo"
-  ): TypedContractMethod<
-    [id: BigNumberish],
-    [
-      [boolean, bigint, string, string, bigint, boolean, string, bigint[]] & {
-        isBundle: boolean;
-        tokenId: bigint;
-        nftContract: string;
-        seller: string;
-        price: bigint;
-        isActive: boolean;
-        collectionName: string;
-        tokenIds: bigint[];
-      }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getMarketplaceStats"
-  ): TypedContractMethod<
-    [],
-    [
-      [bigint, bigint, bigint, bigint, bigint] & {
-        totalListings: bigint;
-        totalCollections: bigint;
-        activeListings: bigint;
-        activeBundles: bigint;
-        activeIndividualCollections: bigint;
-      }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getRealCollectionId"
-  ): TypedContractMethod<[specialId: BigNumberish], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getSellerCollections"
-  ): TypedContractMethod<[seller: AddressLike], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getSellerListings"
-  ): TypedContractMethod<[seller: AddressLike], [bigint[]], "view">;
-  getFunction(
-    nameOrSignature: "getTotalCollections"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getTotalListings"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "isBundleCollectionId"
-  ): TypedContractMethod<[id: BigNumberish], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "isTokenListed"
-  ): TypedContractMethod<
-    [nftContract: AddressLike, tokenId: BigNumberish],
-    [[boolean, bigint]],
     "view"
   >;
   getFunction(
@@ -1269,30 +555,6 @@ export interface NFTMarket extends BaseContract {
       nftContract: AddressLike,
       tokenIds: BigNumberish[],
       bundlePrice: BigNumberish,
-      collectionName: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "listCollectionIndividual"
-  ): TypedContractMethod<
-    [
-      nftContract: AddressLike,
-      tokenIds: BigNumberish[],
-      prices: BigNumberish[],
-      collectionName: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "listCollectionSamePrice"
-  ): TypedContractMethod<
-    [
-      nftContract: AddressLike,
-      tokenIds: BigNumberish[],
-      pricePerItem: BigNumberish,
       collectionName: string
     ],
     [void],
@@ -1310,50 +572,22 @@ export interface NFTMarket extends BaseContract {
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, string, string, bigint, boolean, bigint, bigint] & {
+      [bigint, string, string, bigint, boolean] & {
         tokenId: bigint;
         nftContract: string;
         seller: string;
         price: bigint;
         isActive: boolean;
-        createdAt: bigint;
-        collectionId: bigint;
       }
     ],
     "view"
   >;
   getFunction(
-    nameOrSignature: "marketplaceFee"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "paused"
-  ): TypedContractMethod<[], [boolean], "view">;
-  getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "sellerCollections"
-  ): TypedContractMethod<
-    [arg0: AddressLike, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "sellerListings"
-  ): TypedContractMethod<
-    [arg0: AddressLike, arg1: BigNumberish],
-    [bigint],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "setMarketplaceFee"
-  ): TypedContractMethod<[newFee: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "setPaused"
-  ): TypedContractMethod<[_paused: boolean], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "tokenToListingId"
   ): TypedContractMethod<
@@ -1378,9 +612,6 @@ export interface NFTMarket extends BaseContract {
     [void],
     "nonpayable"
   >;
-  getFunction(
-    nameOrSignature: "withdrawFees"
-  ): TypedContractMethod<[], [void], "nonpayable">;
 
   getEvent(
     key: "BundlePriceUpdated"
@@ -1409,20 +640,6 @@ export interface NFTMarket extends BaseContract {
     CollectionCancelledEvent.InputTuple,
     CollectionCancelledEvent.OutputTuple,
     CollectionCancelledEvent.OutputObject
-  >;
-  getEvent(
-    key: "CollectionIndividualListed"
-  ): TypedContractEvent<
-    CollectionIndividualListedEvent.InputTuple,
-    CollectionIndividualListedEvent.OutputTuple,
-    CollectionIndividualListedEvent.OutputObject
-  >;
-  getEvent(
-    key: "CollectionItemSold"
-  ): TypedContractEvent<
-    CollectionItemSoldEvent.InputTuple,
-    CollectionItemSoldEvent.OutputTuple,
-    CollectionItemSoldEvent.OutputObject
   >;
   getEvent(
     key: "ListingCancelled"
@@ -1503,28 +720,6 @@ export interface NFTMarket extends BaseContract {
       CollectionCancelledEvent.InputTuple,
       CollectionCancelledEvent.OutputTuple,
       CollectionCancelledEvent.OutputObject
-    >;
-
-    "CollectionIndividualListed(uint256,address,address,uint256[],uint256[],string)": TypedContractEvent<
-      CollectionIndividualListedEvent.InputTuple,
-      CollectionIndividualListedEvent.OutputTuple,
-      CollectionIndividualListedEvent.OutputObject
-    >;
-    CollectionIndividualListed: TypedContractEvent<
-      CollectionIndividualListedEvent.InputTuple,
-      CollectionIndividualListedEvent.OutputTuple,
-      CollectionIndividualListedEvent.OutputObject
-    >;
-
-    "CollectionItemSold(uint256,uint256,address,address,uint256,uint256)": TypedContractEvent<
-      CollectionItemSoldEvent.InputTuple,
-      CollectionItemSoldEvent.OutputTuple,
-      CollectionItemSoldEvent.OutputObject
-    >;
-    CollectionItemSold: TypedContractEvent<
-      CollectionItemSoldEvent.InputTuple,
-      CollectionItemSoldEvent.OutputTuple,
-      CollectionItemSoldEvent.OutputObject
     >;
 
     "ListingCancelled(uint256,address,uint8)": TypedContractEvent<

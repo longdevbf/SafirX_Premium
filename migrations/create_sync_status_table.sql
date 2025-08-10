@@ -1,5 +1,3 @@
--- Migration to create sync_status table for tracking blockchain synchronization
--- Run this SQL script in your PostgreSQL database
 
 CREATE TABLE IF NOT EXISTS sync_status (
     id SERIAL PRIMARY KEY,
