@@ -1,4 +1,5 @@
-// Keep-alive service để giữ Railway proce// Self-ping để giữ process hoạt động
+import express, { Request, Response } from 'express';
+import { createServer } from 'http';
 setInterval(async () => {
     try {
         // Use Railway domain if available, fallback to localhost
@@ -9,9 +10,7 @@ setInterval(async () => {
     } catch (error) {
         console.log('⚠️ Self-ping failed (normal for Railway):', (error as Error)?.message || 'Unknown error');
     }
-}, 10 * 60 * 1000); // Ping every 10 minutes (increased from 5)ạt động
-import express, { Request, Response } from 'express';
-import { createServer } from 'http';
+}, 10 * 60 * 1000); 
 
 const app = express();
 const server = createServer(app);
@@ -26,7 +25,6 @@ app.get('/health', (req: Request, res: Response) => {
     });
 });
 
-// Ping endpoint để external services có thể ping
 app.get('/ping', (req: Request, res: Response) => {
     res.json({ 
         message: 'pong', 

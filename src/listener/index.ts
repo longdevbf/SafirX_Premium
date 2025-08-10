@@ -1,14 +1,6 @@
-#!/usr/bin/env node
-/**
- * SafirX Unified Blockchain Listeners + Sync Service
- * Chạy tất cả: real-time listeners + catch-up sync + keep-alive
- */
 
 import './keepAlive'; // Start HTTP server first
 import { startSyncService } from './syncService';
-
-console.log('🚀 Starting SafirX Unified Blockchain Service...');
-console.log('📡 HTTP Server + Real-time Listeners + Catch-up Sync');
 
 async function main() {
     try {
@@ -26,10 +18,6 @@ async function main() {
         
         console.log('✅ All services started successfully!');
         console.log('📊 System Status:');
-        console.log('   🌐 HTTP Server: http://localhost:3001/health');
-        console.log('   🔄 Sync Service: Active (5-minute intervals)');
-        console.log('   🎯 Auction Listener: Active (real-time events)');
-        console.log('   🏪 Market Listener: Active (real-time events)');
         
     } catch (error) {
         console.error('❌ Failed to start services:', error);

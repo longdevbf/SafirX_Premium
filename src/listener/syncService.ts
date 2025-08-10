@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from 'ethers';
-import { pool } from '@/lib/db';
-import { ABI_CONFIG } from '@/components/config/abi_config';
+import { pool } from '../lib/db';
+import * as SealedBidAuction from '../../contract/safirX_contract/artifacts/contracts/sealedBidAuction.sol/SealedBidAuction.json';
+import * as NFTMarketPlace from '../../contract/safirX_contract/artifacts/contracts/marketPlace.sol/NFTMarket.json';
 import axios from 'axios';
 
 // Contract addresses
@@ -10,8 +11,8 @@ const MARKET_ADDRESS = '0xAcA4a7Eed013E4b890077d8006fDb0B46e24A932';
 
 // RPC provider for data fetching
 const provider = new ethers.JsonRpcProvider('https://testnet.sapphire.oasis.io');
-const auctionContract = new ethers.Contract(AUCTION_ADDRESS, ABI_CONFIG.sealedBidAuction.abi, provider);
-const marketContract = new ethers.Contract(MARKET_ADDRESS, ABI_CONFIG.marketPlace.abi, provider);
+const auctionContract = new ethers.Contract(AUCTION_ADDRESS, SealedBidAuction.abi, provider);
+const marketContract = new ethers.Contract(MARKET_ADDRESS, NFTMarketPlace.abi, provider);
 
 // Fetch NFT metadata
 async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
@@ -181,8 +182,8 @@ async function saveListingToDatabase(data: any) {
 export async function syncAuctionEvents(fromBlock: number, toBlock: number): Promise<void> {
     console.log(`🔄 Syncing auction events from block ${fromBlock} to ${toBlock}...`);
     
-    // Split large block ranges to avoid RPC limits (max 100 blocks per query)
-    const MAX_BLOCKS_PER_QUERY = 90; // Use 90 to be safe
+    // Split large block ranges to avoid RPC limits (max 50 blocks per query for safety)
+    const MAX_BLOCKS_PER_QUERY = 50; // Reduced from 90 to 50 for RPC stability
     const totalBlocks = toBlock - fromBlock + 1;
     
     if (totalBlocks > MAX_BLOCKS_PER_QUERY) {
@@ -198,42 +199,50 @@ export async function syncAuctionEvents(fromBlock: number, toBlock: number): Pro
     await syncAuctionEventsChunk(fromBlock, toBlock);
 }
 
-// Anti-sniping function - extend auction if bid placed in last 10 minutes
-async function handleAntiSniping(auctionId: string, bidTime: Date): Promise<void> {
+// Anti-sniping function with improved logic matching auctionListener
+async function handleAntiSniping(auctionId: string): Promise<void> {
+    const client = await pool.connect();
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
         
-        // Get current auction end time
-        const auctionResult = await pool.query(
-            'SELECT end_time FROM auctions WHERE auction_id = $1 AND status = $2',
-            [auctionId, 'active']
+        // Get current auction details for both single and bundle types
+        const auctionResult = await client.query(
+            `SELECT end_time, auction_type FROM auctions WHERE auction_id = $1 AND status = 'active'`,
+            [auctionId]
         );
         
-        if (auctionResult.rows.length === 0) {
-            await pool.query('ROLLBACK');
-            return;
+        for (const auction of auctionResult.rows) {
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilEnd = auction.end_time - currentTime;
+            const TEN_MINUTES = 10 * 60; // 10 minutes in seconds
+            
+            // Anti-sniping: Extend auction if bid placed in last 10 minutes
+            if (timeUntilEnd > 0 && timeUntilEnd <= TEN_MINUTES) {
+                const newEndTime = currentTime + TEN_MINUTES;
+                
+                await client.query(
+                    `UPDATE auctions 
+                     SET total_bid = total_bid + 1, end_time = $1, updated_at = NOW()
+                     WHERE auction_id = $2 AND auction_type = $3`,
+                    [newEndTime, auctionId, auction.auction_type]
+                );
+                
+                console.log(`� Anti-sniping: Auction ${auctionId} (${auction.auction_type}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
+            } else {
+                // Normal increment without extension
+                await client.query(
+                    `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
+                    [auctionId, auction.auction_type]
+                );
+            }
         }
         
-        const endTime = new Date(auctionResult.rows[0].end_time * 1000); // Convert Unix timestamp to Date
-        const timeDiff = endTime.getTime() - bidTime.getTime();
-        const tenMinutesInMs = 10 * 60 * 1000;
-        
-        // If bid is placed within last 10 minutes, extend auction by 10 minutes
-        if (timeDiff <= tenMinutesInMs && timeDiff > 0) {
-            const newEndTime = Math.floor((endTime.getTime() + tenMinutesInMs) / 1000); // Convert back to Unix timestamp
-            
-            await pool.query(
-                'UPDATE auctions SET end_time = $1 WHERE auction_id = $2',
-                [newEndTime, auctionId]
-            );
-            
-            console.log(`🚨 Anti-sniping activated! Auction ${auctionId} extended to ${new Date(newEndTime * 1000).toISOString()}`);
-        }
-        
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
     } catch (error) {
-        await pool.query('ROLLBACK');
+        await client.query('ROLLBACK');
         console.error('Error in anti-sniping logic:', error);
+    } finally {
+        client.release();
     }
 }
 
@@ -255,14 +264,10 @@ async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> 
             const bidder = args[1];
             const timestamp = Number(args[2]);
             
-            // Get block timestamp for anti-sniping calculation
-            const block = await provider.getBlock(eventLog.blockNumber);
-            const bidTime = new Date(Number(block?.timestamp || 0) * 1000);
-            
             console.log(`💰 Processing bid: Auction ${auctionId}, Bidder: ${bidder}, Timestamp: ${timestamp}`);
             
-            // Apply anti-sniping logic for both single and bundle types
-            await handleAntiSniping(auctionId, bidTime);
+            // Apply anti-sniping logic
+            await handleAntiSniping(auctionId);
             
             // Increment total_bid for both auction types
             try {
@@ -285,12 +290,64 @@ async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> 
     }
 }
 
+// Update auction status with reclaim timestamp
+async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const reclaimTimestamp = currentTimestamp + (3 * 24 * 60 * 60); // +3 days
+        
+        await client.query(
+            `UPDATE auctions SET status = $1, reclaim_nft = $2 WHERE auction_id = $3 AND auction_type = $4`,
+            [status, reclaimTimestamp, auctionId, auctionType]
+        );
+        
+        console.log(`✅ Updated auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp}`);
+    } catch (error) {
+        console.error('Error updating auction status with reclaim:', error);
+    } finally {
+        client.release();
+    }
+}
+
+// Update claim status
+async function updateClaimStatus(auctionId: string, auctionType: string, field: string, value: boolean): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `UPDATE auctions SET ${field} = $1 WHERE auction_id = $2 AND auction_type = $3`,
+            [value, auctionId, auctionType]
+        );
+        console.log(`✅ Updated ${field} = ${value} for auction ${auctionId} (${auctionType})`);
+    } catch (error) {
+        console.error(`Error updating ${field}:`, error);
+    } finally {
+        client.release();
+    }
+}
+
+// Delete auction from database
+async function deleteAuctionFromDB(auctionId: string, auctionType: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `DELETE FROM auctions WHERE auction_id = $1 AND auction_type = $2`,
+            [auctionId, auctionType]
+        );
+        console.log(`✅ Deleted auction ${auctionId} (${auctionType})`);
+    } catch (error) {
+        console.error('Error deleting auction:', error);
+    } finally {
+        client.release();
+    }
+}
+
 // Helper function to sync a chunk of auction events
 async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
     console.log(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
     
     try {
-        // Get AuctionCreated events
+        // 1. Sync AuctionCreated events
         const auctionCreatedFilter = auctionContract.filters.AuctionCreated();
         const auctionCreatedEvents = await auctionContract.queryFilter(auctionCreatedFilter, fromBlock, toBlock);
         
@@ -300,10 +357,9 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             if (!args) continue;
             
             const auctionId = args[0].toString();
-            const auctionTypeNum = Number(args[3]); // Keep as number for comparison
-            const auctionTypeString = auctionTypeNum === 0 ? 'single' : 'bundle'; // Convert to string for DB
+            const auctionTypeNum = Number(args[3]);
+            const auctionTypeString = auctionTypeNum === 0 ? 'single' : 'bundle';
             
-            // Kiểm tra xem auction đã tồn tại chưa
             const exists = await auctionExistsInDB(auctionId, auctionTypeString);
             if (exists) {
                 console.log(`⏭️ Auction ${auctionId} (${auctionTypeString}) already exists, skipping...`);
@@ -340,10 +396,10 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
                 auction_id: auctionId,
                 seller_address: seller,
                 nft_contract_address: nftContract,
-                auction_type: auctionTypeString, // Use already converted string
+                auction_type: auctionTypeString,
                 token_ids: activeTokenIds,
                 starting_price: startingPrice,
-                end_time: endTime, // Keep as number (UNIX timestamp)
+                end_time: endTime,
                 title: title || representativeMetadata?.name || '',
                 collection_name: representativeMetadata?.token?.name || '',
                 image_url: representativeMetadata?.image || '',
@@ -357,11 +413,75 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             await saveAuctionToDatabase(auctionData);
         }
         
-        console.log(`  ✅ Synced ${auctionCreatedEvents.length} auction events`);
+        // 2. Sync AuctionFinalized events
+        const auctionFinalizedFilter = auctionContract.filters.AuctionFinalized();
+        const auctionFinalizedEvents = await auctionContract.queryFilter(auctionFinalizedFilter, fromBlock, toBlock);
+        
+        for (const event of auctionFinalizedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const auctionId = args[0].toString();
+            console.log(`📋 Processing AuctionFinalized: ${auctionId}`);
+            
+            await updateAuctionStatusWithReclaim(auctionId, 'single', 'finalized');
+            await updateAuctionStatusWithReclaim(auctionId, 'bundle', 'finalized');
+        }
+        
+        // 3. Sync AuctionCancelled events
+        const auctionCancelledFilter = auctionContract.filters.AuctionCancelled();
+        const auctionCancelledEvents = await auctionContract.queryFilter(auctionCancelledFilter, fromBlock, toBlock);
+        
+        for (const event of auctionCancelledEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const auctionId = args[0].toString();
+            console.log(`🚫 Processing AuctionCancelled: ${auctionId}`);
+            
+            await deleteAuctionFromDB(auctionId, 'single');
+            await deleteAuctionFromDB(auctionId, 'bundle');
+        }
+        
+        // 4. Sync NFTClaimed events
+        const nftClaimedFilter = auctionContract.filters.NFTClaimed();
+        const nftClaimedEvents = await auctionContract.queryFilter(nftClaimedFilter, fromBlock, toBlock);
+        
+        for (const event of nftClaimedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const auctionId = args[0].toString();
+            console.log(`🎁 Processing NFTClaimed: ${auctionId}`);
+            
+            await updateClaimStatus(auctionId, 'single', 'nft_claimed', true);
+            await updateClaimStatus(auctionId, 'bundle', 'nft_claimed', true);
+        }
+        
+        // 5. Sync NFTReclaimed events
+        const nftReclaimedFilter = auctionContract.filters.NFTReclaimed();
+        const nftReclaimedEvents = await auctionContract.queryFilter(nftReclaimedFilter, fromBlock, toBlock);
+        
+        for (const event of nftReclaimedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const auctionId = args[0].toString();
+            console.log(`🔄 Processing NFTReclaimed: ${auctionId}`);
+            
+            await updateClaimStatus(auctionId, 'single', 'nft_reclaimed', true);
+            await updateClaimStatus(auctionId, 'bundle', 'nft_reclaimed', true);
+        }
+        
+        console.log(`  ✅ Synced ${auctionCreatedEvents.length} created, ${auctionFinalizedEvents.length} finalized, ${auctionCancelledEvents.length} cancelled, ${nftClaimedEvents.length} claimed, ${nftReclaimedEvents.length} reclaimed`);
         
     } catch (error) {
-        console.error('  ❌ Lỗi khi sync auction chunk:', error);
-        throw error; // Re-throw để parent function có thể handle
+        console.error('  ❌ Error syncing auction chunk:', error);
+        throw error;
     }
 }
 
@@ -369,8 +489,8 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
 export async function syncMarketEvents(fromBlock: number, toBlock: number): Promise<void> {
     console.log(`🔄 Syncing market events from block ${fromBlock} to ${toBlock}...`);
     
-    // Split large block ranges to avoid RPC limits (max 100 blocks per query)
-    const MAX_BLOCKS_PER_QUERY = 90; // Use 90 to be safe
+    // Split large block ranges to avoid RPC limits (max 50 blocks per query for safety)
+    const MAX_BLOCKS_PER_QUERY = 50; // Reduced from 90 to 50 for RPC stability
     const totalBlocks = toBlock - fromBlock + 1;
     
     if (totalBlocks > MAX_BLOCKS_PER_QUERY) {
@@ -386,12 +506,44 @@ export async function syncMarketEvents(fromBlock: number, toBlock: number): Prom
     await syncMarketEventsChunk(fromBlock, toBlock);
 }
 
+// Update market listing price
+async function updateListingPrice(listingId: string, newPrice: string, listingType: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `UPDATE market_listings SET price = $1 WHERE listing_id = $2 AND listing_type = $3`,
+            [newPrice, listingId, listingType]
+        );
+        console.log(`✅ Updated price for listing ${listingId} (${listingType}): ${newPrice}`);
+    } catch (error) {
+        console.error('Error updating listing price:', error);
+    } finally {
+        client.release();
+    }
+}
+
+// Delete market listing from database
+async function deleteListingFromDB(listingId: string, listingType: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `DELETE FROM market_listings WHERE listing_id = $1 AND listing_type = $2`,
+            [listingId, listingType]
+        );
+        console.log(`✅ Deleted listing ${listingId} (${listingType})`);
+    } catch (error) {
+        console.error('Error deleting listing:', error);
+    } finally {
+        client.release();
+    }
+}
+
 // Helper function to sync a chunk of market events
 async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
     console.log(`  📦 Processing market chunk: blocks ${fromBlock} to ${toBlock}`);
     
     try {
-        // Get NFTListed events
+        // 1. Sync NFTListed events
         const nftListedFilter = marketContract.filters.NFTListed();
         const nftListedEvents = await marketContract.queryFilter(nftListedFilter, fromBlock, toBlock);
         
@@ -403,7 +555,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const listingId = args[0].toString();
             const listingType = 'single';
             
-            // Kiểm tra xem listing đã tồn tại chưa
             const exists = await listingExistsInDB(listingId, listingType);
             if (exists) {
                 console.log(`⏭️ Listing ${listingId} (${listingType}) already exists, skipping...`);
@@ -415,7 +566,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const seller = args[3];
             const price = ethers.formatEther(args[4]);
             
-            // Fetch metadata
             const metadata = await fetchNFTMetadata(nftContract, tokenId);
             if (!metadata) {
                 console.log(`❌ Failed to fetch metadata for listing ${listingId}, skipping...`);
@@ -439,7 +589,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             await saveListingToDatabase(listingData);
         }
         
-        // Get CollectionBundleListed events
+        // 2. Sync CollectionBundleListed events
         const bundleListedFilter = marketContract.filters.CollectionBundleListed();
         const bundleListedEvents = await marketContract.queryFilter(bundleListedFilter, fromBlock, toBlock);
         
@@ -451,7 +601,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const collectionId = args[0].toString();
             const listingType = 'bundle';
             
-            // Kiểm tra xem bundle đã tồn tại chưa
             const exists = await listingExistsInDB(collectionId, listingType);
             if (exists) {
                 console.log(`⏭️ Bundle ${collectionId} (${listingType}) already exists, skipping...`);
@@ -464,7 +613,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const bundlePrice = ethers.formatEther(args[4]);
             const collectionName = args[5];
             
-            // Fetch metadata cho tất cả NFT trong bundle
             const metadataPromises = tokenIds.map((id: string) => fetchNFTMetadata(nftContract, id));
             const metadataResults = await Promise.all(metadataPromises);
             
@@ -496,11 +644,103 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             await saveListingToDatabase(bundleData);
         }
         
-        console.log(`  ✅ Synced ${nftListedEvents.length} single listings and ${bundleListedEvents.length} bundle listings`);
+        // 3. Sync PriceUpdated events
+        const priceUpdatedFilter = marketContract.filters.PriceUpdated();
+        const priceUpdatedEvents = await marketContract.queryFilter(priceUpdatedFilter, fromBlock, toBlock);
+        
+        for (const event of priceUpdatedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const listingId = args[0].toString();
+            const newPrice = ethers.formatEther(args[2]);
+            console.log(`💰 Processing PriceUpdated: ${listingId}`);
+            
+            await updateListingPrice(listingId, newPrice, 'single');
+        }
+        
+        // 4. Sync BundlePriceUpdated events
+        const bundlePriceUpdatedFilter = marketContract.filters.BundlePriceUpdated();
+        const bundlePriceUpdatedEvents = await marketContract.queryFilter(bundlePriceUpdatedFilter, fromBlock, toBlock);
+        
+        for (const event of bundlePriceUpdatedEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const collectionId = args[0].toString();
+            const newPrice = ethers.formatEther(args[2]);
+            console.log(`💰 Processing BundlePriceUpdated: ${collectionId}`);
+            
+            await updateListingPrice(collectionId, newPrice, 'bundle');
+        }
+        
+        // 5. Sync ListingCancelled events
+        const listingCancelledFilter = marketContract.filters.ListingCancelled();
+        const listingCancelledEvents = await marketContract.queryFilter(listingCancelledFilter, fromBlock, toBlock);
+        
+        for (const event of listingCancelledEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const listingId = args[0].toString();
+            console.log(`🚫 Processing ListingCancelled: ${listingId}`);
+            
+            await deleteListingFromDB(listingId, 'single');
+        }
+        
+        // 6. Sync CollectionCancelled events
+        const collectionCancelledFilter = marketContract.filters.CollectionCancelled();
+        const collectionCancelledEvents = await marketContract.queryFilter(collectionCancelledFilter, fromBlock, toBlock);
+        
+        for (const event of collectionCancelledEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const collectionId = args[0].toString();
+            console.log(`🚫 Processing CollectionCancelled: ${collectionId}`);
+            
+            await deleteListingFromDB(collectionId, 'bundle');
+        }
+        
+        // 7. Sync NFTSold events
+        const nftSoldFilter = marketContract.filters.NFTSold();
+        const nftSoldEvents = await marketContract.queryFilter(nftSoldFilter, fromBlock, toBlock);
+        
+        for (const event of nftSoldEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const listingId = args[0].toString();
+            console.log(`💸 Processing NFTSold: ${listingId}`);
+            
+            await deleteListingFromDB(listingId, 'single');
+        }
+        
+        // 8. Sync CollectionBundleSold events
+        const collectionBundleSoldFilter = marketContract.filters.CollectionBundleSold();
+        const collectionBundleSoldEvents = await marketContract.queryFilter(collectionBundleSoldFilter, fromBlock, toBlock);
+        
+        for (const event of collectionBundleSoldEvents) {
+            const eventLog = event as ethers.EventLog;
+            const args = eventLog.args;
+            if (!args) continue;
+            
+            const collectionId = args[0].toString();
+            console.log(`💸 Processing CollectionBundleSold: ${collectionId}`);
+            
+            await deleteListingFromDB(collectionId, 'bundle');
+        }
+        
+        console.log(`  ✅ Synced ${nftListedEvents.length} single + ${bundleListedEvents.length} bundle listings, ${priceUpdatedEvents.length + bundlePriceUpdatedEvents.length} price updates, ${listingCancelledEvents.length + collectionCancelledEvents.length} cancellations, ${nftSoldEvents.length + collectionBundleSoldEvents.length} sales`);
         
     } catch (error) {
-        console.error('  ❌ Lỗi khi sync market chunk:', error);
-        throw error; // Re-throw để parent function có thể handle
+        console.error('  ❌ Error syncing market chunk:', error);
+        throw error;
     }
 }
 
@@ -517,7 +757,7 @@ export async function performFullSync(): Promise<void> {
         console.log(`Last synced auction block: ${lastAuctionBlock}`);
         
         if (currentBlock > lastAuctionBlock) {
-            const maxBlockRange = 10000; // Sync in chunks of 10000 blocks
+            const maxBlockRange = 1000; // Reduced from 10000 to 1000 for RPC stability
             for (let fromBlock = Number(lastAuctionBlock) + 1; fromBlock <= currentBlock; fromBlock += maxBlockRange) {
                 const toBlock = Math.min(fromBlock + maxBlockRange - 1, currentBlock);
                 await syncAuctionEvents(fromBlock, toBlock);
@@ -525,7 +765,7 @@ export async function performFullSync(): Promise<void> {
                 await updateLastSyncedBlock('auction', toBlock);
                 
                 // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
             }
         }
         
@@ -534,14 +774,14 @@ export async function performFullSync(): Promise<void> {
         console.log(`Last synced market block: ${lastMarketBlock}`);
         
         if (currentBlock > lastMarketBlock) {
-            const maxBlockRange = 10000; // Sync in chunks of 10000 blocks
+            const maxBlockRange = 1000; // Reduced from 10000 to 1000 for RPC stability
             for (let fromBlock = Number(lastMarketBlock) + 1; fromBlock <= currentBlock; fromBlock += maxBlockRange) {
                 const toBlock = Math.min(fromBlock + maxBlockRange - 1, currentBlock);
                 await syncMarketEvents(fromBlock, toBlock);
                 await updateLastSyncedBlock('market', toBlock);
                 
                 // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
             }
         }
         
@@ -557,9 +797,9 @@ export async function performIncrementalSync(): Promise<void> {
     try {
         const currentBlock = await provider.getBlockNumber();
         
-        // Sync recent auction events (last 100 blocks)
+        // Sync recent auction events (last 50 blocks to reduce RPC load)
         const lastAuctionBlock = await getLastSyncedBlock('auction');
-        const auctionFromBlock = Math.max(Number(lastAuctionBlock) + 1, currentBlock - 100);
+        const auctionFromBlock = Math.max(Number(lastAuctionBlock) + 1, currentBlock - 50); // Reduced from 100 to 50
         
         if (currentBlock >= auctionFromBlock) {
             await syncAuctionEvents(auctionFromBlock, currentBlock);
@@ -567,9 +807,9 @@ export async function performIncrementalSync(): Promise<void> {
             await updateLastSyncedBlock('auction', currentBlock);
         }
         
-        // Sync recent market events (last 100 blocks)
+        // Sync recent market events (last 50 blocks to reduce RPC load)
         const lastMarketBlock = await getLastSyncedBlock('market');
-        const marketFromBlock = Math.max(Number(lastMarketBlock) + 1, currentBlock - 100);
+        const marketFromBlock = Math.max(Number(lastMarketBlock) + 1, currentBlock - 50); // Reduced from 100 to 50
         
         if (currentBlock >= marketFromBlock) {
             await syncMarketEvents(marketFromBlock, currentBlock);
