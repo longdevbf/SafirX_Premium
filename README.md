@@ -51,7 +51,7 @@ npm install
 npm run dev
 .
 ```
-----
+---
 
 And you need to create an env file as follows
 .env
