@@ -189,9 +189,6 @@ contract SealedBidAuction is ReentrancyGuard, Ownable, ERC721Holder {
             auctionDeposits[auctionId] += msg.value;
         }
 
-        if (block.timestamp >= auction.endTime - auction.bidExtensionTime) {
-            auction.endTime += auction.bidExtensionTime;
-        }
 
         emit BidPlaced(auctionId, msg.sender, block.timestamp);
     }

@@ -1,11 +1,14 @@
+'use client'
 /* eslint-disable react/no-unescaped-entities */
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Twitter, Github, DiscIcon as Discord, Instagram } from "lucide-react"
-
+import { useAccount } from "wagmi"
+import { useWallet } from "@/context/walletContext"
 export default function Footer() {
+  const { isConnected, address, disconnect } = useWallet()
   return (
     <footer className="bg-muted/50 border-t">
       <div className="container mx-auto px-4 py-12">
@@ -48,13 +51,13 @@ export default function Footer() {
               <Link href="/marketplace" className="block text-muted-foreground hover:text-foreground">
                 All NFTs
               </Link>
-              <Link href="/collections" className="block text-muted-foreground hover:text-foreground">
+              <Link href="/marketplace" className="block text-muted-foreground hover:text-foreground">
                 Collections
               </Link>
               <Link href="/auctions" className="block text-muted-foreground hover:text-foreground">
                 Auctions
               </Link>
-              <Link href="/trending" className="block text-muted-foreground hover:text-foreground">
+              <Link href="/marketplace" className="block text-muted-foreground hover:text-foreground">
                 Trending
               </Link>
             </div>
@@ -67,13 +70,13 @@ export default function Footer() {
               <Link href="/create" className="block text-muted-foreground hover:text-foreground">
                 Create NFT
               </Link>
-              <Link href="/create/collection" className="block text-muted-foreground hover:text-foreground">
+              <Link href="/create" className="block text-muted-foreground hover:text-foreground">
                 Create Collection
               </Link>
-              <Link href="/create/auction" className="block text-muted-foreground hover:text-foreground">
+              <Link href={`profile/${address}`} className="block text-muted-foreground hover:text-foreground">
                 Create Auction
               </Link>
-              <Link href="/docs" className="block text-muted-foreground hover:text-foreground">
+              <Link href="" className="block text-muted-foreground hover:text-foreground">
                 Creator Guide
               </Link>
             </div>
@@ -93,13 +96,13 @@ export default function Footer() {
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground">© 2024 SafirX. All rights reserved.</p>
           <div className="flex space-x-6 text-sm text-muted-foreground mt-4 md:mt-0">
-            <Link href="/privacy" className="hover:text-foreground">
+            <Link href="" className="hover:text-foreground">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-foreground">
+            <Link href="" className="hover:text-foreground">
               Terms of Service
             </Link>
-            <Link href="/help" className="hover:text-foreground">
+            <Link href="" className="hover:text-foreground">
               Help Center
             </Link>
           </div>

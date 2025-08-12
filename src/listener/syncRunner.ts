@@ -3,6 +3,7 @@ import { runMigration } from '../scripts/migrate';
 
 async function runSyncServiceInBackground() {
     try {
+        console.log('ok')
         await runMigration();    
         await startSyncService();
         process.on('SIGINT', () => {

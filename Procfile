@@ -1,1 +1,1 @@
-web: npm run start:listeners
+web: npm run start

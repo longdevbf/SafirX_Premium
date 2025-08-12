@@ -180,29 +180,48 @@ async function syncBidEventsIfNeeded(fromBlock: number, toBlock: number): Promis
         console.log(`🔄 Process uptime ${uptime.toFixed(2)}s < 120s, syncing missed bid events from block ${fromBlock} to ${toBlock}...`);
         
         try {
-            const bidPlacedFilter = auctionContract.filters.BidPlaced();
-            const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
+            // Split into smaller chunks for RPC limits (max 100 blocks per query)
+            const MAX_BLOCKS_PER_BID_QUERY = 50; // Conservative limit for bid events
+            const totalBlocks = toBlock - fromBlock + 1;
             
-            for (const event of bidPlacedEvents) {
-                const eventLog = event as ethers.EventLog;
-                const args = eventLog.args;
-                if (!args) continue;
-                
-                const auctionId = args[0].toString();
-                
-                // Apply same logic as real-time listener: update both single and bundle types
-                await incrementTotalBidWithAntiSnipingSync(auctionId, 'single');
-                await incrementTotalBidWithAntiSnipingSync(auctionId, 'bundle');
-                
-                console.log(`✅ Processed missed bid event for auction ${auctionId}`);
+            if (totalBlocks > MAX_BLOCKS_PER_BID_QUERY) {
+                console.log(`📦 Splitting ${totalBlocks} blocks into chunks of ${MAX_BLOCKS_PER_BID_QUERY} for bid sync...`);
+                for (let start = fromBlock; start <= toBlock; start += MAX_BLOCKS_PER_BID_QUERY) {
+                    const end = Math.min(start + MAX_BLOCKS_PER_BID_QUERY - 1, toBlock);
+                    await syncBidEventsChunk(start, end);
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } else {
+                await syncBidEventsChunk(fromBlock, toBlock);
             }
-            
-            console.log(`✅ Synced ${bidPlacedEvents.length} missed bid events`);
             
         } catch (error) {
             console.error('❌ Error syncing bid events:', error);
         }
     } else {
+        console.log(`⏭️ Process uptime ${uptime.toFixed(2)}s >= 120s, skipping bid events sync (real-time listener active)`);
+    }
+}
+
+// Helper function to sync bid events in small chunks
+async function syncBidEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
+    const bidPlacedFilter = auctionContract.filters.BidPlaced();
+    const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
+    console.log(`💰 Found ${bidPlacedEvents.length} BidPlaced events in blocks ${fromBlock}-${toBlock}`);
+    
+    for (const event of bidPlacedEvents) {
+        const eventLog = event as ethers.EventLog;
+        const args = eventLog.args;
+        if (!args) continue;
+        
+        const auctionId = args[0].toString();
+        
+        // Apply same logic as real-time listener: update both single and bundle types
+        await incrementTotalBidWithAntiSnipingSync(auctionId, 'single');
+        await incrementTotalBidWithAntiSnipingSync(auctionId, 'bundle');
+        
+        console.log(`✅ Processed missed bid event for auction ${auctionId}`);
     }
 }
 
@@ -311,9 +330,11 @@ async function deleteAuctionFromDB(auctionId: string, auctionType: string): Prom
     }
 }
 async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
+    console.log(`🔍 Searching auction events in blocks ${fromBlock}-${toBlock}...`);
     try {
         const auctionCreatedFilter = auctionContract.filters.AuctionCreated();
         const auctionCreatedEvents = await auctionContract.queryFilter(auctionCreatedFilter, fromBlock, toBlock);
+        console.log(`📝 Found ${auctionCreatedEvents.length} AuctionCreated events`);
         
         for (const event of auctionCreatedEvents) {
             const eventLog = event as ethers.EventLog;
@@ -729,32 +750,43 @@ export async function performFullSync(): Promise<void> {
 
 
 export async function performIncrementalSync(): Promise<void> {
+    console.log('🔄 Starting incremental synchronization...');
     try {
         const currentBlock = await provider.getBlockNumber();
+        console.log(`📦 Current block: ${currentBlock}`);
         
-        // Sync recent auction events (last 50 blocks to reduce RPC load)
+        // Sync auction events - check from last synced block
         const lastAuctionBlock = await getLastSyncedBlock('auction');
-        const auctionFromBlock = Math.max(Number(lastAuctionBlock) + 1, currentBlock - 50); // Reduced from 100 to 50
+        console.log(`📊 Last synced auction block: ${lastAuctionBlock}`);
         
-        if (currentBlock >= auctionFromBlock) {
+        if (currentBlock > lastAuctionBlock) {
+            const auctionFromBlock = Number(lastAuctionBlock) + 1;
+            console.log(`🏺 Syncing auction events from block ${auctionFromBlock} to ${currentBlock} (${currentBlock - auctionFromBlock + 1} blocks)`);
             await syncAuctionEvents(auctionFromBlock, currentBlock);
             await syncBidEventsIfNeeded(auctionFromBlock, currentBlock); // Conditional bid sync
             await updateLastSyncedBlock('auction', currentBlock);
+        } else {
+            console.log(`✅ Auction events already up to date (current: ${currentBlock}, last synced: ${lastAuctionBlock})`);
         }
         
-        // Sync recent market events (last 50 blocks to reduce RPC load)
+        // Sync market events - check from last synced block  
         const lastMarketBlock = await getLastSyncedBlock('market');
-        const marketFromBlock = Math.max(Number(lastMarketBlock) + 1, currentBlock - 50); // Reduced from 100 to 50
+        console.log(`📊 Last synced market block: ${lastMarketBlock}`);
         
-        if (currentBlock >= marketFromBlock) {
+        if (currentBlock > lastMarketBlock) {
+            const marketFromBlock = Number(lastMarketBlock) + 1;
+            console.log(`🛒 Syncing market events from block ${marketFromBlock} to ${currentBlock} (${currentBlock - marketFromBlock + 1} blocks)`);
             await syncMarketEvents(marketFromBlock, currentBlock);
             await updateLastSyncedBlock('market', currentBlock);
+        } else {
+            console.log(`✅ Market events already up to date (current: ${currentBlock}, last synced: ${lastMarketBlock})`);
         }
         
-        //('Incremental synchronization completed!');
+        console.log('✅ Incremental synchronization completed!');
         
     } catch (error) {
-        //('❌ Error during incremental sync:', error);
+        console.error('❌ Error during incremental sync:', error);
+        throw error;
     }
 }
 
@@ -765,27 +797,32 @@ let isServiceRunning = false;
 // Start automatic sync service
 export async function startSyncService(): Promise<void> {
     if (isServiceRunning) {
-        //('⚠️ Sync service is already running');
+        console.log('⚠️ Sync service is already running');
         return;
     }
     
-    //('🚀 Starting automatic sync service...');
+    console.log('🚀 Starting automatic sync service...');
     isServiceRunning = true;
     
     try {
         await performIncrementalSync(); 
         const syncIntervalMs = process.env.RAILWAY_ENVIRONMENT ? 5 * 60 * 1000 : 2 * 60 * 1000; // 5min on Railway, 2min locally
+        console.log(`⏰ Sync interval set to ${syncIntervalMs / 1000}s (${process.env.RAILWAY_ENVIRONMENT ? 'Railway' : 'Local'} mode)`);
+        
         syncInterval = setInterval(async () => {
             if (isServiceRunning) {
                 try {
+                    console.log('🔄 Running incremental sync...');
                     await performIncrementalSync();
                 } catch (error) {
-                    }
+                    console.error('❌ Error in sync interval:', error);
+                }
             }
         }, syncIntervalMs);
        
     } catch (error) {
-         isServiceRunning = false;
+        console.error('❌ Error starting sync service:', error);
+        isServiceRunning = false;
         throw error;
     }
 }

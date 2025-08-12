@@ -1807,8 +1807,8 @@
       ]
     },
     "E:\\SafirX_Premium\\contract\\safirX_contract\\contracts\\sealedBidAuction.sol": {
-      "lastModificationDate": 1754726675769,
-      "contentHash": "1fffbec08a463fc64bdd57830bf59009",
+      "lastModificationDate": 1755017606908,
+      "contentHash": "3ca2c5aab22221032d51aa8231c3185b",
       "sourceName": "contracts/sealedBidAuction.sol",
       "solcConfig": {
         "version": "0.8.28",

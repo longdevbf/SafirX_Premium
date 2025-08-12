@@ -39,8 +39,14 @@ app.get('/', (req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 3001;
 
-server.listen(PORT, () => {
-});
+// Temporary disable for local testing
+if (process.env.RAILWAY_ENVIRONMENT) {
+    server.listen(PORT, () => {
+        console.log(`Health server running on port ${PORT}`);
+    });
+} else {
+    console.log(`Health server disabled for local development (port ${PORT})`);
+}
 
 // Self-ping để giữ process hoạt động
 setInterval(async () => {
