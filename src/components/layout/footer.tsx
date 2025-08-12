@@ -73,7 +73,7 @@ export default function Footer() {
               <Link href="/create" className="block text-muted-foreground hover:text-foreground">
                 Create Collection
               </Link>
-              <Link href={`profile/${address}`} className="block text-muted-foreground hover:text-foreground">
+              <Link href={`/profile/${address}`} className="block text-muted-foreground hover:text-foreground">
                 Create Auction
               </Link>
               <Link href="" className="block text-muted-foreground hover:text-foreground">
