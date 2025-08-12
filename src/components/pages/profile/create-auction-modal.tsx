@@ -873,7 +873,7 @@ export default function CreateAuctionModal({ isOpen, onClose, nfts, mode, showTr
                       <li><strong>Continuous Bidding:</strong> Users can place bids throughout your set duration</li>
                       <li><strong>Sealed Bids:</strong> All bid amounts are hidden until auction ends for fair competition</li>
                       <li><strong>Deposit System:</strong> Bidders only pay <span className="font-semibold text-blue-600">starting price</span> as deposit when bidding</li>
-                      <li><strong>Auto-Extension:</strong> Auction extends 10 minutes if bids placed in final moments</li>
+                     
                     </ul>
                   </div>
 
