@@ -40,7 +40,7 @@ export async function POST(
     });
 
   } catch (error) {
-  //  //('Error incrementing love count:', error);
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

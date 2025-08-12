@@ -6,13 +6,11 @@ async function runSyncServiceInBackground() {
         await runMigration();    
         await startSyncService();
         process.on('SIGINT', () => {
-            //('\n🛑 Gracefully shutting down...');
             process.exit(0);
         });
         setInterval(() => {
         }, 60000); 
     } catch (error) {
-        //('❌ Failed to start sync service runner:', error);
         process.exit(1);
     }
 }

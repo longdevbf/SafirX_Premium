@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-//   //('❌ Error updating expired auctions:', error)
+
     return NextResponse.json({
       success: false,
       error: 'Failed to update expired auctions'

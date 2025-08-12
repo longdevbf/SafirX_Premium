@@ -47,7 +47,7 @@ const TransactionToast = ({ isVisible, txHash, message, onClose }: TransactionTo
 
   if (!isVisible) return null
 
-  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+  const explorerUrl = `https://explorer.oasis.io/sapphire/tx/${txHash}`
 
   return (
     <div 

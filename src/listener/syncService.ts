@@ -7,16 +7,15 @@ import axios from 'axios';
 import {ABI_CONFIG} from '@/components/config/abi_config'
 const AUCTION_ADDRESS = ABI_CONFIG.sealedBidAuction.address;
 const MARKET_ADDRESS = ABI_CONFIG.marketPlace.address;
-const provider = new ethers.JsonRpcProvider('https://testnet.sapphire.oasis.io');
+const provider = new ethers.JsonRpcProvider('https://sapphire.oasis.io');
 const auctionContract = new ethers.Contract(AUCTION_ADDRESS, SealedBidAuction.abi, provider);
 const marketContract = new ethers.Contract(MARKET_ADDRESS, NFTMarketPlace.abi, provider);
 async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
-    const url = `https://testnet.nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
+    const url = `https://nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
     try {
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        //(`Lỗi khi fetch metadata cho token ${tokenId}:`, error);
         return null;
     }
 }
@@ -173,12 +172,86 @@ async function saveListingToDatabase(data: any) {
     }
 }
 
+// Conditional sync bid events - only when server just restarted
+async function syncBidEventsIfNeeded(fromBlock: number, toBlock: number): Promise<void> {
+    const uptime = process.uptime();
+    
+    if (uptime < 120) { // Server vừa restart trong 2 phút
+        console.log(`🔄 Process uptime ${uptime.toFixed(2)}s < 120s, syncing missed bid events from block ${fromBlock} to ${toBlock}...`);
+        
+        try {
+            const bidPlacedFilter = auctionContract.filters.BidPlaced();
+            const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
+            
+            for (const event of bidPlacedEvents) {
+                const eventLog = event as ethers.EventLog;
+                const args = eventLog.args;
+                if (!args) continue;
+                
+                const auctionId = args[0].toString();
+                
+                // Apply same logic as real-time listener: update both single and bundle types
+                await incrementTotalBidWithAntiSnipingSync(auctionId, 'single');
+                await incrementTotalBidWithAntiSnipingSync(auctionId, 'bundle');
+                
+                console.log(`✅ Processed missed bid event for auction ${auctionId}`);
+            }
+            
+            console.log(`✅ Synced ${bidPlacedEvents.length} missed bid events`);
+            
+        } catch (error) {
+            console.error('❌ Error syncing bid events:', error);
+        }
+    } else {
+    }
+}
+
+// Anti-sniping function for sync service (matching auctionListener logic)
+async function incrementTotalBidWithAntiSnipingSync(auctionId: string, auctionType: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const auctionResult = await client.query(
+            `SELECT end_time FROM auctions WHERE auction_id = $1 AND auction_type = $2 AND status = 'active'`,
+            [auctionId, auctionType]
+        );
+
+        if (auctionResult.rows.length > 0) {
+            const auction = auctionResult.rows[0];
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilEnd = auction.end_time - currentTime;
+            const TEN_MINUTES = 10 * 60; 
+            
+            if (timeUntilEnd > 0 && timeUntilEnd <= TEN_MINUTES) {
+                const newEndTime = currentTime + TEN_MINUTES;
+                
+                await client.query(
+                    `UPDATE auctions 
+                     SET total_bid = total_bid + 1, end_time = $1, updated_at = NOW()
+                     WHERE auction_id = $2 AND auction_type = $3`,
+                    [newEndTime, auctionId, auctionType]
+                );
+            } else {
+                await client.query(
+                    `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
+                    [auctionId, auctionType]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in sync anti-sniping logic:', error);
+    } finally {
+        client.release();
+    }
+}
+
 // Sync auction events from a specific block range
 export async function syncAuctionEvents(fromBlock: number, toBlock: number): Promise<void> {
-    //(`🔄 Syncing auction events from block ${fromBlock} to ${toBlock}...`);
-    
-    // Split large block ranges to avoid RPC limits (max 50 blocks per query for safety)
-    const MAX_BLOCKS_PER_QUERY = 50; // Reduced from 90 to 50 for RPC stability
+    const MAX_BLOCKS_PER_QUERY = 50; 
     const totalBlocks = toBlock - fromBlock + 1;
     
     if (totalBlocks > MAX_BLOCKS_PER_QUERY) {
@@ -190,102 +263,9 @@ export async function syncAuctionEvents(fromBlock: number, toBlock: number): Pro
         return;
     }
     
-    // If range is small enough, process directly
+    
     await syncAuctionEventsChunk(fromBlock, toBlock);
 }
-
-// Anti-sniping function with improved logic matching auctionListener
-async function handleAntiSniping(auctionId: string): Promise<void> {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        
-        // Get current auction details for both single and bundle types
-        const auctionResult = await client.query(
-            `SELECT end_time, auction_type FROM auctions WHERE auction_id = $1 AND status = 'active'`,
-            [auctionId]
-        );
-        
-        for (const auction of auctionResult.rows) {
-            const currentTime = Math.floor(Date.now() / 1000);
-            const timeUntilEnd = auction.end_time - currentTime;
-            const TEN_MINUTES = 10 * 60; // 10 minutes in seconds
-            
-            // Anti-sniping: Extend auction if bid placed in last 10 minutes
-            if (timeUntilEnd > 0 && timeUntilEnd <= TEN_MINUTES) {
-                const newEndTime = currentTime + TEN_MINUTES;
-                
-                await client.query(
-                    `UPDATE auctions 
-                     SET total_bid = total_bid + 1, end_time = $1, updated_at = NOW()
-                     WHERE auction_id = $2 AND auction_type = $3`,
-                    [newEndTime, auctionId, auction.auction_type]
-                );
-                
-                //(`� Anti-sniping: Auction ${auctionId} (${auction.auction_type}) extended from ${auction.end_time} to ${newEndTime} (+${newEndTime - auction.end_time}s)`);
-            } else {
-                // Normal increment without extension
-                await client.query(
-                    `UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1 AND auction_type = $2`,
-                    [auctionId, auction.auction_type]
-                );
-            }
-        }
-        
-        await client.query('COMMIT');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        //('Error in anti-sniping logic:', error);
-    } finally {
-        client.release();
-    }
-}
-
-// Sync bid events from auction contracts
-async function syncBidEvents(fromBlock: number, toBlock: number): Promise<void> {
-    //(`🔄 Syncing bid events from block ${fromBlock} to ${toBlock}...`);
-    
-    try {
-        // Get BidPlaced events from auction contract
-        const bidPlacedFilter = auctionContract.filters.BidPlaced();
-        const bidPlacedEvents = await auctionContract.queryFilter(bidPlacedFilter, fromBlock, toBlock);
-        
-        for (const event of bidPlacedEvents) {
-            const eventLog = event as ethers.EventLog;
-            const args = eventLog.args;
-            if (!args) continue;
-            
-            const auctionId = args[0].toString();
-            const bidder = args[1];
-            const timestamp = Number(args[2]);
-            
-            //(`💰 Processing bid: Auction ${auctionId}, Bidder: ${bidder}, Timestamp: ${timestamp}`);
-            
-            // Apply anti-sniping logic
-            await handleAntiSniping(auctionId);
-            
-            // Increment total_bid for both auction types
-            try {
-                await pool.query(
-                    'UPDATE auctions SET total_bid = total_bid + 1 WHERE auction_id = $1',
-                    [auctionId]
-                );
-                
-                //(`✅ Incremented total_bid for auction ${auctionId}`);
-            } catch (error) {
-                //(`❌ Error incrementing total_bid for auction ${auctionId}:`, error);
-            }
-        }
-        
-        //(`✅ Synced ${bidPlacedEvents.length} bid events`);
-        
-    } catch (error) {
-        //('❌ Error syncing bid events:', error);
-        throw error;
-    }
-}
-
-// Update auction status with reclaim timestamp
 async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: string, status: string): Promise<void> {
     const client = await pool.connect();
     try {
@@ -296,16 +276,12 @@ async function updateAuctionStatusWithReclaim(auctionId: string, auctionType: st
             `UPDATE auctions SET status = $1, reclaim_nft = $2 WHERE auction_id = $3 AND auction_type = $4`,
             [status, reclaimTimestamp, auctionId, auctionType]
         );
-        
-        //(`✅ Updated auction ${auctionId} (${auctionType}): status = ${status}, reclaim_nft = ${reclaimTimestamp}`);
     } catch (error) {
-        //('Error updating auction status with reclaim:', error);
     } finally {
         client.release();
     }
 }
 
-// Update claim status
 async function updateClaimStatus(auctionId: string, auctionType: string, field: string, value: boolean): Promise<void> {
     const client = await pool.connect();
     try {
@@ -313,7 +289,6 @@ async function updateClaimStatus(auctionId: string, auctionType: string, field: 
             `UPDATE auctions SET ${field} = $1 WHERE auction_id = $2 AND auction_type = $3`,
             [value, auctionId, auctionType]
         );
-        //(`✅ Updated ${field} = ${value} for auction ${auctionId} (${auctionType})`);
     } catch (error) {
         //(`Error updating ${field}:`, error);
     } finally {
@@ -329,20 +304,14 @@ async function deleteAuctionFromDB(auctionId: string, auctionType: string): Prom
             `DELETE FROM auctions WHERE auction_id = $1 AND auction_type = $2`,
             [auctionId, auctionType]
         );
-        //(`✅ Deleted auction ${auctionId} (${auctionType})`);
     } catch (error) {
-        //('Error deleting auction:', error);
+        
     } finally {
         client.release();
     }
 }
-
-// Helper function to sync a chunk of auction events
 async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
-    //(`  📦 Processing auction chunk: blocks ${fromBlock} to ${toBlock}`);
-    
     try {
-        // 1. Sync AuctionCreated events
         const auctionCreatedFilter = auctionContract.filters.AuctionCreated();
         const auctionCreatedEvents = await auctionContract.queryFilter(auctionCreatedFilter, fromBlock, toBlock);
         
@@ -357,7 +326,6 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             
             const exists = await auctionExistsInDB(auctionId, auctionTypeString);
             if (exists) {
-                //(`⏭️ Auction ${auctionId} (${auctionTypeString}) already exists, skipping...`);
                 continue;
             }
             
@@ -376,7 +344,6 @@ async function syncAuctionEventsChunk(fromBlock: number, toBlock: number): Promi
             const metadataResults = await Promise.all(metadataPromises);
             
             if (metadataResults.some((result: any) => result === null)) {
-                //(`❌ Failed to fetch metadata for auction ${auctionId}, skipping...`);
                 continue;
             }
             
@@ -509,9 +476,7 @@ async function updateListingPrice(listingId: string, newPrice: string, listingTy
             `UPDATE market_listings SET price = $1 WHERE listing_id = $2 AND listing_type = $3`,
             [newPrice, listingId, listingType]
         );
-        //(`✅ Updated price for listing ${listingId} (${listingType}): ${newPrice}`);
     } catch (error) {
-        //('Error updating listing price:', error);
     } finally {
         client.release();
     }
@@ -525,18 +490,13 @@ async function deleteListingFromDB(listingId: string, listingType: string): Prom
             `DELETE FROM market_listings WHERE listing_id = $1 AND listing_type = $2`,
             [listingId, listingType]
         );
-        //(`✅ Deleted listing ${listingId} (${listingType})`);
     } catch (error) {
-        //('Error deleting listing:', error);
     } finally {
         client.release();
     }
 }
 
-// Helper function to sync a chunk of market events
 async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promise<void> {
-    //(`  📦 Processing market chunk: blocks ${fromBlock} to ${toBlock}`);
-    
     try {
         // 1. Sync NFTListed events
         const nftListedFilter = marketContract.filters.NFTListed();
@@ -552,7 +512,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const exists = await listingExistsInDB(listingId, listingType);
             if (exists) {
-                //(`⏭️ Listing ${listingId} (${listingType}) already exists, skipping...`);
                 continue;
             }
             
@@ -563,7 +522,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const metadata = await fetchNFTMetadata(nftContract, tokenId);
             if (!metadata) {
-                //(`❌ Failed to fetch metadata for listing ${listingId}, skipping...`);
                 continue;
             }
             
@@ -583,8 +541,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             await saveListingToDatabase(listingData);
         }
-        
-        // 2. Sync CollectionBundleListed events
         const bundleListedFilter = marketContract.filters.CollectionBundleListed();
         const bundleListedEvents = await marketContract.queryFilter(bundleListedFilter, fromBlock, toBlock);
         
@@ -598,7 +554,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const exists = await listingExistsInDB(collectionId, listingType);
             if (exists) {
-                //(`⏭️ Bundle ${collectionId} (${listingType}) already exists, skipping...`);
                 continue;
             }
             
@@ -612,7 +567,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             const metadataResults = await Promise.all(metadataPromises);
             
             if (metadataResults.some((result: any) => result === null)) {
-                //(`❌ Failed to fetch metadata for bundle ${collectionId}, skipping...`);
                 continue;
             }
             
@@ -650,7 +604,6 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             
             const listingId = args[0].toString();
             const newPrice = ethers.formatEther(args[2]);
-            //(`💰 Processing PriceUpdated: ${listingId}`);
             
             await updateListingPrice(listingId, newPrice, 'single');
         }
@@ -665,9 +618,7 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const collectionId = args[0].toString();
-            const newPrice = ethers.formatEther(args[2]);
-            //(`💰 Processing BundlePriceUpdated: ${collectionId}`);
-            
+            const newPrice = ethers.formatEther(args[2]);   
             await updateListingPrice(collectionId, newPrice, 'bundle');
         }
         
@@ -726,40 +677,32 @@ async function syncMarketEventsChunk(fromBlock: number, toBlock: number): Promis
             if (!args) continue;
             
             const collectionId = args[0].toString();
-            //(`💸 Processing CollectionBundleSold: ${collectionId}`);
-            
+           
             await deleteListingFromDB(collectionId, 'bundle');
         }
         
-        //(`  ✅ Synced ${nftListedEvents.length} single + ${bundleListedEvents.length} bundle listings, ${priceUpdatedEvents.length + bundlePriceUpdatedEvents.length} price updates, ${listingCancelledEvents.length + collectionCancelledEvents.length} cancellations, ${nftSoldEvents.length + collectionBundleSoldEvents.length} sales`);
-        
+       
     } catch (error) {
-        //('  ❌ Error syncing market chunk:', error);
-        throw error;
+         throw error;
     }
 }
 
-// Main sync function
+
 export async function performFullSync(): Promise<void> {
-    //('🚀 Starting full data synchronization...');
-    
+   
     try {
         const currentBlock = await provider.getBlockNumber();
-        //(`Current block number: ${currentBlock}`);
-        
-        // Sync auction events
+       
         const lastAuctionBlock = await getLastSyncedBlock('auction');
-        //(`Last synced auction block: ${lastAuctionBlock}`);
-        
+         
         if (currentBlock > lastAuctionBlock) {
-            const maxBlockRange = 1000; // Reduced from 10000 to 1000 for RPC stability
+            const maxBlockRange = 1000; 
             for (let fromBlock = Number(lastAuctionBlock) + 1; fromBlock <= currentBlock; fromBlock += maxBlockRange) {
                 const toBlock = Math.min(fromBlock + maxBlockRange - 1, currentBlock);
                 await syncAuctionEvents(fromBlock, toBlock);
-                await syncBidEvents(fromBlock, toBlock); // Also sync bid events
+                await syncBidEventsIfNeeded(fromBlock, toBlock);
                 await updateLastSyncedBlock('auction', toBlock);
                 
-                // Small delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
             }
         }
@@ -775,19 +718,16 @@ export async function performFullSync(): Promise<void> {
                 await syncMarketEvents(fromBlock, toBlock);
                 await updateLastSyncedBlock('market', toBlock);
                 
-                // Small delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
             }
         }
         
-        //('✅ Full synchronization completed successfully!');
-        
+       
     } catch (error) {
-        //('❌ Error during synchronization:', error);
-    }
+           }
 }
 
-// Incremental sync function (for regular updates)
+
 export async function performIncrementalSync(): Promise<void> {
     try {
         const currentBlock = await provider.getBlockNumber();
@@ -798,7 +738,7 @@ export async function performIncrementalSync(): Promise<void> {
         
         if (currentBlock >= auctionFromBlock) {
             await syncAuctionEvents(auctionFromBlock, currentBlock);
-            await syncBidEvents(auctionFromBlock, currentBlock); // Also sync bid events
+            await syncBidEventsIfNeeded(auctionFromBlock, currentBlock); // Conditional bid sync
             await updateLastSyncedBlock('auction', currentBlock);
         }
         
@@ -833,36 +773,27 @@ export async function startSyncService(): Promise<void> {
     isServiceRunning = true;
     
     try {
-        // Perform initial sync when service starts
-        //('📊 Performing initial synchronization...');
-        await performIncrementalSync(); // Use incremental instead of full sync for faster startup
-        
-        // Set up incremental sync with Railway-optimized interval
+        await performIncrementalSync(); 
         const syncIntervalMs = process.env.RAILWAY_ENVIRONMENT ? 5 * 60 * 1000 : 2 * 60 * 1000; // 5min on Railway, 2min locally
         syncInterval = setInterval(async () => {
             if (isServiceRunning) {
                 try {
                     await performIncrementalSync();
                 } catch (error) {
-                    //('❌ Error in scheduled sync:', error);
-                }
+                    }
             }
         }, syncIntervalMs);
-        
-        //(`✅ Sync service started with ${syncIntervalMs/1000/60}-minute intervals`);
-        
+       
     } catch (error) {
-        //('❌ Error starting sync service:', error);
-        isServiceRunning = false;
+         isServiceRunning = false;
         throw error;
     }
 }
 
-// Stop sync service
+
 export async function stopSyncService(): Promise<void> {
     if (!isServiceRunning) {
-        //('⚠️ Sync service is not running');
-        return;
+         return;
     }
     
     isServiceRunning = false;
@@ -872,7 +803,7 @@ export async function stopSyncService(): Promise<void> {
         syncInterval = null;
     }
     
-    //('🛑 Sync service stopped');
+    
 }
 
 // Get sync service status
@@ -883,15 +814,13 @@ export function getSyncServiceStatus(): { isRunning: boolean; intervalMs: number
     };
 }
 
-// Graceful shutdown handlers
+
 process.on('SIGINT', async () => {
-    //('🛑 Received SIGINT, shutting down sync service...');
-    await stopSyncService();
+     await stopSyncService();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    //('🛑 Received SIGTERM, shutting down sync service...');
     await stopSyncService();
     process.exit(0);
 });

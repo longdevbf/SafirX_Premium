@@ -55,7 +55,7 @@ export function useNFTData(address: string | undefined) {
       setError(null);
       
       try {
-        const response = await fetch(`https://testnet.nexus.oasis.io/v1/sapphire/accounts/${address}/nfts??limit=100&offset=0`);
+        const response = await fetch(`https://nexus.oasis.io/v1/sapphire/accounts/${address}/nfts??limit=100&offset=0`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch NFTs');

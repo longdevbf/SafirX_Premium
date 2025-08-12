@@ -1,14 +1,14 @@
 
 import { http } from 'wagmi';
-import { sapphireTestnet } from 'wagmi/chains';
+import { sapphire } from 'wagmi/chains';
 import { createSapphireConfig , sapphireHttpTransport} from '@oasisprotocol/sapphire-wagmi-v2';
 
 export const config = createSapphireConfig({
   sapphireConfig: {
     replaceProviders: true,
   },
-  chains: [sapphireTestnet],
+  chains: [sapphire],
   transports: {
-    [sapphireTestnet.id]: sapphireHttpTransport(),
+    [sapphire.id]: sapphireHttpTransport(),
   },
 });

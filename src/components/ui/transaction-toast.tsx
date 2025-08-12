@@ -52,7 +52,7 @@ export const TransactionToast = ({ isVisible, txHash, message, onClose }: Transa
   // Don't render anything if not visible
   if (!isVisible) return null
 
-  const explorerUrl = `https://explorer.oasis.io/testnet/sapphire/tx/${txHash}`
+  const explorerUrl = `https://explorer.oasis.io/sapphire/tx/${txHash}`
 
   const handleClose = () => {
     setIsMounted(false)

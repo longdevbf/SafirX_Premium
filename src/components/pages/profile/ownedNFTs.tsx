@@ -356,7 +356,7 @@ export default function OwnedNFTs({
                 className="h-4 w-4 p-0"
                 onClick={(e) => {
                   e.preventDefault()
-                  window.open(`https://testnet.explorer.sapphire.oasis.io/address/${nft.contractAddress}`, '_blank')
+                  window.open(`https://explorer.sapphire.oasis.io/address/${nft.contractAddress}`, '_blank')
                 }}
                 >
                 <ExternalLink className="w-3 h-3" />

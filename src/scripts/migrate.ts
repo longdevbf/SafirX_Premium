@@ -6,10 +6,8 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-////('🔧 Environment loaded, DATABASE_URL exists:', !!process.env.DATABASE_URL);
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -37,10 +35,10 @@ async function runMigration() {
         if (result.rows.length > 0) {        
             const syncRecords = await client.query('SELECT service, last_synced_block FROM sync_status ORDER BY service');
           syncRecords.rows.forEach((row: any) => {
-                //(`   - ${row.service}: block ${row.last_synced_block}`);
+               
             });
         } else {
-            //('❌ sync_status table was not created properly');
+          
         }
         
     } catch (error) {

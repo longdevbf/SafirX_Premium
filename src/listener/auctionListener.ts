@@ -7,11 +7,11 @@ import {ABI_CONFIG} from '@/components/config/abi_config'
 import { pool } from '../lib/db';
 
 const auctionAddress = ABI_CONFIG.sealedBidAuction.address;
-const provider = new ethers.WebSocketProvider('wss://testnet.sapphire.oasis.io/ws');
+const provider = new ethers.WebSocketProvider('wss://sapphire.oasis.io/ws');
 const auctionContract = new ethers.Contract(auctionAddress, SealedBidAuction.abi, provider);
 
 async function fetchNFTMetadata(contractAddress: string, tokenId: string) {
-    const url = `https://testnet.nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
+    const url = `https://nexus.oasis.io/v1/sapphire/evm_tokens/${contractAddress}/nfts/${tokenId}`;
     try {
         const response = await axios.get(url);
         return response.data;
