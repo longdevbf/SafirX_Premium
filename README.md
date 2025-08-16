@@ -5,7 +5,7 @@
 
 # SafirX - Private NFT Marketplace on Oasis Sapphire
 
-----
+-----
 🔧 Features
 ✅ Mint single NFT
 
