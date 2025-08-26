@@ -24,7 +24,7 @@ Sellers can update prices or cancel listings.
 ✅ Private Auction Mode:
 
 Real-time updates.
-
+.
 All bids are encrypted using Oasis Sapphire — other users can't see them.
 
 When the auction ends, anyone can finalize the result.
