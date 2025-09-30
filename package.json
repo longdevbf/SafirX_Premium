@@ -7,9 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postbuild": "echo 'Build completed successfully'",
-    "test:endpoints": "node test-endpoints.js",
-    "health:check": "node test-endpoints.js"
+    "postbuild": "echo 'Build completed successfully'"
   },
   "dependencies": {
     "@oasisprotocol/sapphire-wagmi-v2": "^2.1.0",
@@ -52,15 +50,16 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
-    "tailwindcss": "^4",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
     "typescript": "^5"
   }
 }
