@@ -61,5 +61,14 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5"
+  },
+  "overrides": {
+    "use-sync-external-store": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "valtio": {
+      "react": "$react"
+    }
   }
 }
