@@ -1,16 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Dangerous: allows production builds to successfully complete even if
-    // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
-  // Allow external images from IPFS gateways
   images: {
     remotePatterns: [
       {
@@ -38,14 +33,23 @@ const nextConfig = {
         pathname: '/**',
       }
     ],
-    unoptimized: true, // Disable optimization for IPFS images
+    unoptimized: true,
   },
-  // Exclude contract folder from build
   experimental: {
     externalDir: true,
   },
-  webpack: (config) => {
-    config.resolve.alias['@/contract'] = false;
+  webpack: (config, { isServer }) => {
+    // Handle React Native modules in browser environment
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        '@react-native-async-storage/async-storage': require.resolve('@react-native-async-storage/async-storage'),
+        'pino-pretty': require.resolve('pino-pretty'),
+        'react-native': false,
+        'react-native-fs': false,
+      };
+    }
+    
     return config;
   },
 }

@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postbuild": "echo 'Build completed successfully'"
+    "start:frontend": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@oasisprotocol/sapphire-wagmi-v2": "^2.1.0",
@@ -26,18 +26,19 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-toast": "^1.2.14",
     "@rainbow-me/rainbowkit": "^2.2.8",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@tanstack/react-query": "^5.66.2",
     "@types/express": "^5.0.3",
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.1",
     "ethers": "^6.15.0",
     "express": "^5.1.0",
     "lucide-react": "^0.536.0",
     "next": "15.4.5",
     "next-themes": "^0.4.6",
     "pg": "^8.16.3",
+    "pino-pretty": "^13.1.1",
     "react": "19.1.0",
     "react-day-picker": "^9.8.1",
     "react-dom": "19.1.0",
@@ -50,22 +51,18 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.18",
     "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.0",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
-  },
-  "overrides": {
-    "use-sync-external-store": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    }
   }
 }

@@ -71,7 +71,7 @@ export default function Header() {
             <img 
               src="/assets/logo.png" 
               alt="SafirX Logo" 
-              className="w-29 h-29 object-contain"
+              className="w-29 h-20 object-contain"
             />
           </Link>
 
