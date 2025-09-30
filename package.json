@@ -66,9 +66,5 @@
     "use-sync-external-store": {
       "react": "$react",
       "react-dom": "$react-dom"
-    },
-    "valtio": {
-      "react": "$react"
-    }
-  }
+    }}
 }
